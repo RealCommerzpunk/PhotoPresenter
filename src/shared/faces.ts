@@ -56,7 +56,7 @@ export function decodeYunet(
   return nms(found, nmsThreshold)
 }
 
-function iou(a: Detection['box'], b: Detection['box']): number {
+export function iou(a: Detection['box'], b: Detection['box']): number {
   const x1 = Math.max(a[0], b[0])
   const y1 = Math.max(a[1], b[1])
   const x2 = Math.min(a[0] + a[2], b[0] + b[2])
@@ -151,6 +151,41 @@ export function personSimilarity(face: ArrayLike<number>, samples: ArrayLike<num
   return best
 }
 
+export interface MatchResult {
+  /** Ähnlichkeit zur Person (bestes Beispiel), −1 ohne Beispiele. */
+  similarity: number
+  /** Ähnlichkeit zum nächsten Gegenbeispiel („ist nicht diese Person“), −1 ohne. */
+  negative: number
+  /** Gilt als die Person: über der Schwelle und ähnlicher als jedes Gegenbeispiel. */
+  match: boolean
+}
+
+/** Abgleich eines Gesichts mit den Beispielen und Gegenbeispielen einer Person. */
+export function matchFace(
+  face: ArrayLike<number>,
+  samples: ArrayLike<number>[],
+  negatives: ArrayLike<number>[],
+  threshold: number
+): MatchResult {
+  const similarity = samples.length ? personSimilarity(face, samples) : -1
+  const negative = negatives.length ? personSimilarity(face, negatives) : -1
+  return {
+    similarity,
+    negative,
+    match: samples.length > 0 && similarity >= threshold && similarity > negative
+  }
+}
+
+/**
+ * Geschätzte 5 Punkte für einen von Hand gezogenen Rahmen, wenn im Ausschnitt kein
+ * Gesicht gefunden wird: die SFace-Vorlage in den Rahmen gelegt (x, y, Breite, Höhe in px).
+ */
+export function templateKeypoints(box: [number, number, number, number]): number[] {
+  return SFACE_TEMPLATE.map((v, i) =>
+    i % 2 === 0 ? box[0] + (v / SFACE_SIZE) * box[2] : box[1] + (v / SFACE_SIZE) * box[3]
+  )
+}
+
 // ---------- Speicherformat ----------
 
 /** Float32-Vektor als Base64 (kompakt für die JSON-Datei). */
@@ -174,6 +209,8 @@ export interface StoredFace {
   kps: number[]
   score: number
   emb: string
+  /** Von Hand markiert; bleibt beim Neu-Analysieren erhalten. */
+  manual?: boolean
 }
 
 export interface PhotoFaces {

@@ -7,16 +7,19 @@ import {
   SFACE_SIZE,
   SFACE_TEMPLATE,
   similarityTransform,
+  templateKeypoints,
   YUNET_SIZE,
+  type Detection,
   type PhotoFaces,
   type StoredFace,
   type YunetOutputs
 } from '@shared/faces'
-import { photoUrl } from '@shared/ipc'
+import { photoUrl, type EmbedResult, type RelBox } from '@shared/ipc'
 
 /**
  * Unsichtbares Analyse-Fenster: holt sich Fotos aus der Warteschlange des Main-Prozesses,
  * sucht Gesichter (YuNet) und berechnet für jedes einen Merkmalsvektor (SFace).
+ * Beantwortet außerdem Hand-Markierungen aus den Einstellungen.
  * Läuft komplett lokal in WebAssembly, ohne Internet.
  */
 
@@ -31,6 +34,11 @@ const detCanvas = new OffscreenCanvas(YUNET_SIZE, YUNET_SIZE)
 const detCtx = detCanvas.getContext('2d', { willReadFrequently: true })!
 const alignCanvas = new OffscreenCanvas(SFACE_SIZE, SFACE_SIZE)
 const alignCtx = alignCanvas.getContext('2d', { willReadFrequently: true })!
+
+interface Models {
+  detector: ort.InferenceSession
+  recognizer: ort.InferenceSession
+}
 
 /** RGBA-Pixel in planare Float-Kanäle (NCHW), wahlweise BGR. */
 function toTensor(data: Uint8ClampedArray, size: number, bgr: boolean): ort.Tensor {
@@ -47,54 +55,113 @@ function toTensor(data: Uint8ClampedArray, size: number, bgr: boolean): ort.Tens
   return new ort.Tensor('float32', out, [1, 3, size, size])
 }
 
-async function analyze(
-  detector: ort.InferenceSession,
-  recognizer: ort.InferenceSession,
-  name: string
-): Promise<PhotoFaces> {
+// Alle Modellaufrufe nacheinander: Analyse und Hand-Markierungen teilen sich die Modelle.
+let chain: Promise<unknown> = Promise.resolve()
+function serial<T>(task: () => Promise<T>): Promise<T> {
+  const run = chain.then(task, task)
+  chain = run.catch(() => undefined)
+  return run
+}
+
+async function loadBitmap(name: string): Promise<ImageBitmap> {
   const response = await fetch(photoUrl(name))
   if (!response.ok) throw new Error(`HTTP ${response.status}`)
-  const bitmap = await createImageBitmap(await response.blob(), { imageOrientation: 'from-image' })
+  return createImageBitmap(await response.blob(), { imageOrientation: 'from-image' })
+}
+
+/**
+ * Sucht Gesichter in einem Bildausschnitt (Standard: ganzes Bild). Der Ausschnitt wird
+ * ins 640er-Quadrat eingepasst; Ergebnisse kommen in Pixeln des Originalbildes zurück.
+ */
+async function detect(
+  m: Models,
+  bitmap: ImageBitmap,
+  region: [number, number, number, number] = [0, 0, bitmap.width, bitmap.height],
+  minFace = MIN_FACE
+): Promise<Detection[]> {
+  const [rx, ry, rw, rh] = region
+  const scale = Math.min(YUNET_SIZE / rw, YUNET_SIZE / rh)
+  detCtx.fillStyle = '#000'
+  detCtx.fillRect(0, 0, YUNET_SIZE, YUNET_SIZE)
+  detCtx.drawImage(bitmap, rx, ry, rw, rh, 0, 0, rw * scale, rh * scale)
+  const pixels = detCtx.getImageData(0, 0, YUNET_SIZE, YUNET_SIZE).data
+  const out = await m.detector.run({ input: toTensor(pixels, YUNET_SIZE, true) })
+  const outputs: YunetOutputs = {}
+  for (const [key, tensor] of Object.entries(out)) outputs[key] = tensor.data as Float32Array
+  return decodeYunet(outputs)
+    .filter((d) => Math.min(d.box[2], d.box[3]) >= minFace)
+    .map((d) => ({
+      score: d.score,
+      box: [d.box[0] / scale + rx, d.box[1] / scale + ry, d.box[2] / scale, d.box[3] / scale],
+      kps: d.kps.map((v, i) => v / scale + (i % 2 === 0 ? rx : ry))
+    }))
+}
+
+/** Merkmalsvektor eines Gesichts: auf die SFace-Vorlage ausrichten und einlesen. */
+async function embed(m: Models, bitmap: ImageBitmap, kps: number[]): Promise<string> {
+  const [a, b, tx, ty] = similarityTransform(kps, SFACE_TEMPLATE)
+  alignCtx.setTransform(1, 0, 0, 1, 0, 0)
+  alignCtx.fillStyle = '#000'
+  alignCtx.fillRect(0, 0, SFACE_SIZE, SFACE_SIZE)
+  alignCtx.setTransform(a, b, -b, a, tx, ty)
+  alignCtx.drawImage(bitmap, 0, 0)
+  const face = alignCtx.getImageData(0, 0, SFACE_SIZE, SFACE_SIZE).data
+  const rec = await m.recognizer.run({ data: toTensor(face, SFACE_SIZE, false) })
+  return encodeEmbedding(normalize(rec.fc1.data as Float32Array))
+}
+
+/** Gesicht in Pixeln → Speicherformat relativ zur Bildgröße. */
+function toStored(d: Detection, w: number, h: number, emb: string): StoredFace {
+  return {
+    box: [d.box[0] / w, d.box[1] / h, d.box[2] / w, d.box[3] / h],
+    kps: d.kps.map((v, i) => (i % 2 === 0 ? v / w : v / h)),
+    score: Math.round(d.score * 1000) / 1000,
+    emb
+  }
+}
+
+async function analyze(m: Models, name: string): Promise<PhotoFaces> {
+  const bitmap = await loadBitmap(name)
+  try {
+    const faces: StoredFace[] = []
+    for (const d of await detect(m, bitmap)) {
+      faces.push(toStored(d, bitmap.width, bitmap.height, await embed(m, bitmap, d.kps)))
+    }
+    return { w: bitmap.width, h: bitmap.height, faces }
+  } finally {
+    bitmap.close()
+  }
+}
+
+/**
+ * Hand-Markierung: im vergrößerten Ausschnitt um den Rahmen nach dem Gesicht suchen
+ * (findet oft auch kleine Gesichter); sonst Punkte aus dem Rahmen schätzen.
+ */
+async function analyzeBox(m: Models, name: string, rel: RelBox): Promise<EmbedResult> {
+  const bitmap = await loadBitmap(name)
   try {
     const w = bitmap.width
     const h = bitmap.height
-    // Ins 640er-Quadrat einpassen (oben links, Rest schwarz).
-    const scale = Math.min(YUNET_SIZE / w, YUNET_SIZE / h)
-    detCtx.fillStyle = '#000'
-    detCtx.fillRect(0, 0, YUNET_SIZE, YUNET_SIZE)
-    detCtx.drawImage(bitmap, 0, 0, w * scale, h * scale)
-    const pixels = detCtx.getImageData(0, 0, YUNET_SIZE, YUNET_SIZE).data
-    const out = await detector.run({ input: toTensor(pixels, YUNET_SIZE, true) })
-    const outputs: YunetOutputs = {}
-    for (const [key, tensor] of Object.entries(out)) outputs[key] = tensor.data as Float32Array
-
-    const faces: StoredFace[] = []
-    for (const d of decodeYunet(outputs)) {
-      if (Math.min(d.box[2], d.box[3]) < MIN_FACE) continue
-      // Punkte in Originalpixel, Gesicht auf die SFace-Vorlage ausrichten.
-      const kps = d.kps.map((v) => v / scale)
-      const [a, b, tx, ty] = similarityTransform(kps, SFACE_TEMPLATE)
-      alignCtx.setTransform(1, 0, 0, 1, 0, 0)
-      alignCtx.fillStyle = '#000'
-      alignCtx.fillRect(0, 0, SFACE_SIZE, SFACE_SIZE)
-      alignCtx.setTransform(a, b, -b, a, tx, ty)
-      alignCtx.drawImage(bitmap, 0, 0)
-      const face = alignCtx.getImageData(0, 0, SFACE_SIZE, SFACE_SIZE).data
-      const rec = await recognizer.run({ data: toTensor(face, SFACE_SIZE, false) })
-      const emb = normalize(rec.fc1.data as Float32Array)
-      faces.push({
-        box: [
-          d.box[0] / scale / w,
-          d.box[1] / scale / h,
-          d.box[2] / scale / w,
-          d.box[3] / scale / h
-        ],
-        kps: kps.map((v, i) => (i % 2 === 0 ? v / w : v / h)),
-        score: Math.round(d.score * 1000) / 1000,
-        emb: encodeEmbedding(emb)
-      })
-    }
-    return { w, h, faces }
+    const box: [number, number, number, number] = [rel[0] * w, rel[1] * h, rel[2] * w, rel[3] * h]
+    const padX = box[2] * 0.6
+    const padY = box[3] * 0.6
+    const x0 = Math.max(0, box[0] - padX)
+    const y0 = Math.max(0, box[1] - padY)
+    const x1 = Math.min(w, box[0] + box[2] + padX)
+    const y1 = Math.min(h, box[1] + box[3] + padY)
+    const found = await detect(m, bitmap, [x0, y0, x1 - x0, y1 - y0], 4)
+    // Gesicht, dessen Mitte im Rahmen liegt; bei mehreren das größte.
+    const inside = found.filter((d) => {
+      const cx = d.box[0] + d.box[2] / 2
+      const cy = d.box[1] + d.box[3] / 2
+      return cx >= box[0] && cx <= box[0] + box[2] && cy >= box[1] && cy <= box[1] + box[3]
+    })
+    inside.sort((a, b) => b.box[2] * b.box[3] - a.box[2] * a.box[3])
+    const face: Detection = inside[0] ?? { box, kps: templateKeypoints(box), score: 0 }
+    console.info(
+      `${name}: Hand-Markierung ${inside[0] ? 'mit erkanntem Gesicht' : 'mit geschätzten Punkten'}`
+    )
+    return { face: toStored(face, w, h, await embed(m, bitmap, face.kps)), w, h }
   } finally {
     bitmap.close()
   }
@@ -114,22 +181,32 @@ function waitForWake(ms: number): Promise<void> {
   })
 }
 
+async function loadModels(): Promise<Models> {
+  const [det, rec] = await Promise.all([
+    window.api.faceModel('yunet'),
+    window.api.faceModel('sface')
+  ])
+  const options = { executionProviders: ['wasm'], logSeverityLevel: 3 as const }
+  return {
+    detector: await ort.InferenceSession.create(det, options),
+    recognizer: await ort.InferenceSession.create(rec, options)
+  }
+}
+
 async function main(): Promise<void> {
-  let detector: ort.InferenceSession
-  let recognizer: ort.InferenceSession
+  const ready = loadModels()
+
+  // Hand-Markierungen werden zwischen zwei Fotos der laufenden Analyse beantwortet.
+  window.api.onEmbedRequest((req) => {
+    ready
+      .then((m) => serial(() => analyzeBox(m, req.name, req.box)))
+      .then((result) => window.api.embedResult(req.requestId, result))
+      .catch((err) => window.api.embedResult(req.requestId, null, String(err)))
+  })
+
+  let models: Models
   try {
-    const [det, rec] = await Promise.all([
-      window.api.faceModel('yunet'),
-      window.api.faceModel('sface')
-    ])
-    detector = await ort.InferenceSession.create(det, {
-      executionProviders: ['wasm'],
-      logSeverityLevel: 3
-    })
-    recognizer = await ort.InferenceSession.create(rec, {
-      executionProviders: ['wasm'],
-      logSeverityLevel: 3
-    })
+    models = await ready
   } catch (err) {
     console.error('Gesichtserkennung nicht verfügbar:', err)
     return
@@ -144,7 +221,7 @@ async function main(): Promise<void> {
     }
     const started = performance.now()
     try {
-      const result = await analyze(detector, recognizer, job.name)
+      const result = await serial(() => analyze(models, job.name))
       await window.api.faceResult(job.name, result)
       console.info(
         `${job.name}: ${result.faces.length} Gesicht(er), ${Math.round(performance.now() - started)} ms`

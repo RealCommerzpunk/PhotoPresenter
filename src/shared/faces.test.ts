@@ -4,6 +4,8 @@ import {
   decodeEmbedding,
   decodeYunet,
   encodeEmbedding,
+  matchFace,
+  templateKeypoints,
   nms,
   personSimilarity,
   SFACE_TEMPLATE,
@@ -102,5 +104,37 @@ describe('Ähnlichkeit und Speicherformat', () => {
     const back = decodeEmbedding(encodeEmbedding(v))
     expect(back).toHaveLength(128)
     back.forEach((x, i) => expect(x).toBeCloseTo(v[i], 5))
+  })
+})
+
+describe('matchFace', () => {
+  const person = [[1, 0, 0]]
+  it('erkennt über der Schwelle', () => {
+    expect(matchFace([0.9, 0.3, 0], person, [], 0.38).match).toBe(true)
+    expect(matchFace([0.2, 1, 0], person, [], 0.38).match).toBe(false)
+  })
+
+  it('schließt Gesichter aus, die einem Gegenbeispiel ähnlicher sind', () => {
+    const negatives = [[0.7, 0.7, 0]]
+    // ähnlich zur Person (0,8), aber noch ähnlicher zum Gegenbeispiel
+    const r = matchFace([0.6, 0.8, 0], person, negatives, 0.38)
+    expect(r.similarity).toBeGreaterThan(0.38)
+    expect(r.match).toBe(false)
+    // das Gegenbeispiel selbst ist nie ein Treffer
+    expect(matchFace([0.7, 0.7, 0], person, negatives, 0.38).match).toBe(false)
+    // echte Treffer bleiben Treffer
+    expect(matchFace([1, 0.05, 0], person, negatives, 0.38).match).toBe(true)
+  })
+
+  it('ist ohne Beispiele nie ein Treffer', () => {
+    expect(matchFace([1, 0, 0], [], [], 0.38).match).toBe(false)
+  })
+})
+
+describe('templateKeypoints', () => {
+  it('legt die Vorlage in den Rahmen', () => {
+    const k = templateKeypoints([100, 200, 112, 112])
+    expect(k[0]).toBeCloseTo(100 + SFACE_TEMPLATE[0])
+    expect(k[1]).toBeCloseTo(200 + SFACE_TEMPLATE[1])
   })
 })

@@ -1,6 +1,6 @@
 import { contextBridge, ipcRenderer, type IpcRendererEvent } from 'electron'
 import type { FaceIndexStatus } from '@shared/faces'
-import { IPC, type PhotoPresenterApi } from '@shared/ipc'
+import { IPC, type EmbedRequest, type PhotoPresenterApi } from '@shared/ipc'
 import type { Settings } from '@shared/settings'
 
 /** Abonniert ein Ereignis aus dem Main-Prozess; liefert eine Abmeldefunktion. */
@@ -24,13 +24,20 @@ const api: PhotoPresenterApi = {
   faceJob: () => ipcRenderer.invoke(IPC.faceJob),
   faceResult: (name, result, error) => ipcRenderer.invoke(IPC.faceResult, name, result, error),
   onFaceWake: (callback) => subscribe<void>(IPC.faceWake, callback),
+  onEmbedRequest: (callback) => subscribe<EmbedRequest>(IPC.embedRequest, callback),
+  embedResult: (requestId, result, error) =>
+    ipcRenderer.invoke(IPC.embedResult, requestId, result, error),
 
   faceStatus: () => ipcRenderer.invoke(IPC.faceStatus),
   onFaceStatus: (callback) => subscribe<FaceIndexStatus>(IPC.faceStatusChanged, callback),
   getFaces: (name) => ipcRenderer.invoke(IPC.getFaces, name),
-  listFaces: (personId) => ipcRenderer.invoke(IPC.listFaces, personId),
+  listFaces: (personId, photo) => ipcRenderer.invoke(IPC.listFaces, personId, photo),
   toggleSample: (personId, photo, face) =>
     ipcRenderer.invoke(IPC.toggleSample, personId, photo, face),
+  toggleNegative: (personId, photo, face) =>
+    ipcRenderer.invoke(IPC.toggleNegative, personId, photo, face),
+  markFace: (personId, photo, box, negative) =>
+    ipcRenderer.invoke(IPC.markFace, personId, photo, box, negative),
   focusPhotos: () => ipcRenderer.invoke(IPC.focusPhotos),
   reindexFaces: () => ipcRenderer.invoke(IPC.reindexFaces)
 }

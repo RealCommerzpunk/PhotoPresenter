@@ -134,11 +134,16 @@ export const PAN_OTHERS = {
 } as const
 export type PanOthers = keyof typeof PAN_OTHERS
 
+const sampleSchema = z.object({ photo: z.string(), face: z.number().int().min(0), emb: z.string() })
+export type FaceSample = z.infer<typeof sampleSchema>
+
 export const personSchema = z.object({
   id: z.string().min(1),
   name: z.string(),
   /** Beispielgesichter: Foto (relativ), Nummer des Gesichts im Index, Merkmalsvektor (Base64). */
-  samples: z.array(z.object({ photo: z.string(), face: z.number().int().min(0), emb: z.string() }))
+  samples: z.array(sampleSchema),
+  /** Gegenbeispiele: Gesichter, die ausdrücklich NICHT diese Person sind. */
+  negatives: z.array(sampleSchema).default([])
 })
 export type Person = z.infer<typeof personSchema>
 

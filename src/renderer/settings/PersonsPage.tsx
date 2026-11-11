@@ -1,8 +1,9 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { FaceIndexStatus } from '@shared/faces'
-import { photoUrl, type FaceListItem } from '@shared/ipc'
+import { photoUrl, type FaceListItem, type RelBox } from '@shared/ipc'
 import { FOCUS_LABELS, PAN_OTHERS, type Person, type Settings } from '@shared/settings'
 import { Card, Field, RangeInput, Select, Toggle, WeightedList } from './controls'
+import { PhotoBrowser, usePhotoList } from './PhotoBrowser'
 
 type Update = (patch: Partial<Settings>) => void
 
@@ -45,6 +46,63 @@ function useFaceStatus(): FaceIndexStatus | null {
   return status
 }
 
+/** Schlüssel, der sich ändert, sobald Beispiele oder Gegenbeispiele der Person sich ändern. */
+function personKey(person: Person): string {
+  return [...person.samples, ...person.negatives].map((s) => s.emb.slice(0, 12)).join('|')
+}
+
+/** Beschriftung und Farbe eines Gesichts je nach Zustand. */
+function faceState(f: FaceListItem, name: string): { label: string; ring: string } {
+  if (f.sample) return { label: 'Beispiel', ring: 'bg-indigo-500/30 ring-2 ring-indigo-400' }
+  if (f.negative) return { label: `nicht ${name}`, ring: 'bg-red-500/20 ring-2 ring-red-400' }
+  const pct = f.similarity !== undefined ? `${Math.round(f.similarity * 100)} %` : ' '
+  if (f.match) return { label: pct, ring: 'ring-2 ring-emerald-400/70' }
+  return { label: pct, ring: '' }
+}
+
+function FaceTile({
+  f,
+  person,
+  onChanged
+}: {
+  f: FaceListItem
+  person: Person
+  onChanged: () => void
+}): React.JSX.Element {
+  const state = faceState(f, person.name || 'diese Person')
+  return (
+    <div className={`relative flex flex-col items-center gap-1 rounded-lg p-1 ${state.ring}`}>
+      <button
+        onClick={() => void window.api.toggleSample(person.id, f.photo, f.face).then(onChanged)}
+        title={`${f.photo}\nKlick: ist ${person.name} (nochmal: zurücknehmen)`}
+        className="rounded-md hover:opacity-90"
+      >
+        <FaceThumb item={f} />
+      </button>
+      <button
+        onClick={() => void window.api.toggleNegative(person.id, f.photo, f.face).then(onChanged)}
+        title={f.negative ? 'Ausschluss zurücknehmen' : `Ist NICHT ${person.name}`}
+        className={`absolute right-0.5 top-0.5 flex h-5 w-5 items-center justify-center rounded-full text-[11px] ${
+          f.negative
+            ? 'bg-red-500 text-white'
+            : 'bg-black/60 text-white/70 hover:bg-red-500 hover:text-white'
+        }`}
+      >
+        ✕
+      </button>
+      {f.manual && (
+        <span
+          className="absolute left-1 top-1 rounded bg-black/60 px-1 text-[9px]"
+          title="von Hand markiert"
+        >
+          ✎
+        </span>
+      )}
+      <span className="max-w-[92px] truncate text-[10px] text-white/50">{state.label}</span>
+    </div>
+  )
+}
+
 function FaceGallery({
   person,
   threshold,
@@ -57,38 +115,39 @@ function FaceGallery({
   const [faces, setFaces] = useState<FaceListItem[]>([])
   const [onlyMatches, setOnlyMatches] = useState(false)
   const [limit, setLimit] = useState(96)
-  const sampleKey = person.samples.map((s) => `${s.photo}#${s.face}`).join('|')
+  const key = personKey(person)
 
   const reload = useCallback(() => {
     void window.api.listFaces(person.id).then(setFaces)
   }, [person.id])
 
-  // Neu laden, wenn sich Beispiele ändern oder die Analyse Fortschritte macht.
-  useEffect(reload, [reload, sampleKey, status?.faces])
+  // Neu laden, wenn sich Beispiele, Schwelle oder der Analysestand ändern.
+  useEffect(reload, [reload, key, threshold, status?.faces])
 
   const hasSamples = person.samples.length > 0
   const shown = useMemo(
-    () =>
-      onlyMatches && hasSamples
-        ? faces.filter((f) => f.sample || (f.similarity ?? 0) >= threshold)
-        : faces,
-    [faces, onlyMatches, hasSamples, threshold]
+    () => (onlyMatches && hasSamples ? faces.filter((f) => f.sample || f.match) : faces),
+    [faces, onlyMatches, hasSamples]
   )
-  const matchPhotos = new Set(
-    faces.filter((f) => f.sample || (f.similarity ?? 0) >= threshold).map((f) => f.photo)
-  )
+  const matchPhotos = new Set(faces.filter((f) => f.sample || f.match).map((f) => f.photo))
 
   return (
     <div className="flex flex-col gap-3">
       <div className="flex flex-wrap items-center gap-4 text-xs text-white/50">
         <span>
           {hasSamples
-            ? `${person.samples.length} Beispiel${person.samples.length === 1 ? '' : 'e'} · erkannt auf ${matchPhotos.size} Foto${matchPhotos.size === 1 ? '' : 's'}`
+            ? `${person.samples.length} Beispiel${person.samples.length === 1 ? '' : 'e'}` +
+              (person.negatives.length ? ` · ${person.negatives.length} ausgeschlossen` : '') +
+              ` · erkannt auf ${matchPhotos.size} Foto${matchPhotos.size === 1 ? '' : 's'}`
             : 'Klicke auf Gesichter dieser Person, um sie als Beispiele zu hinterlegen (3–10 verschiedene sind ideal).'}
         </span>
         {hasSamples && (
           <Toggle checked={onlyMatches} onChange={setOnlyMatches} label="nur Treffer zeigen" />
         )}
+      </div>
+      <div className="text-[11px] text-white/35">
+        Klick aufs Gesicht = ist {person.name || 'diese Person'} · ✕ = ist es nicht (schließt auch
+        ähnliche Gesichter aus) · nochmal klicken nimmt es zurück
       </div>
       {faces.length === 0 && (
         <div className="text-sm text-white/40">
@@ -96,33 +155,10 @@ function FaceGallery({
           gewählt ist.
         </div>
       )}
-      <div className="grid grid-cols-[repeat(auto-fill,minmax(96px,1fr))] gap-3">
-        {shown.slice(0, limit).map((f) => {
-          const match = !f.sample && hasSamples && (f.similarity ?? 0) >= threshold
-          return (
-            <button
-              key={`${f.photo}#${f.face}`}
-              onClick={() => void window.api.toggleSample(person.id, f.photo, f.face)}
-              title={`${f.photo}${f.similarity !== undefined ? ` · Ähnlichkeit ${Math.round(f.similarity * 100)} %` : ''}`}
-              className={`flex flex-col items-center gap-1 rounded-lg p-1 ${
-                f.sample
-                  ? 'bg-indigo-500/30 ring-2 ring-indigo-400'
-                  : match
-                    ? 'ring-2 ring-emerald-400/70'
-                    : 'hover:bg-white/5'
-              }`}
-            >
-              <FaceThumb item={f} />
-              <span className="text-[10px] text-white/50">
-                {f.sample
-                  ? 'Beispiel'
-                  : f.similarity !== undefined
-                    ? `${Math.round(f.similarity * 100)} %`
-                    : ' '}
-              </span>
-            </button>
-          )
-        })}
+      <div className="grid grid-cols-[repeat(auto-fill,minmax(100px,1fr))] gap-3">
+        {shown.slice(0, limit).map((f) => (
+          <FaceTile key={`${f.photo}#${f.face}`} f={f} person={person} onChanged={reload} />
+        ))}
       </div>
       {shown.length > limit && (
         <button
@@ -136,13 +172,228 @@ function FaceGallery({
   )
 }
 
+/** Foto groß anzeigen, vorhandene Gesichter einzeichnen, neuen Rahmen aufziehen. */
+function ManualMarker({
+  person,
+  files,
+  onClose
+}: {
+  person: Person
+  files: string[]
+  onClose: () => void
+}): React.JSX.Element {
+  const [photo, setPhoto] = useState<string | null>(null)
+  const [faces, setFaces] = useState<FaceListItem[]>([])
+  const [draft, setDraft] = useState<RelBox | null>(null)
+  const [busy, setBusy] = useState(false)
+  const [message, setMessage] = useState<string | null>(null)
+  const area = useRef<HTMLDivElement>(null)
+  const start = useRef<[number, number] | null>(null)
+  const name = person.name || 'diese Person'
+
+  const reload = useCallback(() => {
+    if (photo) void window.api.listFaces(person.id, photo).then(setFaces)
+  }, [person.id, photo])
+  useEffect(reload, [reload, personKey(person)])
+
+  const pos = (e: React.PointerEvent): [number, number] => {
+    const r = area.current!.getBoundingClientRect()
+    return [
+      Math.min(1, Math.max(0, (e.clientX - r.left) / r.width)),
+      Math.min(1, Math.max(0, (e.clientY - r.top) / r.height))
+    ]
+  }
+  const onDown = (e: React.PointerEvent): void => {
+    if (busy) return
+    area.current!.setPointerCapture(e.pointerId)
+    start.current = pos(e)
+    setDraft(null)
+    setMessage(null)
+  }
+  const onMove = (e: React.PointerEvent): void => {
+    if (!start.current) return
+    const [x0, y0] = start.current
+    const [x1, y1] = pos(e)
+    setDraft([Math.min(x0, x1), Math.min(y0, y1), Math.abs(x1 - x0), Math.abs(y1 - y0)])
+  }
+  const onUp = (): void => {
+    start.current = null
+    setDraft((d) => (d && d[2] > 0.01 && d[3] > 0.01 ? d : null))
+  }
+
+  const commit = async (negative: boolean): Promise<void> => {
+    if (!photo || !draft) return
+    setBusy(true)
+    setMessage('Gesicht wird berechnet …')
+    const res = await window.api.markFace(person.id, photo, draft, negative)
+    setBusy(false)
+    setDraft(null)
+    setMessage(
+      res.ok
+        ? negative
+          ? `Als „nicht ${name}“ übernommen.`
+          : `Als Beispiel für ${name} übernommen.`
+        : `Fehler: ${res.error}`
+    )
+    reload()
+  }
+
+  const pct = (v: number): string => `${v * 100}%`
+
+  return (
+    <div className="flex flex-col gap-3 rounded-lg border border-indigo-400/30 bg-indigo-500/5 p-4">
+      <div className="flex items-center justify-between">
+        <div className="text-sm font-medium">Gesicht von Hand markieren</div>
+        <button onClick={onClose} className="text-xs text-white/60 hover:text-white">
+          Schließen
+        </button>
+      </div>
+      {!photo ? (
+        <>
+          <div className="text-xs text-white/50">
+            Foto wählen, z. B. ein altes Kinderfoto oder ein Gruppenbild, in dem das Gesicht nicht
+            erkannt wurde.
+          </div>
+          <PhotoBrowser files={files} onPick={setPhoto} />
+        </>
+      ) : (
+        <>
+          <div className="flex items-center gap-3 text-xs text-white/60">
+            <button
+              onClick={() => {
+                setPhoto(null)
+                setDraft(null)
+                setMessage(null)
+              }}
+              className="rounded-md border border-white/15 bg-white/5 px-2 py-1 hover:bg-white/10"
+            >
+              ← anderes Foto
+            </button>
+            <span className="truncate">{photo}</span>
+          </div>
+          <div className="text-xs text-white/50">
+            Mit der Maus einen Rahmen ums Gesicht ziehen. Erkannte Gesichter sind eingezeichnet und
+            lassen sich auch direkt zuordnen.
+          </div>
+          <div className="flex justify-center">
+            <div className="relative inline-block select-none">
+              <img
+                src={photoUrl(photo)}
+                alt=""
+                draggable={false}
+                className="block max-h-[60vh] max-w-full"
+              />
+              <div
+                ref={area}
+                onPointerDown={onDown}
+                onPointerMove={onMove}
+                onPointerUp={onUp}
+                className="absolute inset-0 cursor-crosshair"
+              >
+                {faces.map((f) => {
+                  const color = f.sample
+                    ? 'border-indigo-400'
+                    : f.negative
+                      ? 'border-red-400'
+                      : f.match
+                        ? 'border-emerald-400'
+                        : 'border-white/70'
+                  return (
+                    <div
+                      key={f.face}
+                      className={`absolute border-2 ${color}`}
+                      style={{
+                        left: pct(f.box[0]),
+                        top: pct(f.box[1]),
+                        width: pct(f.box[2]),
+                        height: pct(f.box[3])
+                      }}
+                    >
+                      <div
+                        className="absolute -top-6 left-0 flex gap-1"
+                        onPointerDown={(e) => e.stopPropagation()}
+                      >
+                        <button
+                          onClick={() =>
+                            void window.api.toggleSample(person.id, f.photo, f.face).then(reload)
+                          }
+                          title={`ist ${name}`}
+                          className={`rounded px-1 text-[11px] ${f.sample ? 'bg-indigo-500 text-white' : 'bg-black/70 text-white/80 hover:bg-indigo-500'}`}
+                        >
+                          ✓
+                        </button>
+                        <button
+                          onClick={() =>
+                            void window.api.toggleNegative(person.id, f.photo, f.face).then(reload)
+                          }
+                          title={`ist nicht ${name}`}
+                          className={`rounded px-1 text-[11px] ${f.negative ? 'bg-red-500 text-white' : 'bg-black/70 text-white/80 hover:bg-red-500'}`}
+                        >
+                          ✕
+                        </button>
+                      </div>
+                    </div>
+                  )
+                })}
+                {draft && (
+                  <div
+                    className="absolute border-2 border-dashed border-amber-300 bg-amber-300/10"
+                    style={{
+                      left: pct(draft[0]),
+                      top: pct(draft[1]),
+                      width: pct(draft[2]),
+                      height: pct(draft[3])
+                    }}
+                  />
+                )}
+              </div>
+            </div>
+          </div>
+          <div className="flex flex-wrap items-center gap-3">
+            <button
+              disabled={!draft || busy}
+              onClick={() => void commit(false)}
+              className="rounded-md bg-indigo-500 px-3 py-1.5 text-sm font-medium text-white hover:bg-indigo-400 disabled:opacity-40"
+            >
+              ✓ Ist {name}
+            </button>
+            <button
+              disabled={!draft || busy}
+              onClick={() => void commit(true)}
+              className="rounded-md border border-red-400/40 bg-red-500/10 px-3 py-1.5 text-sm text-red-200 hover:bg-red-500/20 disabled:opacity-40"
+            >
+              ✕ Ist nicht {name}
+            </button>
+            {draft && !busy && (
+              <button
+                onClick={() => setDraft(null)}
+                className="text-xs text-white/60 hover:text-white"
+              >
+                Rahmen verwerfen
+              </button>
+            )}
+            {message && <span className="text-xs text-white/70">{message}</span>}
+          </div>
+        </>
+      )}
+    </div>
+  )
+}
+
 export function PersonsPage({ s, update }: { s: Settings; update: Update }): React.JSX.Element {
   const status = useFaceStatus()
+  const files = usePhotoList(s.photoFolder, s.includeSubfolders)
   const [selected, setSelected] = useState<string>(s.focusPersonId || s.persons[0]?.id || '')
+  const [marking, setMarking] = useState(false)
   const person = s.persons.find((p) => p.id === selected)
 
   const addPerson = (): void => {
-    const p: Person = { id: `p${Date.now().toString(36)}`, name: 'Neue Person', samples: [] }
+    const p: Person = {
+      id: `p${Date.now().toString(36)}`,
+      name: 'Neue Person',
+      samples: [],
+      negatives: []
+    }
     update({
       persons: [...s.persons, p],
       focusPersonId: s.focusPersonId || p.id
@@ -188,7 +439,7 @@ export function PersonsPage({ s, update }: { s: Settings; update: Update }): Rea
                 onClick={() => {
                   if (
                     window.confirm(
-                      'Alle Fotos neu analysieren? Die Beispielgesichter bleiben erhalten.'
+                      'Alle Fotos neu analysieren? Beispiele und von Hand markierte Gesichter bleiben erhalten.'
                     )
                   )
                     void window.api.reindexFaces()
@@ -207,7 +458,10 @@ export function PersonsPage({ s, update }: { s: Settings; update: Update }): Rea
           {s.persons.map((p) => (
             <button
               key={p.id}
-              onClick={() => setSelected(p.id)}
+              onClick={() => {
+                setSelected(p.id)
+                setMarking(false)
+              }}
               className={`rounded-full border px-3 py-1 text-sm ${
                 p.id === selected
                   ? 'border-indigo-400 bg-indigo-500/20 text-white'
@@ -244,6 +498,14 @@ export function PersonsPage({ s, update }: { s: Settings; update: Update }): Rea
                 />
                 Fokus-Person der Show
               </label>
+              {!marking && (
+                <button
+                  onClick={() => setMarking(true)}
+                  className="rounded-md border border-white/15 bg-white/5 px-3 py-1 text-xs hover:bg-white/10"
+                >
+                  ✎ Gesicht von Hand markieren
+                </button>
+              )}
               <button
                 onClick={() => {
                   if (window.confirm(`„${person.name}“ löschen?`)) removePerson(person.id)
@@ -253,6 +515,9 @@ export function PersonsPage({ s, update }: { s: Settings; update: Update }): Rea
                 Person löschen
               </button>
             </div>
+            {marking && (
+              <ManualMarker person={person} files={files} onClose={() => setMarking(false)} />
+            )}
             <FaceGallery person={person} threshold={s.focusThreshold} status={status} />
           </div>
         )}

@@ -2,6 +2,16 @@
 
 Alle Änderungen je Version. Format: neueste Version oben, Datum im Format JJJJ-MM-TT.
 
+## 0.6.1 – 2026-11-11
+
+Gesichter ausschließen und von Hand markieren.
+
+- „Ist nicht diese Person“: ✕ an jedem Gesicht in der Galerie setzt ein Gegenbeispiel (rot markiert). Ein Gesicht zählt nur noch als Treffer, wenn es der Person ähnlicher ist als jedem Gegenbeispiel, dadurch fallen auch ähnliche Fotos derselben falschen Person heraus
+- „Gesicht von Hand markieren“: Foto suchen (Dateiname oder Ordner), Rahmen ums Gesicht ziehen, als Beispiel oder Gegenbeispiel übernehmen. Im vergrößerten Ausschnitt wird das Gesicht erneut gesucht (findet auch kleine Gesichter, genauerer Merkmalsvektor); ohne Treffer werden die Punkte aus dem Rahmen geschätzt
+- Erkannte Gesichter lassen sich im Markier-Fenster direkt per ✓/✕ zuordnen
+- Eine Markierung über einem schon erkannten Gesicht ersetzt dieses durch die genauere Fassung statt es doppelt anzulegen
+- Beispiele werden am Merkmalsvektor erkannt; „Alles neu analysieren“ behält Zuordnungen und von Hand markierte Gesichter
+
 ## 0.6.0 – 2026-11-11
 
 Gesichtserkennung und Fokus-Person (Meilenstein 6).

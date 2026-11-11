@@ -49,6 +49,8 @@ Plan und Meilensteine: `docs/PLAN.md` · Änderungen je Version: `CHANGELOG.md` 
 - Neue Datenquellen in der Show brauchen einen Eintrag in der CSP beider `index.html`.
 - Neue Auswahl-Optionen (Effekte, Bewegungsarten, Füllmodi) nur hinten an die Konstanten in `settings.ts` anhängen; `parseSettings` ergänzt sie in gespeicherten Einstellungen. Ein entfernter Eintrag setzt die ganze Liste auf Standard zurück.
 - Gesichtskoordinaten im Index sind relativ (0–1) zum bereits EXIF-gedrehten Bild; Show und Analyse dekodieren beide mit `imageOrientation: 'from-image'`.
+- Beispiele und Gegenbeispiele (`Person.samples`/`negatives`) werden am Merkmalsvektor (`emb`) erkannt, nicht an der Gesichtsnummer. Treffer = über der Schwelle und ähnlicher als jedes Gegenbeispiel (`matchFace`).
+- Hand-Markierung: `markFace` → Analyse-Fenster (`analyzeBox`) sucht im Ausschnitt neu; überlappt das Ergebnis ein vorhandenes Gesicht (IoU > 0,5), wird es ersetzt und Zuordnungen ziehen mit. Von Hand markierte Gesichter (`manual`) überstehen das Neu-Analysieren.
 - `FaceStore` nimmt den aktuellen Ordner aus den Einstellungen, nicht aus dem letzten Einlesen (sonst findet die Show beim Start keine Gesichter).
 - Zum Testen der Erkennung: OpenCV-Beispielbilder (`lena.jpg`, `messi5.jpg`) ins Scratchpad laden, nie ins Repo. Gleiche Person ≈ 0,8–0,93, verschiedene ≈ 0,13–0,18 (Schwelle 0,38).
 - Textgrößen sind in `cqh` angegeben: Der Host-Container eines `TextOverlay` braucht `container-type: size`.

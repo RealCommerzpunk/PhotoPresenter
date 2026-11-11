@@ -2,7 +2,7 @@ import { mkdir, writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
 import { app, BrowserWindow, dialog, ipcMain, powerSaveBlocker, screen, shell } from 'electron'
 import type { PhotoFaces } from '@shared/faces'
-import { IPC, type FaceModel, type ShowOptions } from '@shared/ipc'
+import { IPC, type EmbedResult, type FaceModel, type RelBox, type ShowOptions } from '@shared/ipc'
 import type { Settings } from '@shared/settings'
 import { FaceStore } from './faces'
 import { handlePhotoProtocol, listPhotos, registerPhotoScheme } from './photos'
@@ -175,7 +175,8 @@ app.whenReady().then(() => {
     (status) => broadcast(IPC.faceStatusChanged, status),
     () => indexerWindow?.webContents.send(IPC.faceWake),
     () => showWindow !== null,
-    (patch) => setSettings(patch)
+    (patch) => setSettings(patch),
+    (request) => indexerWindow?.webContents.send(IPC.embedRequest, request)
   )
   ipcMain.handle(IPC.faceModel, (_e, model: FaceModel) => faceStore.model(model))
   ipcMain.handle(IPC.faceJob, () => faceStore.nextJob())
@@ -184,7 +185,22 @@ app.whenReady().then(() => {
   )
   ipcMain.handle(IPC.faceStatus, () => faceStore.status())
   ipcMain.handle(IPC.getFaces, (_e, name: string) => faceStore.getFaces(name))
-  ipcMain.handle(IPC.listFaces, (_e, personId?: string) => faceStore.listFaces(personId))
+  ipcMain.handle(IPC.listFaces, (_e, personId?: string, photo?: string) =>
+    faceStore.listFaces(personId, photo)
+  )
+  ipcMain.handle(IPC.toggleNegative, (_e, personId: string, photo: string, face: number) =>
+    faceStore.toggleNegative(personId, photo, face)
+  )
+  ipcMain.handle(
+    IPC.markFace,
+    (_e, personId: string, photo: string, box: RelBox, negative: boolean) =>
+      faceStore.markFace(personId, photo, box, negative)
+  )
+  ipcMain.handle(
+    IPC.embedResult,
+    (_e, requestId: number, result: EmbedResult | null, error?: string) =>
+      faceStore.handleEmbedResult(requestId, result, error)
+  )
   ipcMain.handle(IPC.toggleSample, (_e, personId: string, photo: string, face: number) =>
     faceStore.toggleSample(personId, photo, face)
   )

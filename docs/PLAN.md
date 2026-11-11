@@ -124,8 +124,8 @@ Jeder Meilenstein ergibt eine lauffähige Version und einen eigenen Commit/PR.
 - **Gesichtserkennung mit onnxruntime-web (WebAssembly) statt onnxruntime-node**, in einem unsichtbaren Analyse-Fenster: keine nativen Module, Windows und Linux identisch, Fotos werden genau wie in der Show dekodiert (EXIF-Drehung), daher passen die Gesichtspositionen garantiert.
 - **Gesichtsindex als JSON-Datei** (`faces.json` im Benutzerordner) statt SQLite: reicht für < 5.000 Fotos, kein natives Modul. sharp und better-sqlite3 werden nicht gebraucht.
 - Modelle liegen nicht im Git-Repo (SFace ≈ 39 MB), sondern werden per `npm run models` geladen und mit dem Installer ausgeliefert.
-- Beispielgesichter werden aus erkannten Gesichtern gewählt; einen Rahmen von Hand ziehen (für nicht erkannte Gesichter) steht unter „später“.
+- Zusätzlich zum Plan: Gegenbeispiele („ist nicht diese Person“) und Gesichter von Hand markieren (seit 0.6.1).
 
 ## Offene Punkte für später (nicht im ersten Wurf)
 
-HEIC/RAW-Support, Videos in der Show, Hintergrundmusik, Web-Fernbedienung, mehrere Fokus-Personen, Gesichtsrahmen von Hand ziehen, Erkennung kleiner Gesichter in großen Gruppenfotos (Kacheln statt eines 640er-Durchgangs), Texte über Fotos neben statt unter Gesichter setzen.
+HEIC/RAW-Support, Videos in der Show, Hintergrundmusik, Web-Fernbedienung, mehrere Fokus-Personen, Erkennung kleiner Gesichter in großen Gruppenfotos (Kacheln statt eines 640er-Durchgangs), Texte über Fotos neben statt unter Gesichter setzen.

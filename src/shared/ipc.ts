@@ -1,4 +1,4 @@
-import type { FaceIndexStatus, FaceInfo, PhotoFaces } from './faces'
+import type { FaceIndexStatus, FaceInfo, PhotoFaces, StoredFace } from './faces'
 import type { Settings } from './settings'
 
 /** Kanalnamen für die Kommunikation zwischen Main-Prozess und Fenstern. */
@@ -20,6 +20,10 @@ export const IPC = {
   getFaces: 'faces:get',
   listFaces: 'faces:list',
   toggleSample: 'faces:toggleSample',
+  toggleNegative: 'faces:toggleNegative',
+  markFace: 'faces:mark',
+  embedRequest: 'faces:embedRequest',
+  embedResult: 'faces:embedResult',
   focusPhotos: 'faces:focusPhotos',
   reindexFaces: 'faces:reindex'
 } as const
@@ -55,6 +59,29 @@ export interface FaceListItem {
   similarity?: number
   /** Ist ein Beispielgesicht der gewählten Person. */
   sample: boolean
+  /** Ist ausdrücklich NICHT die gewählte Person (Gegenbeispiel). */
+  negative: boolean
+  /** Gilt als Treffer (über der Schwelle und keinem Gegenbeispiel ähnlicher). */
+  match: boolean
+  /** Von Hand markiert. */
+  manual: boolean
+}
+
+/** Rahmen relativ zur Bildgröße: x, y, Breite, Höhe (0–1). */
+export type RelBox = [number, number, number, number]
+
+/** Ergebnis einer Hand-Markierung: das Gesicht und die Bildgröße. */
+export interface EmbedResult {
+  face: StoredFace
+  w: number
+  h: number
+}
+
+/** Auftrag an das Analyse-Fenster: Merkmalsvektor für einen von Hand gezogenen Rahmen. */
+export interface EmbedRequest {
+  requestId: number
+  name: string
+  box: RelBox
 }
 
 export type FaceModel = 'yunet' | 'sface'
@@ -75,13 +102,24 @@ export interface PhotoPresenterApi {
   faceJob(): Promise<{ name: string } | null>
   faceResult(name: string, result: PhotoFaces | null, error?: string): Promise<void>
   onFaceWake(callback: () => void): () => void
+  onEmbedRequest(callback: (request: EmbedRequest) => void): () => void
+  embedResult(requestId: number, result: EmbedResult | null, error?: string): Promise<void>
 
   // Gesichtserkennung: Show und Einstellungen
   faceStatus(): Promise<FaceIndexStatus>
   onFaceStatus(callback: (status: FaceIndexStatus) => void): () => void
   getFaces(name: string): Promise<FaceInfo | null>
-  listFaces(personId?: string): Promise<FaceListItem[]>
+  /** Gesichter des Ordners (oder nur eines Fotos) mit Abgleich zur Person. */
+  listFaces(personId?: string, photo?: string): Promise<FaceListItem[]>
   toggleSample(personId: string, photo: string, face: number): Promise<void>
+  toggleNegative(personId: string, photo: string, face: number): Promise<void>
+  /** Gesicht von Hand markieren und als Beispiel oder Gegenbeispiel übernehmen. */
+  markFace(
+    personId: string,
+    photo: string,
+    box: RelBox,
+    negative: boolean
+  ): Promise<{ ok: boolean; error?: string }>
   focusPhotos(): Promise<string[]>
   reindexFaces(): Promise<void>
 }
