@@ -104,8 +104,8 @@ Tastatur/Maus: Esc beendet, Leertaste pausiert, ←/→ springt, I zeigt Info (D
 
 1. ✅ **Gerüst & Repo**: electron-vite-Projekt, ESLint/Prettier, `git init`, privates GitHub-Repo `PhotoPresenter` per `gh repo create`, README.
 2. ✅ **Basis-Diashow**: Ordner wählen, Index (ohne Gesichter), zufällige Playlist, PixiJS-Bühne, Contain + Blur-Backdrop, Crossfade, Ken Burns mit Ranges.
-3. **Settings-UI & Konfig-Modell**: zod-Schema, Range-/Gewichtungs-Controls, Live-Vorschau-Fenster, Persistenz.
-4. **Übergangs-Bibliothek & weitere Füllmodi**: 10+ Shader-Übergänge, Ambient-/Edge-Fill, Kamerafahrten.
+3. ✅ **Settings-UI & Konfig-Modell**: zod-Schema, Range-/Gewichtungs-Controls, Live-Vorschau-Fenster, Persistenz.
+4. ✅ **Übergangs-Bibliothek & weitere Füllmodi**: 10+ Shader-Übergänge, Ambient-/Edge-Fill, Kamerafahrten.
 5. **Texte**: Datenmodell, Editor, Stil-Presets, GSAP-Animationen, Fülltexte, Bildtexte vor/nach/über.
 6. **Gesichtserkennung**: Indexer-Prozess, YuNet+SFace, Personen-Anlernen-UI, Matching, Fokus-Modi, Schwenk über andere Gesichter.
 7. **Feinschliff & Release**: Performance (Vorladen/Decoding im Worker, Texturspeicher freigeben), Installer, erster Release `v0.1.0`.

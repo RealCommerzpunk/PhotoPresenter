@@ -73,14 +73,23 @@ export class Slide {
     this.photo.position.set(cx + k.x, cy + k.y)
 
     if (this.backdrop.visible) {
-      // Der Hintergrund bewegt sich langsamer und gegenläufig: Das gibt Tiefe.
       const tex = this.backdrop.texture
-      const cover = Math.max(screen.w / tex.width, screen.h / tex.height) * 1.12
-      this.backdrop.scale.set(cover * (1 + (k.zoom - 1) * 0.35))
-      this.backdrop.position.set(cx - k.x * 0.15, cy - k.y * 0.15)
+      const cover = Math.max(screen.w / tex.width, screen.h / tex.height)
+      if (this.loaded.fill === 'mirror') {
+        // Spiegelung liegt deckungsgleich unter dem Foto und bewegt sich exakt mit.
+        this.backdrop.scale.set(cover * k.zoom)
+        this.backdrop.position.set(cx + k.x, cy + k.y)
+      } else {
+        // Der Hintergrund bewegt sich langsamer und gegenläufig: Das gibt Tiefe.
+        this.backdrop.scale.set(cover * 1.12 * (1 + (k.zoom - 1) * 0.35))
+        this.backdrop.position.set(cx - k.x * 0.15, cy - k.y * 0.15)
+      }
     }
+  }
 
-    this.view.alpha = this.fadeIn > 0 ? Math.min(1, this.elapsed / this.fadeIn) : 1
+  /** Fortschritt des Einblendens 0..1. */
+  get fadeProgress(): number {
+    return this.fadeIn > 0 ? Math.min(1, this.elapsed / this.fadeIn) : 1
   }
 
   destroy(): void {

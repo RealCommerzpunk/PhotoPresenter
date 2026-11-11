@@ -3,7 +3,7 @@ import { IPC, type PhotoPresenterApi } from '@shared/ipc'
 import type { Settings } from '@shared/settings'
 
 const api: PhotoPresenterApi = {
-  startShow: () => ipcRenderer.invoke(IPC.startShow),
+  startShow: (options) => ipcRenderer.invoke(IPC.startShow, options),
   stopShow: () => ipcRenderer.invoke(IPC.stopShow),
   appVersion: () => ipcRenderer.invoke(IPC.appVersion),
   getSettings: () => ipcRenderer.invoke(IPC.getSettings),

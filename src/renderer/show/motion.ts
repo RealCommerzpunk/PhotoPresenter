@@ -16,6 +16,8 @@ export interface Keyframe {
 export interface Shot {
   from: Keyframe
   to: Keyframe
+  /** Zwischenpunkt einer Kamerafahrt: Der Pfad schwingt durch ihn hindurch (Bézierkurve). */
+  via?: Keyframe
 }
 
 export interface Fit {
@@ -80,6 +82,27 @@ export function planShot(
       : { from: { zoom: zMax, x: across, y: a }, to: { zoom: zMax, x: across, y: b } }
   }
 
+  if (kind === 'journey') {
+    // Kamerafahrt: von einem Bildteil über einen nahen Zwischenpunkt zu einem anderen.
+    const i = Math.max(0, intensity)
+    const zFrom = 1 + i * (0.25 + rng() * 0.2)
+    const zVia = 1 + i
+    const zTo = 1 + i * (0.55 + rng() * 0.25)
+    const from = randomOffset(maxOffset(img, screen, scale, zFrom), rng, 0.9)
+    const limTo = maxOffset(img, screen, scale, zTo)
+    // Ziel liegt grob gegenüber dem Start, damit die Fahrt Strecke macht.
+    const to = {
+      x: -Math.sign(from.x || 1) * (0.4 + rng() * 0.5) * limTo.w,
+      y: -Math.sign(from.y || 1) * (0.4 + rng() * 0.5) * limTo.h
+    }
+    const via = randomOffset(maxOffset(img, screen, scale, zVia), rng, 0.7)
+    return {
+      from: { zoom: zFrom, ...from },
+      via: { zoom: zVia, ...via },
+      to: { zoom: zTo, ...to }
+    }
+  }
+
   const wide: Keyframe = { zoom: 1, x: 0, y: 0 }
   const close: Keyframe = { zoom: zMax, ...randomOffset(limitMax, rng, 0.8) }
   return kind === 'zoomIn' ? { from: wide, to: close } : { from: close, to: wide }
@@ -101,10 +124,13 @@ export function evaluateShot(
   scale: number
 ): Keyframe {
   const e = ease(t)
-  const zoom = shot.from.zoom + (shot.to.zoom - shot.from.zoom) * e
+  const { from, to, via } = shot
+  const blend = (a: number, b: number, c?: number): number =>
+    c === undefined ? a + (b - a) * e : (1 - e) * (1 - e) * a + 2 * (1 - e) * e * c + e * e * b
+  const zoom = blend(from.zoom, to.zoom, via?.zoom)
   const limit = maxOffset(img, screen, scale, zoom)
-  const x = shot.from.x + (shot.to.x - shot.from.x) * e
-  const y = shot.from.y + (shot.to.y - shot.from.y) * e
+  const x = blend(from.x, to.x, via?.x)
+  const y = blend(from.y, to.y, via?.y)
   return {
     zoom,
     x: Math.max(-limit.w, Math.min(limit.w, x)),

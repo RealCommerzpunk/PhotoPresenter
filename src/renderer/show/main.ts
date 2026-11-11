@@ -1,11 +1,13 @@
 // Ohne eval auskommen, damit die strenge Content-Security-Policy greift.
 import 'pixi.js/unsafe-eval'
-import { Application } from 'pixi.js'
+import { Application, Container } from 'pixi.js'
+import { pickWeighted } from '@shared/random'
 import type { Settings } from '@shared/settings'
 import { loadPhoto, type LoadedPhoto } from './loader'
 import type { Size } from './motion'
 import { Playlist } from './playlist'
 import { Slide } from './slide'
+import { TransitionEngine } from './transitions/engine'
 
 const FIRST_FADE = 1.2
 const SKIP_FADE = 0.6
@@ -41,6 +43,11 @@ async function main(): Promise<void> {
   let settings: Settings = await window.api.getSettings()
   const playlist = new Playlist([])
 
+  /** Hält das aktuelle Foto, solange kein Übergang läuft. */
+  const slideLayer = new Container()
+  const transitions = new TransitionEngine(app.renderer)
+  app.stage.addChild(slideLayer, transitions.view)
+
   let current: Slide | null = null
   let incoming: Slide | null = null
   /** Vorgeladenes nächstes Foto. */
@@ -72,7 +79,8 @@ async function main(): Promise<void> {
     if (!name) return
     loading = true
     const gen = generation
-    loadPhoto(name, screen(), app.renderer.resolution, settings.maxCrop)
+    const fill = pickWeighted(settings.fillModes) ?? 'blur'
+    loadPhoto(name, screen(), app.renderer.resolution, settings.maxCrop, fill)
       .then((photo) => {
         if (gen !== generation) photo.destroy()
         else {
@@ -91,12 +99,13 @@ async function main(): Promise<void> {
       })
   }
 
+  /** Beginnt den Übergang zum vorgeladenen Foto (beim ersten Foto aus Schwarz). */
   function startTransition(fade: number): void {
     if (!ready) return
     incoming = new Slide(ready, screen(), settings, fade)
     ready = null
-    app.stage.addChild(incoming.view)
-    incoming.update(0, screen())
+    slideLayer.removeChildren()
+    transitions.begin(current ? (pickWeighted(settings.transitions) ?? 'fade') : 'fade')
     updateInfo()
     prefetch()
   }
@@ -133,22 +142,21 @@ async function main(): Promise<void> {
     const dt = Math.min(0.1, ticker.deltaMS / 1000)
     const s = screen()
 
-    if (!current && ready) {
+    if (!current && !incoming && ready) {
       showMessage(null)
-      current = new Slide(ready, s, settings, FIRST_FADE)
-      ready = null
-      app.stage.addChild(current.view)
-      updateInfo()
-      prefetch()
+      startTransition(FIRST_FADE)
     }
 
     current?.update(dt, s)
     if (incoming) {
       incoming.update(dt, s)
+      transitions.render(current?.view ?? null, incoming.view, incoming.fadeProgress, s)
       if (incoming.fadedIn) {
         current?.destroy()
         current = incoming
         incoming = null
+        transitions.end()
+        slideLayer.addChild(current.view)
       }
     } else if (current?.readyForNext && ready) {
       startTransition(current.fadeOut)

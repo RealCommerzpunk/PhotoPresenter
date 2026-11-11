@@ -1,5 +1,11 @@
 import { useEffect, useState } from 'react'
-import { MOTION_LABELS, type Settings } from '@shared/settings'
+import {
+  defaultSettings,
+  FILL_LABELS,
+  MOTION_LABELS,
+  TRANSITION_LABELS,
+  type Settings
+} from '@shared/settings'
 import type { PhotoList } from '@shared/ipc'
 import { Card, Field, RangeInput, Toggle, WeightedList } from './controls'
 import { useSettings } from './useSettings'
@@ -72,6 +78,30 @@ function General({ s, update }: { s: Settings; update: Update }): React.JSX.Elem
             <span>{Math.round(s.maxCrop * 100)} %</span>
           </div>
         </Field>
+        <Field
+          label="Randfüllung"
+          hint="Wie freie Ränder aufgefüllt werden. Pro Foto wird aus den aktiven Arten gewählt."
+        >
+          <WeightedList
+            value={s.fillModes}
+            labels={FILL_LABELS}
+            onChange={(v) => update({ fillModes: v })}
+          />
+        </Field>
+      </Card>
+      <Card title="Zurücksetzen">
+        <Field label="Alle Einstellungen" hint="Der Fotoordner bleibt erhalten.">
+          <button
+            onClick={() => {
+              if (window.confirm('Alle Einstellungen auf die Standardwerte zurücksetzen?')) {
+                update({ ...defaultSettings, photoFolder: s.photoFolder })
+              }
+            }}
+            className="rounded-md border border-red-400/30 bg-red-500/10 px-3 py-1.5 text-sm text-red-200 hover:bg-red-500/20"
+          >
+            Auf Standardwerte zurücksetzen
+          </button>
+        </Field>
       </Card>
     </>
   )
@@ -125,8 +155,16 @@ function Transitions({ s, update }: { s: Settings; update: Update }): React.JSX.
           unit="s"
         />
       </Field>
-      <Field label="Effekte" hint="Weitere Übergangseffekte folgen in Meilenstein 4.">
-        <span className="text-sm text-white/50">Weiches Überblenden</span>
+      <Field
+        label="Effekte"
+        hint="Pro Fotowechsel wird ein aktiver Effekt gewählt; der Regler bestimmt, wie oft (1–5)."
+      >
+        <WeightedList
+          value={s.transitions}
+          labels={TRANSITION_LABELS}
+          onChange={(v) => update({ transitions: v })}
+          columns={2}
+        />
       </Field>
     </Card>
   )
@@ -167,13 +205,22 @@ export function App(): React.JSX.Element {
       <main className="flex flex-1 flex-col overflow-hidden">
         <header className="flex items-center justify-between border-b border-white/10 px-8 py-4">
           <h2 className="text-xl font-medium">{active}</h2>
-          <button
-            onClick={() => void window.api.startShow()}
-            disabled={!settings?.photoFolder}
-            className="rounded-lg bg-indigo-500 px-5 py-2 text-sm font-medium text-white shadow hover:bg-indigo-400 disabled:cursor-not-allowed disabled:opacity-40"
-          >
-            ▶ Diashow starten
-          </button>
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => void window.api.startShow({ windowed: true })}
+              disabled={!settings?.photoFolder}
+              className="rounded-lg border border-white/15 bg-white/5 px-4 py-2 text-sm text-white/90 hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-40"
+            >
+              Vorschau
+            </button>
+            <button
+              onClick={() => void window.api.startShow()}
+              disabled={!settings?.photoFolder}
+              className="rounded-lg bg-indigo-500 px-5 py-2 text-sm font-medium text-white shadow hover:bg-indigo-400 disabled:cursor-not-allowed disabled:opacity-40"
+            >
+              ▶ Diashow starten
+            </button>
+          </div>
         </header>
         <section className="flex-1 overflow-auto p-8">
           {!settings ? null : active === 'Allgemein' ? (

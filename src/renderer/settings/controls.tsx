@@ -154,38 +154,57 @@ export function RangeInput({
 export function WeightedList<T extends string>({
   value,
   labels,
-  onChange
+  onChange,
+  columns = 1
 }: {
   value: WeightedOption<T>[]
   labels: Record<T, string>
   onChange: (v: WeightedOption<T>[]) => void
+  /** Zweispaltig für lange Listen, mit Knöpfen „alle an/aus“. */
+  columns?: 1 | 2
 }): React.JSX.Element {
   const update = (id: T, patch: Partial<WeightedOption<T>>): void =>
     onChange(value.map((o) => (o.id === id ? { ...o, ...patch } : o)))
+  const setAll = (enabled: boolean): void => onChange(value.map((o) => ({ ...o, enabled })))
+  const linkClass = 'text-xs text-indigo-300 hover:text-indigo-200'
   return (
-    <div className="flex flex-col gap-2">
-      {value.map((o) => (
-        <div key={o.id} className="flex items-center gap-4">
-          <div className="w-44">
-            <Toggle
-              checked={o.enabled}
-              label={labels[o.id]}
-              onChange={(v) => update(o.id, { enabled: v })}
-            />
-          </div>
-          <input
-            type="range"
-            min={1}
-            max={5}
-            step={1}
-            disabled={!o.enabled}
-            value={o.weight}
-            onChange={(e) => update(o.id, { weight: Number(e.target.value) })}
-            className="w-40 accent-indigo-500 disabled:opacity-30"
-          />
-          <span className="text-xs text-white/40">Häufigkeit {o.weight}</span>
+    <div className="flex flex-col gap-3">
+      {columns === 2 && (
+        <div className="flex gap-4">
+          <button className={linkClass} onClick={() => setAll(true)}>
+            alle an
+          </button>
+          <button className={linkClass} onClick={() => setAll(false)}>
+            alle aus
+          </button>
         </div>
-      ))}
+      )}
+      <div className={columns === 2 ? 'grid grid-cols-2 gap-x-8 gap-y-2' : 'flex flex-col gap-2'}>
+        {value.map((o) => (
+          <div key={o.id} className="flex items-center gap-4">
+            <div className={columns === 2 ? 'w-36' : 'w-44'}>
+              <Toggle
+                checked={o.enabled}
+                label={labels[o.id]}
+                onChange={(v) => update(o.id, { enabled: v })}
+              />
+            </div>
+            <input
+              type="range"
+              min={1}
+              max={5}
+              step={1}
+              disabled={!o.enabled}
+              value={o.weight}
+              onChange={(e) => update(o.id, { weight: Number(e.target.value) })}
+              className={`${columns === 2 ? 'w-20' : 'w-40'} accent-indigo-500 disabled:opacity-30`}
+            />
+            <span className="text-xs text-white/40">
+              {columns === 2 ? o.weight : `Häufigkeit ${o.weight}`}
+            </span>
+          </div>
+        ))}
+      </div>
     </div>
   )
 }

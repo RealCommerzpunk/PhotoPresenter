@@ -6,6 +6,8 @@ import type { Range, WeightedOption } from './random'
  * ungültigem Inhalt darauf zurück, damit eine beschädigte Datei nie den Start verhindert.
  */
 
+export const SETTINGS_VERSION = 1
+
 const rangeSchema = z.object({
   min: z.number(),
   max: z.number(),
@@ -21,22 +23,88 @@ function field<S extends z.ZodType>(schema: S, fallback: z.infer<S>) {
   >
 }
 
-export const MOTION_KINDS = ['zoomIn', 'zoomOut', 'pan'] as const
+// ---------- Bewegung ----------
+
+export const MOTION_KINDS = ['zoomIn', 'zoomOut', 'pan', 'journey'] as const
 export type MotionKind = (typeof MOTION_KINDS)[number]
 
 export const MOTION_LABELS: Record<MotionKind, string> = {
   zoomIn: 'Hineinzoomen',
   zoomOut: 'Herauszoomen',
-  pan: 'Schwenk'
+  pan: 'Schwenk',
+  journey: 'Kamerafahrt'
 }
 
 const defaultMotionKinds: WeightedOption<MotionKind>[] = [
   { id: 'zoomIn', enabled: true, weight: 2 },
   { id: 'zoomOut', enabled: true, weight: 1 },
-  { id: 'pan', enabled: true, weight: 1 }
+  { id: 'pan', enabled: true, weight: 1 },
+  { id: 'journey', enabled: true, weight: 2 }
 ]
 
+// ---------- Randfüllung ----------
+
+export const FILL_MODES = ['blur', 'ambient', 'mirror'] as const
+export type FillMode = (typeof FILL_MODES)[number]
+
+export const FILL_LABELS: Record<FillMode, string> = {
+  blur: 'Weichgezeichnet',
+  ambient: 'Farbverlauf',
+  mirror: 'Gespiegelt'
+}
+
+const defaultFillModes: WeightedOption<FillMode>[] = [
+  { id: 'blur', enabled: true, weight: 3 },
+  { id: 'ambient', enabled: true, weight: 1 },
+  { id: 'mirror', enabled: true, weight: 1 }
+]
+
+// ---------- Übergänge ----------
+
+export const TRANSITIONS = [
+  'fade',
+  'fadeBlack',
+  'wipe',
+  'push',
+  'circle',
+  'zoomBlur',
+  'dissolve',
+  'clock',
+  'pixelize',
+  'ripple',
+  'glow',
+  'blinds',
+  'swirl'
+] as const
+export type TransitionId = (typeof TRANSITIONS)[number]
+
+export const TRANSITION_LABELS: Record<TransitionId, string> = {
+  fade: 'Überblenden',
+  fadeBlack: 'Über Schwarz',
+  wipe: 'Wischen',
+  push: 'Schieben',
+  circle: 'Kreis öffnen',
+  zoomBlur: 'Zoom-Unschärfe',
+  dissolve: 'Auflösen',
+  clock: 'Uhrzeiger',
+  pixelize: 'Verpixeln',
+  ripple: 'Welle',
+  glow: 'Lichtblende',
+  blinds: 'Jalousie',
+  swirl: 'Strudel'
+}
+
+const defaultTransitions: WeightedOption<TransitionId>[] = TRANSITIONS.map((id) => ({
+  id,
+  enabled: true,
+  weight: id === 'fade' ? 4 : ['zoomBlur', 'dissolve', 'glow', 'wipe'].includes(id) ? 2 : 1
+}))
+
+// ---------- Schema ----------
+
 export const settingsSchema = z.object({
+  /** Version des Einstellungsformats, für spätere Umstellungen. */
+  version: field(z.number(), SETTINGS_VERSION),
   /** Fotoordner (absoluter Pfad), leer = noch nicht gewählt. */
   photoFolder: field(z.string(), ''),
   includeSubfolders: field(z.boolean(), true),
@@ -44,6 +112,7 @@ export const settingsSchema = z.object({
   displayDuration: field(rangeSchema, { min: 6, max: 10, mode: 'random' } satisfies Range),
   /** Überblenddauer in Sekunden. */
   transitionDuration: field(rangeSchema, { min: 1.2, max: 2.5, mode: 'random' } satisfies Range),
+  transitions: field(weightedSchema(TRANSITIONS), defaultTransitions),
   /** Bewegungsintensität: zusätzlicher Zoom, 0.15 = 15 %. */
   motionIntensity: field(rangeSchema, { min: 0.08, max: 0.2, mode: 'random' } satisfies Range),
   motionKinds: field(weightedSchema(MOTION_KINDS), defaultMotionKinds),
@@ -51,14 +120,36 @@ export const settingsSchema = z.object({
    * Bis zu diesem Anteil darf ein Foto beschnitten werden, um den Bildschirm ganz zu füllen.
    * Darüber wird eingepasst und der Rand aufgefüllt. 0.12 = 12 %.
    */
-  maxCrop: field(z.number().min(0).max(0.5), 0.12)
+  maxCrop: field(z.number().min(0).max(0.5), 0.12),
+  fillModes: field(weightedSchema(FILL_MODES), defaultFillModes)
 })
 
 export type Settings = z.infer<typeof settingsSchema>
 
+/**
+ * Gespeicherte Auswahllisten um neue Optionen ergänzen (aus den Standardwerten),
+ * Doppelte entfernen und in die Standardreihenfolge bringen. So bleiben die Werte
+ * des Nutzers erhalten, wenn eine neue Version Effekte hinzufügt.
+ */
+function completeWeighted<T extends string>(
+  saved: WeightedOption<T>[],
+  defaults: WeightedOption<T>[]
+): WeightedOption<T>[] {
+  const byId = new Map<T, WeightedOption<T>>()
+  for (const o of saved) if (!byId.has(o.id)) byId.set(o.id, o)
+  return defaults.map((d) => byId.get(d.id) ?? d)
+}
+
 export function parseSettings(raw: unknown): Settings {
   const input = raw && typeof raw === 'object' ? raw : {}
-  return settingsSchema.parse(input)
+  const s = settingsSchema.parse(input)
+  return {
+    ...s,
+    version: SETTINGS_VERSION,
+    transitions: completeWeighted(s.transitions, defaultTransitions),
+    motionKinds: completeWeighted(s.motionKinds, defaultMotionKinds),
+    fillModes: completeWeighted(s.fillModes, defaultFillModes)
+  }
 }
 
 export const defaultSettings: Settings = parseSettings({})

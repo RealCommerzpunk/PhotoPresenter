@@ -27,9 +27,10 @@ Plan und Meilensteine: `docs/PLAN.md` · Änderungen je Version: `CHANGELOG.md` 
 - `src/shared/`: `random.ts` (Range „von … bis“ + Zufall, gewichtete Auswahl, `seededRng`), `settings.ts` (zod-Schema; jedes Feld hat Standardwert und fällt bei ungültigem Inhalt darauf zurück)
 - `src/renderer/settings/`: React + Tailwind v4; Bausteine `RangeInput`, `WeightedList`, `Card`, `Field` in `controls.tsx`
 - `src/renderer/show/`: PixiJS v8
-  - `loader.ts`: Laden mit EXIF-Drehung, Verkleinern auf Bildschirm × 1,35, weiche Kanten, Randfüllung
+  - `loader.ts`: Laden mit EXIF-Drehung, Verkleinern auf Bildschirm × 1,35, weiche Kanten, Randfüllung (blur/ambient/mirror; mirror liegt deckungsgleich unter dem Foto)
   - `motion.ts`: reine Bewegungsmathematik (`fitImage`, `planShot`, `evaluateShot`); Versatz wird immer an den Bildrand begrenzt
   - `slide.ts`: ein Foto mit Bewegung über Einblenden + Stehen + Ausblenden
+  - `transitions/`: `engine.ts` rendert altes und neues Foto je Frame in RenderTextures und mischt per Mesh-Shader; `shaders.ts` enthält die Effekte (`vec4 transition(vec2 uv)` mit `fromColor`/`toColor`). Neuer Effekt = Eintrag in `TRANSITIONS` (`settings.ts`) + GLSL-Body
   - `playlist.ts`: Zufall ohne Wiederholung, Verlauf für ←
   - `main.ts`: Ablauf, Vorladen, Tasten
 
@@ -38,4 +39,5 @@ Plan und Meilensteine: `docs/PLAN.md` · Änderungen je Version: `CHANGELOG.md` 
 - Die Fenster laufen mit `sandbox: true`: Der Preload muss CommonJS sein, deshalb kein `"type": "module"` in `package.json` (ESLint-Konfiguration ist `.mjs`).
 - `import 'pixi.js/unsafe-eval'` muss vor PixiJS geladen werden, weil die CSP kein eval erlaubt.
 - Neue Datenquellen in der Show brauchen einen Eintrag in der CSP beider `index.html`.
+- Neue Auswahl-Optionen (Effekte, Bewegungsarten, Füllmodi) nur hinten an die Konstanten in `settings.ts` anhängen; `parseSettings` ergänzt sie in gespeicherten Einstellungen. Ein entfernter Eintrag setzt die ganze Liste auf Standard zurück.
 - npm 11 blockiert Install-Skripte; Freigaben stehen in `allowScripts` in `package.json`. Electron lädt seine Binärdatei beim ersten Start selbst.

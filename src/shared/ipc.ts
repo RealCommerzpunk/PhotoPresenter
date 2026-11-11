@@ -27,9 +27,14 @@ export interface PhotoList {
   error?: string
 }
 
+export interface ShowOptions {
+  /** Vorschau in einem normalen Fenster statt Vollbild. */
+  windowed?: boolean
+}
+
 /** API, die das Preload-Skript den Fenstern unter `window.api` bereitstellt. */
 export interface PhotoPresenterApi {
-  startShow(): Promise<void>
+  startShow(options?: ShowOptions): Promise<void>
   stopShow(): Promise<void>
   appVersion(): Promise<string>
   getSettings(): Promise<Settings>

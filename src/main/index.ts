@@ -1,7 +1,7 @@
 import { mkdir, writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
 import { app, BrowserWindow, dialog, ipcMain, powerSaveBlocker, screen, shell } from 'electron'
-import { IPC } from '@shared/ipc'
+import { IPC, type ShowOptions } from '@shared/ipc'
 import type { Settings } from '@shared/settings'
 import { handlePhotoProtocol, listPhotos, registerPhotoScheme } from './photos'
 import { loadSettings, updateSettings } from './settings'
@@ -52,16 +52,23 @@ function createSettingsWindow(): void {
   captureForTests(settingsWindow, 'settings')
 }
 
-function startShow(): void {
+function startShow(options: ShowOptions = {}): void {
   if (showWindow) {
     showWindow.focus()
     return
   }
   const display = screen.getDisplayNearestPoint(screen.getCursorScreenPoint())
+  const { width } = display.workAreaSize
+  const placement = options.windowed
+    ? {
+        width: Math.round(width * 0.55),
+        height: Math.round(width * 0.55 * (9 / 16)),
+        title: 'PhotoPresenter – Vorschau',
+        autoHideMenuBar: true
+      }
+    : { ...display.bounds, fullscreen: true, frame: false }
   showWindow = new BrowserWindow({
-    ...display.bounds,
-    fullscreen: true,
-    frame: false,
+    ...placement,
     backgroundColor: '#000000',
     show: false,
     webPreferences: {
@@ -129,7 +136,7 @@ function setSettings(patch: Partial<Settings>): Settings {
 
 app.whenReady().then(() => {
   handlePhotoProtocol()
-  ipcMain.handle(IPC.startShow, () => startShow())
+  ipcMain.handle(IPC.startShow, (_e, options?: ShowOptions) => startShow(options))
   ipcMain.handle(IPC.stopShow, () => stopShow())
   ipcMain.handle(IPC.appVersion, () => app.getVersion())
   ipcMain.handle(IPC.getSettings, () => loadSettings())
