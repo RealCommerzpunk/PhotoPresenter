@@ -20,6 +20,7 @@ Voraussetzung: Node.js ≥ 22.12.
 
 ```bash
 npm install
+npm run models       # Modelle für die Gesichtserkennung laden (einmalig, ca. 39 MB)
 npm run dev          # App mit Hot Reload starten
 npm run dev -- --show  # direkt die Diashow starten
 npm test             # Unit-Tests (Vitest)
@@ -65,5 +66,5 @@ resources/      Modelle und Fonts, die mit ausgeliefert werden
 3. ✅ Einstellungsfenster und Konfigurationsmodell
 4. ✅ Übergangs-Bibliothek, weitere Füllmodi, Kamerafahrten
 5. ✅ Texte: Editor, Stile, Animationen
-6. Gesichtserkennung und Fokus-Person
+6. ✅ Gesichtserkennung und Fokus-Person
 7. Feinschliff und erstes Release

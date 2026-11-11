@@ -109,6 +109,39 @@ const defaultTransitions: WeightedOption<TransitionId>[] = TRANSITIONS.map((id) 
   weight: id === 'fade' ? 4 : ['zoomBlur', 'dissolve', 'glow', 'wipe'].includes(id) ? 2 : 1
 }))
 
+// ---------- Fokus-Person ----------
+
+export const FOCUS_MODES = ['slowZoom', 'fastZoom', 'journey'] as const
+export type FocusMode = (typeof FOCUS_MODES)[number]
+
+export const FOCUS_LABELS: Record<FocusMode, string> = {
+  slowZoom: 'Langsam anzoomen',
+  fastZoom: 'Schnell anzoomen',
+  journey: 'Kamerafahrt zum Gesicht'
+}
+
+const defaultFocusModes: WeightedOption<FocusMode>[] = [
+  { id: 'slowZoom', enabled: true, weight: 2 },
+  { id: 'fastZoom', enabled: true, weight: 1 },
+  { id: 'journey', enabled: true, weight: 2 }
+]
+
+export const PAN_OTHERS = {
+  off: 'nie',
+  before: 'vorher über die anderen Gesichter',
+  after: 'nachher über die anderen Gesichter',
+  random: 'zufällig vorher, nachher oder nie'
+} as const
+export type PanOthers = keyof typeof PAN_OTHERS
+
+export const personSchema = z.object({
+  id: z.string().min(1),
+  name: z.string(),
+  /** Beispielgesichter: Foto (relativ), Nummer des Gesichts im Index, Merkmalsvektor (Base64). */
+  samples: z.array(z.object({ photo: z.string(), face: z.number().int().min(0), emb: z.string() }))
+})
+export type Person = z.infer<typeof personSchema>
+
 // ---------- Textstile für den Zufall ----------
 
 /** Alle Vorlagen aktiv, außer „Untertitel“ (passt nur über Fotos, nicht als Fülltext). */
@@ -150,15 +183,28 @@ export const settingsSchema = z.object({
   textDuration: field(rangeSchema, { min: 4, max: 6, mode: 'random' } satisfies Range),
   /** Stile, aus denen bei „Zufall“ gewählt wird (Vorlagen und eigene). */
   textStyles: field(looseWeighted, defaultTextStyles),
-  /** Texte und eigene Stile werden einzeln geprüft (siehe parseSettings). */
+  /** Fokus-Person: Gesicht in Fotos suchen und anzoomen. */
+  focusEnabled: field(z.boolean(), true),
+  focusPersonId: field(z.string(), ''),
+  /** Ab dieser Ähnlichkeit (Kosinus) gilt ein Gesicht als die Person. */
+  focusThreshold: field(z.number().min(0).max(1), 0.38),
+  focusModes: field(weightedSchema(FOCUS_MODES), defaultFocusModes),
+  /** Gesichtshöhe am Ende des Anzoomens, Anteil der Bildschirmhöhe. */
+  focusFaceSize: field(rangeSchema, { min: 0.28, max: 0.42, mode: 'random' } satisfies Range),
+  focusPanOthers: field(z.enum(['off', 'before', 'after', 'random']), 'random'),
+  /** Fotos mit der Person häufiger zeigen: 0 = normal, 1–3 = zusätzliche Male je Runde. */
+  focusBoost: field(z.number().int().min(0).max(3), 1),
+  /** Texte, eigene Stile und Personen werden einzeln geprüft (siehe parseSettings). */
   texts: z.unknown().optional(),
-  customStyles: z.unknown().optional()
+  customStyles: z.unknown().optional(),
+  persons: z.unknown().optional()
 })
 
 type ParsedSchema = z.infer<typeof settingsSchema>
-export type Settings = Omit<ParsedSchema, 'texts' | 'customStyles'> & {
+export type Settings = Omit<ParsedSchema, 'texts' | 'customStyles' | 'persons'> & {
   texts: TextItem[]
   customStyles: TextStyle[]
+  persons: Person[]
 }
 
 /**
@@ -191,6 +237,8 @@ export function parseSettings(raw: unknown): Settings {
     version: SETTINGS_VERSION,
     texts: parseList(s.texts, textItemSchema, defaultTexts),
     customStyles,
+    persons: parseList(s.persons, personSchema, []),
+    focusModes: completeWeighted(s.focusModes, defaultFocusModes),
     textStyles: completeWeighted(s.textStyles, styleDefaults),
     transitions: completeWeighted(s.transitions, defaultTransitions),
     motionKinds: completeWeighted(s.motionKinds, defaultMotionKinds),

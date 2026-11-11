@@ -6,3 +6,6 @@ dist/
 .vscode/*
 !.vscode/extensions.json
 *.tsbuildinfo
+
+# Modelle für die Gesichtserkennung (npm run models)
+resources/models/*.onnx

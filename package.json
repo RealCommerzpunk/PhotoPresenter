@@ -1,7 +1,7 @@
 {
   "name": "photopresenter",
   "productName": "PhotoPresenter",
-  "version": "0.5.0",
+  "version": "0.6.0",
   "description": "Zufällige Vollbild-Foto-Diashow mit Kamerafahrten, Übergängen, Gesichtsfokus und animierten Texten",
   "main": "./out/main/index.js",
   "author": "RealCommerzpunk",
@@ -15,9 +15,10 @@
     "lint": "eslint .",
     "format": "prettier --write .",
     "test": "vitest run",
-    "dist": "npm run build && electron-builder",
-    "dist:win": "npm run build && electron-builder --win",
-    "dist:linux": "npm run build && electron-builder --linux"
+    "dist": "npm run models && npm run build && electron-builder",
+    "dist:win": "npm run models && npm run build && electron-builder --win",
+    "dist:linux": "npm run models && npm run build && electron-builder --linux",
+    "models": "node scripts/fetch-models.mjs"
   },
   "dependencies": {
     "@fontsource/bebas-neue": "^5.3.0",
@@ -29,6 +30,7 @@
     "@fontsource/pacifico": "^5.3.0",
     "@fontsource/playfair-display": "^5.3.0",
     "gsap": "^3.15.1",
+    "onnxruntime-web": "^1.31.1",
     "pixi.js": "^8.23.0",
     "react": "^19.3.1",
     "react-dom": "^19.3.1",
@@ -54,6 +56,7 @@
     "vitest": "^5.1.0"
   },
   "allowScripts": {
-    "electron-winstaller": false
+    "electron-winstaller": false,
+    "protobufjs": false
   }
 }

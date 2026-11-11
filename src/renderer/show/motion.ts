@@ -1,5 +1,5 @@
 import type { Rng } from '@shared/random'
-import type { MotionKind } from '@shared/settings'
+import type { FocusMode, MotionKind } from '@shared/settings'
 
 export interface Size {
   w: number
@@ -18,7 +18,15 @@ export interface Shot {
   to: Keyframe
   /** Zwischenpunkt einer Kamerafahrt: Der Pfad schwingt durch ihn hindurch (Bézierkurve). */
   via?: Keyframe
+  /**
+   * Pfad aus mehreren Stationen (Zeitpunkt t ∈ [0,1] aufsteigend). Die Kamera fährt von
+   * Station zu Station und kommt an jeder kurz zur Ruhe. Hat Vorrang vor from/via/to.
+   */
+  path?: (Keyframe & { t: number })[]
 }
+
+/** Rahmen eines Gesichts relativ zur Bildgröße: x, y, Breite, Höhe (0–1). */
+export type FaceBox = [number, number, number, number]
 
 export interface Fit {
   /** Skalierung Bildpixel → Bildschirmpixel bei Zoom 1. */
@@ -123,6 +131,7 @@ export function evaluateShot(
   screen: Size,
   scale: number
 ): Keyframe {
+  if (shot.path && shot.path.length > 1) return evaluatePath(shot.path, t, img, screen, scale)
   const e = ease(t)
   const { from, to, via } = shot
   const blend = (a: number, b: number, c?: number): number =>
@@ -135,5 +144,165 @@ export function evaluateShot(
     zoom,
     x: Math.max(-limit.w, Math.min(limit.w, x)),
     y: Math.max(-limit.h, Math.min(limit.h, y))
+  }
+}
+
+function clampToImage(k: Keyframe, img: Size, screen: Size, scale: number): Keyframe {
+  const limit = maxOffset(img, screen, scale, k.zoom)
+  return {
+    zoom: k.zoom,
+    x: Math.max(-limit.w, Math.min(limit.w, k.x)),
+    y: Math.max(-limit.h, Math.min(limit.h, k.y))
+  }
+}
+
+function evaluatePath(
+  path: (Keyframe & { t: number })[],
+  t: number,
+  img: Size,
+  screen: Size,
+  scale: number
+): Keyframe {
+  const c = Math.min(1, Math.max(0, t))
+  let i = 0
+  while (i < path.length - 2 && c > path[i + 1].t) i++
+  const a = path[i]
+  const b = path[i + 1]
+  const span = Math.max(1e-6, b.t - a.t)
+  const u = Math.min(1, Math.max(0, (c - a.t) / span))
+  // Jede Teilstrecke beginnt und endet weich: Die Kamera verweilt an den Stationen.
+  const e = u * u * (3 - 2 * u)
+  return clampToImage(
+    {
+      zoom: a.zoom + (b.zoom - a.zoom) * e,
+      x: a.x + (b.x - a.x) * e,
+      y: a.y + (b.y - a.y) * e
+    },
+    img,
+    screen,
+    scale
+  )
+}
+
+/** Höchster Zoom auf ein Gesicht, damit es nicht übermäßig vergrößert wird. */
+export const MAX_FACE_ZOOM = 4
+
+/** Zoom, bei dem das Gesicht `faceSize` der Bildschirmhöhe einnimmt (mindestens 1). */
+export function faceZoom(
+  face: FaceBox,
+  img: Size,
+  screen: Size,
+  scale: number,
+  faceSize: number
+): number {
+  const faceHeight = face[3] * img.h * scale
+  if (faceHeight <= 0) return 1
+  return Math.min(MAX_FACE_ZOOM, Math.max(1, (faceSize * screen.h) / faceHeight))
+}
+
+/** Kamera, die das Gesicht bei Zoom `zoom` in die Bildschirmmitte holt (soweit möglich). */
+export function faceKey(face: FaceBox, img: Size, scale: number, zoom: number): Keyframe {
+  const cx = face[0] + face[2] / 2
+  // Etwas oberhalb der Gesichtsmitte zielen: Augenpartie wirkt natürlicher als Mund.
+  const cy = face[1] + face[3] * 0.45
+  return {
+    zoom,
+    x: -(cx - 0.5) * img.w * scale * zoom,
+    y: -(cy - 0.5) * img.h * scale * zoom
+  }
+}
+
+export interface FocusPlan {
+  mode: FocusMode
+  /** Gesichtshöhe am Ende, Anteil der Bildschirmhöhe. */
+  faceSize: number
+  /** Über die anderen Gesichter schwenken: davor, danach oder gar nicht. */
+  others: 'off' | 'before' | 'after'
+}
+
+/**
+ * Kamerabewegung zur Fokus-Person: anzoomen (langsam, schnell, als Fahrt), optional
+ * vorher oder nachher über die anderen Gesichter (höchstens drei, von links nach rechts).
+ */
+export function planFocusShot(
+  img: Size,
+  screen: Size,
+  scale: number,
+  focus: FaceBox,
+  otherFaces: FaceBox[],
+  plan: FocusPlan,
+  rng: Rng = Math.random
+): Shot {
+  const zFocus = faceZoom(focus, img, screen, scale, plan.faceSize)
+  const target = faceKey(focus, img, scale, zFocus)
+  const wide: Keyframe = { zoom: 1, x: 0, y: 0 }
+  const others = otherFaces
+    .slice()
+    .sort((a, b) => a[0] - b[0])
+    .slice(0, 3)
+    .map((f) =>
+      faceKey(f, img, scale, Math.max(1, faceZoom(f, img, screen, scale, plan.faceSize) * 0.8))
+    )
+
+  if (plan.others !== 'off' && others.length) {
+    const stations: Keyframe[] =
+      plan.others === 'before' ? [wide, ...others, target] : [wide, target, ...others]
+    // Die Fokus-Person bekommt die längste Verweildauer.
+    const weights: number[] = stations.map((k) => (k === target ? 2 : 1))
+    weights[0] = 0.6
+    const total = weights.reduce((a, b) => a + b, 0)
+    let acc = 0
+    const path = stations.map((k, i) => {
+      const key = { ...k, t: acc / total }
+      acc += weights[i]
+      return key
+    })
+    if (plan.others === 'before') {
+      // Am Ende noch etwas auf dem Gesicht ruhen und leicht nachzoomen.
+      path[path.length - 1].t = Math.min(0.82, path[path.length - 1].t)
+      path.push({
+        ...target,
+        zoom: target.zoom * 1.04,
+        x: target.x * 1.04,
+        y: target.y * 1.04,
+        t: 1
+      })
+    } else {
+      path[path.length - 1].t = 1
+    }
+    return { from: path[0], to: path[path.length - 1], path }
+  }
+
+  switch (plan.mode) {
+    case 'fastZoom':
+      // Kurz das ganze Bild, dann zügig aufs Gesicht, dort langsam weiter.
+      return {
+        from: wide,
+        to: target,
+        path: [
+          { ...wide, t: 0 },
+          { ...wide, zoom: 1.02, t: 0.12 },
+          { ...target, t: 0.42 },
+          { ...target, zoom: target.zoom * 1.06, x: target.x * 1.06, y: target.y * 1.06, t: 1 }
+        ]
+      }
+    case 'journey': {
+      // Fahrt von einer anderen Bildstelle in einem Bogen zum Gesicht.
+      const zStart = 1 + (zFocus - 1) * 0.35
+      const lim = maxOffset(img, screen, scale, zStart)
+      const from: Keyframe = {
+        zoom: zStart,
+        x: -Math.sign(target.x || (rng() < 0.5 ? 1 : -1)) * lim.w * (0.5 + rng() * 0.4),
+        y: -Math.sign(target.y || (rng() < 0.5 ? 1 : -1)) * lim.h * (0.3 + rng() * 0.4)
+      }
+      const via: Keyframe = {
+        zoom: 1 + (zFocus - 1) * 0.6,
+        x: (from.x + target.x) / 2 + (rng() - 0.5) * screen.w * 0.3,
+        y: (from.y + target.y) / 2 + (rng() - 0.5) * screen.h * 0.3
+      }
+      return { from, via, to: target }
+    }
+    default:
+      return { from: wide, to: target }
   }
 }

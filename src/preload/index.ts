@@ -1,6 +1,14 @@
 import { contextBridge, ipcRenderer, type IpcRendererEvent } from 'electron'
+import type { FaceIndexStatus } from '@shared/faces'
 import { IPC, type PhotoPresenterApi } from '@shared/ipc'
 import type { Settings } from '@shared/settings'
+
+/** Abonniert ein Ereignis aus dem Main-Prozess; liefert eine Abmeldefunktion. */
+function subscribe<T>(channel: string, callback: (value: T) => void): () => void {
+  const listener = (_e: IpcRendererEvent, value: T): void => callback(value)
+  ipcRenderer.on(channel, listener)
+  return () => ipcRenderer.removeListener(channel, listener)
+}
 
 const api: PhotoPresenterApi = {
   startShow: (options) => ipcRenderer.invoke(IPC.startShow, options),
@@ -8,13 +16,23 @@ const api: PhotoPresenterApi = {
   appVersion: () => ipcRenderer.invoke(IPC.appVersion),
   getSettings: () => ipcRenderer.invoke(IPC.getSettings),
   setSettings: (patch) => ipcRenderer.invoke(IPC.setSettings, patch),
-  onSettingsChanged: (callback) => {
-    const listener = (_e: IpcRendererEvent, s: Settings): void => callback(s)
-    ipcRenderer.on(IPC.settingsChanged, listener)
-    return () => ipcRenderer.removeListener(IPC.settingsChanged, listener)
-  },
+  onSettingsChanged: (callback) => subscribe<Settings>(IPC.settingsChanged, callback),
   pickFolder: () => ipcRenderer.invoke(IPC.pickFolder),
-  listPhotos: () => ipcRenderer.invoke(IPC.listPhotos)
+  listPhotos: () => ipcRenderer.invoke(IPC.listPhotos),
+
+  faceModel: (model) => ipcRenderer.invoke(IPC.faceModel, model),
+  faceJob: () => ipcRenderer.invoke(IPC.faceJob),
+  faceResult: (name, result, error) => ipcRenderer.invoke(IPC.faceResult, name, result, error),
+  onFaceWake: (callback) => subscribe<void>(IPC.faceWake, callback),
+
+  faceStatus: () => ipcRenderer.invoke(IPC.faceStatus),
+  onFaceStatus: (callback) => subscribe<FaceIndexStatus>(IPC.faceStatusChanged, callback),
+  getFaces: (name) => ipcRenderer.invoke(IPC.getFaces, name),
+  listFaces: (personId) => ipcRenderer.invoke(IPC.listFaces, personId),
+  toggleSample: (personId, photo, face) =>
+    ipcRenderer.invoke(IPC.toggleSample, personId, photo, face),
+  focusPhotos: () => ipcRenderer.invoke(IPC.focusPhotos),
+  reindexFaces: () => ipcRenderer.invoke(IPC.reindexFaces)
 }
 
 contextBridge.exposeInMainWorld('api', api)

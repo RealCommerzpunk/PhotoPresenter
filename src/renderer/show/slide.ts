@@ -4,12 +4,27 @@ import type { Settings } from '@shared/settings'
 import type { TextItem, TextStyle } from '@shared/text'
 import { TextOverlay } from '../text/overlay'
 import type { LoadedPhoto } from './loader'
-import { evaluateShot, planShot, type Shot, type Size } from './motion'
+import {
+  evaluateShot,
+  planFocusShot,
+  planShot,
+  type FaceBox,
+  type FocusPlan,
+  type Shot,
+  type Size
+} from './motion'
 import { OverlayTrack, TimedScene, type Scene } from './scene'
 
 export interface OverlayText {
   item: TextItem
   style: TextStyle
+}
+
+/** Fokus-Person auf diesem Foto: ihr Gesicht, die übrigen Gesichter und der Plan. */
+export interface FocusTarget {
+  face: FaceBox
+  others: FaceBox[]
+  plan: FocusPlan
 }
 
 /** Ein Foto auf der Bühne: Randfüllung, Foto, Bewegung und ggf. Texte darüber. */
@@ -26,7 +41,8 @@ export class Slide extends TimedScene implements Scene {
     settings: Settings,
     fadeIn: number,
     texts: OverlayText[] = [],
-    textHost?: HTMLElement
+    textHost?: HTMLElement,
+    readonly focus?: FocusTarget
   ) {
     super(fadeIn)
     this.display = pick(settings.displayDuration)
@@ -41,14 +57,28 @@ export class Slide extends TimedScene implements Scene {
 
     this.view.addChild(this.backdrop, this.photo)
 
-    const kind = pickWeighted(settings.motionKinds) ?? 'zoomIn'
-    this.shot = planShot(
-      loaded.size,
-      screen,
-      loaded.fit.scale,
-      kind,
-      pick(settings.motionIntensity)
-    )
+    if (focus) {
+      this.shot = planFocusShot(
+        loaded.size,
+        screen,
+        loaded.fit.scale,
+        focus.face,
+        focus.others,
+        focus.plan
+      )
+      // Genug Zeit, damit die Kamera an jedem Gesicht kurz verweilen kann.
+      const stations = this.shot.path?.length ?? 2
+      this.display = Math.max(this.display, 5, stations * 2)
+    } else {
+      const kind = pickWeighted(settings.motionKinds) ?? 'zoomIn'
+      this.shot = planShot(
+        loaded.size,
+        screen,
+        loaded.fit.scale,
+        kind,
+        pick(settings.motionIntensity)
+      )
+    }
 
     // Texte über dem Foto nacheinander; die Standzeit wird bei Bedarf verlängert.
     if (textHost && texts.length) {
@@ -66,7 +96,7 @@ export class Slide extends TimedScene implements Scene {
   }
 
   get label(): string {
-    return this.loaded.name
+    return this.focus ? `${this.loaded.name} · Fokus-Person` : this.loaded.name
   }
 
   get photoName(): string {

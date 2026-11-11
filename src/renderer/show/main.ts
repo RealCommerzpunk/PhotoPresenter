@@ -2,17 +2,17 @@
 import 'pixi.js/unsafe-eval'
 import { Application, Container } from 'pixi.js'
 import { gsap } from 'gsap'
-import { pickWeighted } from '@shared/random'
+import { pick, pickWeighted } from '@shared/random'
 import type { Settings } from '@shared/settings'
 import type { TextStyle } from '@shared/text'
 import { loadFont } from '../text/fonts'
 import { resolveStyle } from '../text/resolve'
 import { loadPhoto, loadSoft, type LoadedPhoto } from './loader'
-import type { Size } from './motion'
+import { faceZoom, fitImage, type FaceBox, type Size } from './motion'
 import { Playlist } from './playlist'
 import type { Scene } from './scene'
 import { Sequencer, type Entry } from './sequencer'
-import { Slide, type OverlayText } from './slide'
+import { Slide, type FocusTarget, type OverlayText } from './slide'
 import { TextSlide } from './textSlide'
 import { TransitionEngine } from './transitions/engine'
 
@@ -27,7 +27,7 @@ const textHost = document.getElementById('texts')!
 
 /** Vorbereiteter nächster Eintrag: alles geladen, kann sofort gezeigt werden. */
 type Prepared =
-  | { kind: 'photo'; photo: LoadedPhoto; texts: OverlayText[] }
+  | { kind: 'photo'; photo: LoadedPhoto; texts: OverlayText[]; focus?: FocusTarget }
   | {
       kind: 'text'
       entry: Extract<Entry, { kind: 'text' }>
@@ -111,29 +111,64 @@ async function main(): Promise<void> {
     }
   }
 
+  /** Fokusplan für ein Foto, wenn die Fokus-Person darauf erkannt wurde. */
+  async function focusFor(name: string): Promise<{ target: FocusTarget; zoom: number } | null> {
+    if (!settings.focusEnabled || !settings.focusPersonId) return null
+    const info = await window.api.getFaces(name).catch(() => null)
+    const focusFace = info?.faces.find((f) => f.focus)
+    if (!info || !focusFace) return null
+    const others: FaceBox[] = info.faces.filter((f) => f !== focusFace).map((f) => f.box)
+    const choice = settings.focusPanOthers
+    const pan =
+      choice === 'random'
+        ? (['off', 'before', 'after'] as const)[Math.floor(Math.random() * 3)]
+        : choice
+    const plan = {
+      mode: pickWeighted(settings.focusModes) ?? 'slowZoom',
+      faceSize: pick(settings.focusFaceSize),
+      others: pan
+    }
+    const img = { w: info.w, h: info.h }
+    const { scale } = fitImage(img, screen(), settings.maxCrop)
+    return {
+      target: { face: focusFace.box, others, plan },
+      zoom: faceZoom(focusFace.box, img, screen(), scale, plan.faceSize)
+    }
+  }
+
   async function prepare(entry: Entry): Promise<Prepared> {
     if (entry.kind === 'photo') {
       const fill = pickWeighted(settings.fillModes) ?? 'blur'
+      const focus = await focusFor(entry.name)
       const photo = await loadPhoto(
         entry.name,
         screen(),
         app.renderer.resolution,
         settings.maxCrop,
-        fill
+        fill,
+        focus?.zoom ?? 1
       )
       remember(entry.name, photo.soft)
       const texts = entry.overlays.map((item) => ({ item, style: resolveStyle(item, settings) }))
       await Promise.all(texts.map((t) => loadFont(t.style)))
-      return { kind: 'photo', photo, texts }
+      return { kind: 'photo', photo, texts, focus: focus?.target }
     }
     const style = resolveStyle(entry.item, settings)
     const [background] = await Promise.all([softFor(entry.ref), loadFont(style)])
     return { kind: 'text', entry, style, background }
   }
 
+  /** Fotos mit der Fokus-Person häufiger zeigen. */
+  async function refreshFocusPhotos(): Promise<void> {
+    const names =
+      settings.focusEnabled && settings.focusBoost > 0 ? await window.api.focusPhotos() : []
+    playlist.setBoost(names, settings.focusBoost)
+  }
+
   async function reloadPhotos(): Promise<void> {
     const list = await window.api.listPhotos()
     playlist.setItems(list.files)
+    void refreshFocusPhotos()
     const hasFillers = settings.texts.some((t) => t.enabled && t.kind === 'filler')
     if (list.error) showMessage(`Fotoordner nicht lesbar:\n${list.error}`)
     else if (!list.folder && !hasFillers)
@@ -173,7 +208,7 @@ async function main(): Promise<void> {
   function createScene(p: Prepared, fade: number): Scene {
     if (p.kind === 'photo') {
       lastPhoto = p.photo.name
-      return new Slide(p.photo, screen(), settings, fade, p.texts, textHost)
+      return new Slide(p.photo, screen(), settings, fade, p.texts, textHost, p.focus)
     }
     return new TextSlide(p.entry.item, p.style, p.background, settings, fade, textHost)
   }
@@ -283,11 +318,15 @@ async function main(): Promise<void> {
       next.includeSubfolders !== settings.includeSubfolders
     settings = next
     sequencer.setTexts(settings.texts, settings.textFillerEvery)
+    void refreshFocusPhotos()
     if (folderChanged) {
       discardReady()
       void reloadPhotos().then(() => prefetch())
     }
   })
+
+  // Während die Analyse noch läuft, kommen neue Treffer hinzu.
+  window.setInterval(() => void refreshFocusPhotos(), 60_000)
 
   await reloadPhotos()
   prefetch()

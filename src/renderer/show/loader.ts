@@ -223,7 +223,9 @@ export async function loadPhoto(
   screen: Size,
   pixelRatio: number,
   maxCrop: number,
-  fill: FillMode
+  fill: FillMode,
+  /** Größter geplanter Zoom (z. B. aufs Gesicht); bestimmt die nötige Auflösung. */
+  maxZoom = 1
 ): Promise<LoadedPhoto> {
   const original = await fetchBitmap(name)
 
@@ -232,7 +234,9 @@ export async function loadPhoto(
   const horizontalGaps = original.width / original.height < screen.w / screen.h
   const physW = screen.w * pixelRatio
   const physH = screen.h * pixelRatio
-  const needed = Math.max(physW / original.width, physH / original.height) * ZOOM_HEADROOM
+  const needed =
+    Math.max(physW / original.width, physH / original.height) *
+    Math.max(ZOOM_HEADROOM, maxZoom * 1.08)
   const scale = Math.min(1, needed)
   const tw = Math.max(1, Math.round(original.width * scale))
   const th = Math.max(1, Math.round(original.height * scale))

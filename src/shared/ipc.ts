@@ -1,3 +1,4 @@
+import type { FaceIndexStatus, FaceInfo, PhotoFaces } from './faces'
 import type { Settings } from './settings'
 
 /** Kanalnamen für die Kommunikation zwischen Main-Prozess und Fenstern. */
@@ -9,7 +10,18 @@ export const IPC = {
   setSettings: 'settings:set',
   settingsChanged: 'settings:changed',
   pickFolder: 'photos:pickFolder',
-  listPhotos: 'photos:list'
+  listPhotos: 'photos:list',
+  faceModel: 'faces:model',
+  faceJob: 'faces:job',
+  faceResult: 'faces:result',
+  faceWake: 'faces:wake',
+  faceStatus: 'faces:status',
+  faceStatusChanged: 'faces:statusChanged',
+  getFaces: 'faces:get',
+  listFaces: 'faces:list',
+  toggleSample: 'faces:toggleSample',
+  focusPhotos: 'faces:focusPhotos',
+  reindexFaces: 'faces:reindex'
 } as const
 
 /** Schema des Protokolls, über das die Show Fotos aus dem gewählten Ordner lädt. */
@@ -32,6 +44,21 @@ export interface ShowOptions {
   windowed?: boolean
 }
 
+/** Ein Gesicht in der Galerie der Personen-Seite. */
+export interface FaceListItem {
+  photo: string
+  face: number
+  box: [number, number, number, number]
+  w: number
+  h: number
+  /** Ähnlichkeit zur gewählten Person (nur wenn sie Beispiele hat). */
+  similarity?: number
+  /** Ist ein Beispielgesicht der gewählten Person. */
+  sample: boolean
+}
+
+export type FaceModel = 'yunet' | 'sface'
+
 /** API, die das Preload-Skript den Fenstern unter `window.api` bereitstellt. */
 export interface PhotoPresenterApi {
   startShow(options?: ShowOptions): Promise<void>
@@ -42,4 +69,19 @@ export interface PhotoPresenterApi {
   onSettingsChanged(callback: (settings: Settings) => void): () => void
   pickFolder(): Promise<string | null>
   listPhotos(): Promise<PhotoList>
+
+  // Gesichtserkennung: Analyse-Fenster
+  faceModel(model: FaceModel): Promise<Uint8Array>
+  faceJob(): Promise<{ name: string } | null>
+  faceResult(name: string, result: PhotoFaces | null, error?: string): Promise<void>
+  onFaceWake(callback: () => void): () => void
+
+  // Gesichtserkennung: Show und Einstellungen
+  faceStatus(): Promise<FaceIndexStatus>
+  onFaceStatus(callback: (status: FaceIndexStatus) => void): () => void
+  getFaces(name: string): Promise<FaceInfo | null>
+  listFaces(personId?: string): Promise<FaceListItem[]>
+  toggleSample(personId: string, photo: string, face: number): Promise<void>
+  focusPhotos(): Promise<string[]>
+  reindexFaces(): Promise<void>
 }

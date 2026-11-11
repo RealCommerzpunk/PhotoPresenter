@@ -8,6 +8,7 @@ import {
 } from '@shared/settings'
 import type { PhotoList } from '@shared/ipc'
 import { Card, Field, RangeInput, Toggle, WeightedList } from './controls'
+import { PersonsPage } from './PersonsPage'
 import { StylesPage } from './StylesPage'
 import { TextsPage } from './TextsPage'
 import { useSettings } from './useSettings'
@@ -235,6 +236,8 @@ export function App(): React.JSX.Element {
             <Motion s={settings} update={update} />
           ) : active === 'Übergänge' ? (
             <Transitions s={settings} update={update} />
+          ) : active === 'Personen' ? (
+            <PersonsPage s={settings} update={update} />
           ) : active === 'Texte' ? (
             <TextsPage s={settings} update={update} />
           ) : active === 'Stile' ? (

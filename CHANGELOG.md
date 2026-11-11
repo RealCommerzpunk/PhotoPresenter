@@ -2,6 +2,19 @@
 
 Alle Änderungen je Version. Format: neueste Version oben, Datum im Format JJJJ-MM-TT.
 
+## 0.6.0 – 2026-11-11
+
+Gesichtserkennung und Fokus-Person (Meilenstein 6).
+
+- Alle Fotos werden im Hintergrund nach Gesichtern durchsucht (YuNet) und jedes Gesicht wird wiedererkennbar gespeichert (SFace), komplett lokal ohne Internet; rund 150 ms pro Foto, neue und geänderte Fotos werden automatisch nachgezogen, während der Show gedrosselt
+- Seite „Personen“: Analysefortschritt, Personen anlegen, Gesichter per Klick als Beispiele hinterlegen; die Galerie sortiert nach Ähnlichkeit und markiert Treffer
+- Fokus-Person in der Show: langsam anzoomen, schnell anzoomen oder Kamerafahrt zum Gesicht; Gesichtsgröße am Ende einstellbar
+- Bei Gruppenfotos optional vorher oder nachher über die anderen Gesichter schwenken
+- Fotos mit der Fokus-Person können häufiger gezeigt werden (×2 bis ×4), nie direkt hintereinander
+- Starkes Zoomen aufs Gesicht lädt das Foto entsprechend höher aufgelöst
+- Erkennungsschwelle einstellbar; Info-Einblendung (Taste I) zeigt „Fokus-Person“
+- Modelle: `npm run models` lädt sie aus dem OpenCV Model Zoo (mit Prüfsumme); der Installer-Bau erledigt das automatisch
+
 ## 0.5.0 – 2026-11-11
 
 Texte (Meilenstein 5).

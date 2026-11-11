@@ -1,8 +1,10 @@
 import { mkdir, writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
 import { app, BrowserWindow, dialog, ipcMain, powerSaveBlocker, screen, shell } from 'electron'
-import { IPC, type ShowOptions } from '@shared/ipc'
+import type { PhotoFaces } from '@shared/faces'
+import { IPC, type FaceModel, type ShowOptions } from '@shared/ipc'
 import type { Settings } from '@shared/settings'
+import { FaceStore } from './faces'
 import { handlePhotoProtocol, listPhotos, registerPhotoScheme } from './photos'
 import { loadSettings, updateSettings } from './settings'
 
@@ -10,15 +12,26 @@ registerPhotoScheme()
 
 let settingsWindow: BrowserWindow | null = null
 let showWindow: BrowserWindow | null = null
+let indexerWindow: BrowserWindow | null = null
 let powerBlockId: number | null = null
+let faceStore: FaceStore
+
+/** Sendet an alle sichtbaren Fenster (nicht an das Analyse-Fenster). */
+function broadcast(channel: string, value: unknown): void {
+  for (const win of [settingsWindow, showWindow]) {
+    if (win && !win.isDestroyed()) win.webContents.send(channel, value)
+  }
+}
 
 const preload = join(__dirname, '../preload/index.js')
 
-function loadPage(win: BrowserWindow, page: 'settings' | 'show', hash = ''): void {
+function loadPage(win: BrowserWindow, page: 'settings' | 'show' | 'indexer', hash = ''): void {
   if (!app.isPackaged) {
     // Warnungen und Fehler der Fenster im Terminal zeigen.
     win.webContents.on('console-message', ({ level, message }) => {
-      if (level === 'warning' || level === 'error') console.log(`[${page}:${level}] ${message}`)
+      const log =
+        level === 'warning' || level === 'error' || (page === 'indexer' && level === 'info')
+      if (log) console.log(`[${page}:${level}] ${message}`)
     })
   }
   const devUrl = process.env['ELECTRON_RENDERER_URL']
@@ -111,6 +124,16 @@ function captureForTests(win: BrowserWindow, prefix: string): void {
   }, 2000)
 }
 
+/** Unsichtbares Fenster, das die Fotos im Hintergrund nach Gesichtern durchsucht. */
+function createIndexerWindow(): void {
+  indexerWindow = new BrowserWindow({
+    show: false,
+    webPreferences: { preload, sandbox: true, contextIsolation: true, backgroundThrottling: false }
+  })
+  indexerWindow.on('closed', () => (indexerWindow = null))
+  loadPage(indexerWindow, 'indexer')
+}
+
 function stopShow(): void {
   showWindow?.close()
 }
@@ -129,9 +152,11 @@ async function pickFolder(): Promise<string | null> {
 }
 
 function setSettings(patch: Partial<Settings>): Settings {
+  const prev = loadSettings()
   const next = updateSettings(patch)
-  for (const win of BrowserWindow.getAllWindows()) {
-    win.webContents.send(IPC.settingsChanged, next)
+  broadcast(IPC.settingsChanged, next)
+  if (next.photoFolder !== prev.photoFolder || next.includeSubfolders !== prev.includeSubfolders) {
+    void faceStore.rescan()
   }
   return next
 }
@@ -146,6 +171,28 @@ app.whenReady().then(() => {
   ipcMain.handle(IPC.pickFolder, () => pickFolder())
   ipcMain.handle(IPC.listPhotos, () => listPhotos())
 
+  faceStore = new FaceStore(
+    (status) => broadcast(IPC.faceStatusChanged, status),
+    () => indexerWindow?.webContents.send(IPC.faceWake),
+    () => showWindow !== null,
+    (patch) => setSettings(patch)
+  )
+  ipcMain.handle(IPC.faceModel, (_e, model: FaceModel) => faceStore.model(model))
+  ipcMain.handle(IPC.faceJob, () => faceStore.nextJob())
+  ipcMain.handle(IPC.faceResult, (_e, name: string, result: PhotoFaces | null, error?: string) =>
+    faceStore.storeResult(name, result, error)
+  )
+  ipcMain.handle(IPC.faceStatus, () => faceStore.status())
+  ipcMain.handle(IPC.getFaces, (_e, name: string) => faceStore.getFaces(name))
+  ipcMain.handle(IPC.listFaces, (_e, personId?: string) => faceStore.listFaces(personId))
+  ipcMain.handle(IPC.toggleSample, (_e, personId: string, photo: string, face: number) =>
+    faceStore.toggleSample(personId, photo, face)
+  )
+  ipcMain.handle(IPC.focusPhotos, () => faceStore.focusPhotos())
+  ipcMain.handle(IPC.reindexFaces, () => faceStore.reindex())
+  createIndexerWindow()
+  void faceStore.rescan()
+
   // `--show` startet direkt die Diashow (z. B. für Autostart als Bilderrahmen).
   if (process.argv.includes('--show')) startShow()
   else createSettingsWindow()
@@ -154,6 +201,8 @@ app.whenReady().then(() => {
     if (BrowserWindow.getAllWindows().length === 0) createSettingsWindow()
   })
 })
+
+app.on('before-quit', () => faceStore?.flush())
 
 app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') app.quit()

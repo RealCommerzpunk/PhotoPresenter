@@ -107,7 +107,7 @@ Tastatur/Maus: Esc beendet, Leertaste pausiert, ←/→ springt, I zeigt Info (D
 3. ✅ **Settings-UI & Konfig-Modell**: zod-Schema, Range-/Gewichtungs-Controls, Live-Vorschau-Fenster, Persistenz.
 4. ✅ **Übergangs-Bibliothek & weitere Füllmodi**: 10+ Shader-Übergänge, Ambient-/Edge-Fill, Kamerafahrten.
 5. ✅ **Texte**: Datenmodell, Editor, Stil-Presets, GSAP-Animationen, Fülltexte, Bildtexte vor/nach/über.
-6. **Gesichtserkennung**: Indexer-Prozess, YuNet+SFace, Personen-Anlernen-UI, Matching, Fokus-Modi, Schwenk über andere Gesichter.
+6. ✅ **Gesichtserkennung**: Indexer-Prozess, YuNet+SFace, Personen-Anlernen-UI, Matching, Fokus-Modi, Schwenk über andere Gesichter.
 7. **Feinschliff & Release**: Performance (Vorladen/Decoding im Worker, Texturspeicher freigeben), Installer, erster Release `v0.1.0`.
 
 Jeder Meilenstein ergibt eine lauffähige Version und einen eigenen Commit/PR.
@@ -119,6 +119,13 @@ Jeder Meilenstein ergibt eine lauffähige Version und einen eigenen Commit/PR.
 - Gesichtserkennung: Testset mit 3–5 bekannten Personen, Treffer- und Fehlerquote bei Standard-Schwelle protokollieren.
 - Installer lokal bauen und manuell auf Windows 11 und einem Linux (z. B. Ubuntu/Mint) testen.
 
+## Abweichungen vom ursprünglichen Plan
+
+- **Gesichtserkennung mit onnxruntime-web (WebAssembly) statt onnxruntime-node**, in einem unsichtbaren Analyse-Fenster: keine nativen Module, Windows und Linux identisch, Fotos werden genau wie in der Show dekodiert (EXIF-Drehung), daher passen die Gesichtspositionen garantiert.
+- **Gesichtsindex als JSON-Datei** (`faces.json` im Benutzerordner) statt SQLite: reicht für < 5.000 Fotos, kein natives Modul. sharp und better-sqlite3 werden nicht gebraucht.
+- Modelle liegen nicht im Git-Repo (SFace ≈ 39 MB), sondern werden per `npm run models` geladen und mit dem Installer ausgeliefert.
+- Beispielgesichter werden aus erkannten Gesichtern gewählt; einen Rahmen von Hand ziehen (für nicht erkannte Gesichter) steht unter „später“.
+
 ## Offene Punkte für später (nicht im ersten Wurf)
 
-HEIC/RAW-Support, Videos in der Show, Hintergrundmusik, Web-Fernbedienung, mehrere Fokus-Personen.
+HEIC/RAW-Support, Videos in der Show, Hintergrundmusik, Web-Fernbedienung, mehrere Fokus-Personen, Gesichtsrahmen von Hand ziehen, Erkennung kleiner Gesichter in großen Gruppenfotos (Kacheln statt eines 640er-Durchgangs), Texte über Fotos neben statt unter Gesichter setzen.
