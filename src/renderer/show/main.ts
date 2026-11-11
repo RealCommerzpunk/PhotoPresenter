@@ -1,6 +1,6 @@
 // Ohne eval auskommen, damit die strenge Content-Security-Policy greift.
 import 'pixi.js/unsafe-eval'
-import { Application, Container } from 'pixi.js'
+import { Application, Container, RenderTexture, Sprite, type Texture } from 'pixi.js'
 import { gsap } from 'gsap'
 import { pick, pickWeighted } from '@shared/random'
 import type { Settings } from '@shared/settings'
@@ -15,6 +15,7 @@ import { Sequencer, type Entry } from './sequencer'
 import { Slide, type FocusTarget, type OverlayText } from './slide'
 import { TextSlide } from './textSlide'
 import { TransitionEngine } from './transitions/engine'
+import { frame, mark, measure } from './perf'
 
 const FIRST_FADE = 1.2
 const SKIP_FADE = 0.6
@@ -73,6 +74,8 @@ async function main(): Promise<void> {
   const slideLayer = new Container()
   const transitions = new TransitionEngine(app.renderer)
   app.stage.addChild(slideLayer, transitions.view)
+  transitions.warmUp()
+  mark(`Bühne ${app.screen.width}×${app.screen.height} @ ${app.renderer.resolution}`)
 
   let current: Scene | null = null
   let incoming: Scene | null = null
@@ -136,7 +139,33 @@ async function main(): Promise<void> {
     }
   }
 
+  // Winziges Ziel, um Texturen einmal zu zeichnen und so wirklich hochzuladen.
+  const uploadTarget = RenderTexture.create({ width: 2, height: 2 })
+  function uploadNow(texture: Texture): void {
+    const sprite = new Sprite(texture)
+    sprite.width = 2
+    sprite.height = 2
+    app.renderer.render({ container: sprite, target: uploadTarget })
+    sprite.destroy()
+  }
+  const uploadQueue: { texture: Texture; done: () => void }[] = []
+  /** Lädt Texturen nacheinander hoch, eine pro Frame (siehe Ticker). */
+  function uploadGradually(textures: Texture[]): Promise<void> {
+    return Promise.all(
+      textures.map((texture) => new Promise<void>((done) => uploadQueue.push({ texture, done })))
+    ).then(() => undefined)
+  }
+
   async function prepare(entry: Entry): Promise<Prepared> {
+    const prepStart = performance.now()
+    try {
+      return await prepareInner(entry)
+    } finally {
+      mark(`Vorbereitung ${Math.round(performance.now() - prepStart)}ms`)
+    }
+  }
+
+  async function prepareInner(entry: Entry): Promise<Prepared> {
     if (entry.kind === 'photo') {
       const fill = pickWeighted(settings.fillModes) ?? 'blur'
       const focus = await focusFor(entry.name)
@@ -148,6 +177,9 @@ async function main(): Promise<void> {
         fill,
         focus?.zoom ?? 1
       )
+      // Vorab auf die Grafikkarte laden, ein Streifen pro Frame: So blockiert kein Frame
+      // lange, und im Übergang ist alles schon da.
+      await uploadGradually([photo.backdrop, ...photo.parts.map((p) => p.texture)])
       remember(entry.name, photo.soft)
       const texts = entry.overlays.map((item) => ({ item, style: resolveStyle(item, settings) }))
       await Promise.all(texts.map((t) => loadFont(t.style)))
@@ -185,8 +217,10 @@ async function main(): Promise<void> {
     if (!entry) return
     loading = true
     const gen = generation
+    mark('Vorladen startet')
     prepare(entry)
       .then((p) => {
+        mark('Vorladen fertig')
         if (gen !== generation) dispose(p)
         else {
           ready = p
@@ -216,12 +250,19 @@ async function main(): Promise<void> {
   /** Beginnt den Übergang zum vorbereiteten Eintrag (beim ersten aus Schwarz). */
   function startTransition(fade: number): void {
     if (!ready) return
+    mark('Übergang startet')
     incoming = createScene(ready, fade)
     ready = null
     slideLayer.removeChildren()
     transitions.begin(current ? (pickWeighted(settings.transitions) ?? 'fade') : 'fade')
+    // Den ersten Übergangs-Frame sofort zeichnen. Sonst zeigt die Übergangsfläche in diesem
+    // Frame noch ihren alten Inhalt vom vorigen Übergang: ein sichtbares Zucken/Blitzen.
+    const s = screen()
+    incoming.update(0, s)
+    transitions.render(current?.view ?? null, incoming.view, 0, s)
     updateInfo()
-    prefetch()
+    // Das nächste Foto erst nach dem Übergang vorbereiten: Während des Übergangs ist die
+    // Grafikkarte am stärksten ausgelastet, jede zusätzliche Arbeit lässt ihn ruckeln.
   }
 
   function updateInfo(): void {
@@ -253,6 +294,12 @@ async function main(): Promise<void> {
   }
 
   app.ticker.add((ticker) => {
+    frame(ticker.deltaMS)
+    const upload = uploadQueue.shift()
+    if (upload) {
+      measure('Streifen hochladen', () => uploadNow(upload.texture))
+      upload.done()
+    }
     if (paused) return
     const dt = Math.min(0.1, ticker.deltaMS / 1000)
     const s = screen()
@@ -271,6 +318,8 @@ async function main(): Promise<void> {
         current = incoming
         incoming = null
         transitions.end()
+        mark('Übergang Ende')
+        prefetch()
         slideLayer.addChild(current.view)
       }
     } else if (current?.readyForNext && ready) {

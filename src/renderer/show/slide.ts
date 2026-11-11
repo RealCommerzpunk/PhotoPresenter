@@ -31,7 +31,8 @@ export interface FocusTarget {
 export class Slide extends TimedScene implements Scene {
   readonly view = new Container()
   private readonly backdrop: Sprite
-  private readonly photo: Sprite
+  /** Foto aus Streifen-Sprites, Drehpunkt in der Fotomitte. */
+  private readonly photo = new Container()
   private readonly shot: Shot
   private readonly track = new OverlayTrack()
 
@@ -52,8 +53,12 @@ export class Slide extends TimedScene implements Scene {
     this.backdrop.anchor.set(0.5)
     this.backdrop.visible = !loaded.fit.covers
 
-    this.photo = new Sprite(loaded.photo)
-    this.photo.anchor.set(0.5)
+    for (const part of loaded.parts) {
+      const strip = new Sprite(part.texture)
+      strip.y = part.y
+      this.photo.addChild(strip)
+    }
+    this.photo.pivot.set(loaded.size.w / 2, loaded.size.h / 2)
 
     this.view.addChild(this.backdrop, this.photo)
 

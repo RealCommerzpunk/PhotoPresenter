@@ -35,6 +35,8 @@ npm run dist:win     # Windows: NSIS-Installer in dist/
 npm run dist:linux   # Linux: AppImage und .deb in dist/ (auf einem Linux-Rechner oder in WSL ausführen)
 ```
 
+Testläufe mit eigenem Datenordner (lässt die echten Einstellungen in Ruhe): `PP_USER_DATA=<ordner>`. Frame-Messung: `PP_PERF=1`.
+
 Für Tests ohne Hinsehen: Ist `PP_CAPTURE_DIR` gesetzt, speichert die App im Entwicklungsmodus
 alle 2 s ein Bild ihrer eigenen Fenster in diesen Ordner.
 

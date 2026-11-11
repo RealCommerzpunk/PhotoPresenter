@@ -10,6 +10,12 @@ import { loadSettings, updateSettings } from './settings'
 
 registerPhotoScheme()
 
+// Nur in der Entwicklung: eigener Datenordner (Einstellungen, Gesichtsindex) für Tests,
+// damit Testläufe nie die echten Daten des Nutzers überschreiben.
+if (!app.isPackaged && process.env['PP_USER_DATA']) {
+  app.setPath('userData', process.env['PP_USER_DATA'])
+}
+
 let settingsWindow: BrowserWindow | null = null
 let showWindow: BrowserWindow | null = null
 let indexerWindow: BrowserWindow | null = null
@@ -101,7 +107,8 @@ function startShow(options: ShowOptions = {}): void {
     if (!settingsWindow) app.quit()
   })
   powerBlockId = powerSaveBlocker.start('prevent-display-sleep')
-  loadPage(showWindow, 'show')
+  // Für Tests in der Entwicklung: Frame-Messung mit PP_PERF=1.
+  loadPage(showWindow, 'show', !app.isPackaged && process.env['PP_PERF'] ? 'perf' : '')
   captureForTests(showWindow, 'show')
 }
 

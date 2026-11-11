@@ -1,5 +1,5 @@
 import { Container, Geometry, Mesh, RenderTexture, Shader, type Renderer } from 'pixi.js'
-import type { TransitionId } from '@shared/settings'
+import { TRANSITIONS, type TransitionId } from '@shared/settings'
 import type { Size } from '../motion'
 import { fragmentFor, vertex } from './shaders'
 
@@ -82,6 +82,21 @@ export class TransitionEngine {
     this.rtFrom = RenderTexture.create(opts)
     this.rtTo = RenderTexture.create(opts)
     this.size = { ...screen }
+  }
+
+  /**
+   * Kompiliert alle Effekte einmal vorab (beim Start der Show). Sonst würde jeder Effekt
+   * bei seinem ersten Einsatz kurz ruckeln, während die Grafikkarte ihn übersetzt.
+   */
+  warmUp(): void {
+    const target = RenderTexture.create({ width: 4, height: 4 })
+    this.view.visible = true
+    for (const id of TRANSITIONS) {
+      this.view.shader = this.shaderFor(id)
+      this.renderer.render({ container: this.view, target, clear: true })
+    }
+    this.view.visible = false
+    target.destroy(true)
   }
 
   begin(id: TransitionId): void {

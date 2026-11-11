@@ -2,6 +2,18 @@
 
 Alle Änderungen je Version. Format: neueste Version oben, Datum im Format JJJJ-MM-TT.
 
+## 0.6.2 – 2026-11-11
+
+Ruckeln und Zucken vor dem Übergang behoben.
+
+- Behoben: Kurz vor jedem Übergang zeigte die Show einen Frame lang ein veraltetes Bild (Zucken/Blitzen). Der erste Übergangs-Frame wird jetzt sofort gezeichnet.
+- Fotos werden in einem eigenen Thread (Web Worker) geladen und vorbereitet; der Canvas dort rechnet auf dem Prozessor, damit er nicht mit der Grafikkarte konkurriert
+- Das nächste Foto wird erst nach dem Übergang vorbereitet, nicht währenddessen
+- Fotos werden in Streifen vorab auf die Grafikkarte geladen, ein Streifen pro Frame; keine Mipmaps mehr
+- Alle Übergangseffekte werden beim Start vorkompiliert
+- Gemessen (Testfotos, 1920×1080): Übergänge ohne langsame Frames; im A/B-Vergleich 0–8 statt 21–38 langsame Frames pro 10 s
+- Für die Entwicklung: `PP_PERF=1` protokolliert langsame Frames, `PP_USER_DATA` trennt Testdaten von den echten Einstellungen
+
 ## 0.6.1 – 2026-11-11
 
 Gesichter ausschließen und von Hand markieren.
