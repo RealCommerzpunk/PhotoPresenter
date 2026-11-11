@@ -1,6 +1,12 @@
+import { mkdir, writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
-import { app, BrowserWindow, ipcMain, powerSaveBlocker, screen, shell } from 'electron'
+import { app, BrowserWindow, dialog, ipcMain, powerSaveBlocker, screen, shell } from 'electron'
 import { IPC } from '@shared/ipc'
+import type { Settings } from '@shared/settings'
+import { handlePhotoProtocol, listPhotos, registerPhotoScheme } from './photos'
+import { loadSettings, updateSettings } from './settings'
+
+registerPhotoScheme()
 
 let settingsWindow: BrowserWindow | null = null
 let showWindow: BrowserWindow | null = null
@@ -43,6 +49,7 @@ function createSettingsWindow(): void {
     if (!showWindow) app.quit()
   })
   loadPage(settingsWindow, 'settings')
+  captureForTests(settingsWindow, 'settings')
 }
 
 function startShow(): void {
@@ -73,16 +80,62 @@ function startShow(): void {
   })
   powerBlockId = powerSaveBlocker.start('prevent-display-sleep')
   loadPage(showWindow, 'show')
+  captureForTests(showWindow, 'show')
+}
+
+/**
+ * Nur für Tests in der Entwicklung: Ist PP_CAPTURE_DIR gesetzt, wird alle 2 s ein Bild
+ * des Fensters gespeichert (nur das eigene Fenster, nie der Bildschirm).
+ */
+function captureForTests(win: BrowserWindow, prefix: string): void {
+  const dir = process.env['PP_CAPTURE_DIR']
+  if (app.isPackaged || !dir) return
+  let n = 0
+  const timer = setInterval(async () => {
+    if (win.isDestroyed()) return clearInterval(timer)
+    const image = await win.webContents.capturePage()
+    await mkdir(dir, { recursive: true })
+    await writeFile(
+      join(dir, `${prefix}${String(++n).padStart(2, '0')}.jpg`),
+      image.resize({ width: 960 }).toJPEG(80)
+    )
+  }, 2000)
 }
 
 function stopShow(): void {
   showWindow?.close()
 }
 
+async function pickFolder(): Promise<string | null> {
+  const parent = settingsWindow ?? BrowserWindow.getFocusedWindow()
+  const options: Electron.OpenDialogOptions = {
+    title: 'Fotoordner wählen',
+    defaultPath: loadSettings().photoFolder || app.getPath('pictures'),
+    properties: ['openDirectory']
+  }
+  const result = parent
+    ? await dialog.showOpenDialog(parent, options)
+    : await dialog.showOpenDialog(options)
+  return result.canceled ? null : (result.filePaths[0] ?? null)
+}
+
+function setSettings(patch: Partial<Settings>): Settings {
+  const next = updateSettings(patch)
+  for (const win of BrowserWindow.getAllWindows()) {
+    win.webContents.send(IPC.settingsChanged, next)
+  }
+  return next
+}
+
 app.whenReady().then(() => {
+  handlePhotoProtocol()
   ipcMain.handle(IPC.startShow, () => startShow())
   ipcMain.handle(IPC.stopShow, () => stopShow())
   ipcMain.handle(IPC.appVersion, () => app.getVersion())
+  ipcMain.handle(IPC.getSettings, () => loadSettings())
+  ipcMain.handle(IPC.setSettings, (_e, patch: Partial<Settings>) => setSettings(patch))
+  ipcMain.handle(IPC.pickFolder, () => pickFolder())
+  ipcMain.handle(IPC.listPhotos, () => listPhotos())
 
   // `--show` startet direkt die Diashow (z. B. für Autostart als Bilderrahmen).
   if (process.argv.includes('--show')) startShow()

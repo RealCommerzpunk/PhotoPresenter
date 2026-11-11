@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <meta
       http-equiv="Content-Security-Policy"
-      content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:"
+      content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: photo:; connect-src 'self' ws: photo:"
     />
     <title>PhotoPresenter – Show</title>
     <style>
@@ -15,15 +15,53 @@
         overflow: hidden;
         background: #000;
         cursor: none;
+        font-family: system-ui, 'Segoe UI', Roboto, sans-serif;
       }
       #stage {
         position: fixed;
         inset: 0;
       }
+      .overlay {
+        position: fixed;
+        color: #fff;
+        opacity: 0;
+        transition: opacity 0.4s ease;
+        pointer-events: none;
+        text-shadow: 0 1px 4px rgba(0, 0, 0, 0.8);
+      }
+      #message {
+        inset: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        text-align: center;
+        white-space: pre-line;
+        font-size: 28px;
+        font-weight: 300;
+        line-height: 1.5;
+        color: rgba(255, 255, 255, 0.8);
+      }
+      #info {
+        left: 24px;
+        bottom: 20px;
+        font-size: 16px;
+        max-width: 70vw;
+      }
+      #status {
+        right: 24px;
+        top: 20px;
+        font-size: 18px;
+        background: rgba(0, 0, 0, 0.45);
+        padding: 6px 14px;
+        border-radius: 8px;
+      }
     </style>
   </head>
   <body>
     <div id="stage"></div>
+    <div id="message" class="overlay" style="opacity: 1">Lade Fotos …</div>
+    <div id="info" class="overlay"></div>
+    <div id="status" class="overlay"></div>
     <script type="module" src="./main.ts"></script>
   </body>
 </html>

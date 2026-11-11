@@ -34,11 +34,18 @@ npm run dist:win     # Windows: NSIS-Installer in dist/
 npm run dist:linux   # Linux: AppImage und .deb in dist/ (auf einem Linux-Rechner oder in WSL ausführen)
 ```
 
+Für Tests ohne Hinsehen: Ist `PP_CAPTURE_DIR` gesetzt, speichert die App im Entwicklungsmodus
+alle 2 s ein Bild ihrer eigenen Fenster in diesen Ordner.
+
 Tests, Typprüfung und Lint vor jedem Commit lokal ausführen: `npm run typecheck && npm run lint && npm test`.
 
 > Hinweis: Ist in der Shell `ELECTRON_RUN_AS_NODE=1` gesetzt (manche Editor-Umgebungen tun das),
 > startet Electron als reines Node und die App bricht mit `Cannot read properties of undefined (reading 'whenReady')` ab.
 > Dann die Variable vorher entfernen.
+
+## Bedienung in der Show
+
+Esc beenden · Leertaste Pause · ←/→ blättern · I Dateiname · D fps
 
 ## Aufbau
 
@@ -54,7 +61,7 @@ resources/      Modelle und Fonts, die mit ausgeliefert werden
 ## Fahrplan
 
 1. ✅ Gerüst und Repo
-2. Basis-Diashow: Ordner, zufällige Playlist, Auffüllen der Ränder, Ken Burns, Überblenden
+2. ✅ Basis-Diashow: Ordner, zufällige Playlist, Auffüllen der Ränder, Ken Burns, Überblenden
 3. Einstellungsfenster und Konfigurationsmodell
 4. Übergangs-Bibliothek, weitere Füllmodi, Kamerafahrten
 5. Texte: Editor, Stile, Animationen
