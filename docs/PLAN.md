@@ -22,7 +22,7 @@ Festgelegt: Electron + TypeScript · normaler PC/Mini-PC (x86, iGPU reicht) · e
 | Bildvorbereitung  | **sharp** (Thumbnails, EXIF-Rotation, Downscale fürs Face-Scanning)                                                                                          | schnell, plattformübergreifend                                                                                                                                                   |
 | Datenhaltung      | **better-sqlite3** (Foto-Index, Gesichter, Embeddings, Texte) + JSON-Settings mit **zod**-Schema                                                             | robust, inkrementell                                                                                                                                                             |
 | Packaging         | **electron-builder**: NSIS (Windows), AppImage + .deb (Linux)                                                                                                |                                                                                                                                                                                  |
-| CI/Releases       | GitHub Actions, Build-Matrix windows/ubuntu, Release bei Tag `v*`                                                                                            |                                                                                                                                                                                  |
+| Builds            | lokal per `npm run dist:win` / `dist:linux`, kein CI (GitHub nur für den Code)                                                                               |                                                                                                                                                                                  |
 
 ## Architektur
 
@@ -49,7 +49,7 @@ src/renderer/show/       stage.ts, playlist.ts, shotPlanner.ts, backgroundFill.t
                          transitions/ (*.glsl + registry.ts), text/ (presets/, textLayer.ts)
 resources/models/        yunet.onnx, sface.onnx
 resources/fonts/         gebündelte Fonts (OFL) für Textstile
-.github/workflows/build.yml
+
 ```
 
 ## Kernfunktionen im Detail
@@ -102,7 +102,7 @@ Tastatur/Maus: Esc beendet, Leertaste pausiert, ←/→ springt, I zeigt Info (D
 
 ## Umsetzung in Meilensteinen
 
-1. **Gerüst & Repo**: electron-vite-Projekt, ESLint/Prettier, `git init`, privates GitHub-Repo `PhotoPresenter` per `gh repo create`, CI-Workflow mit Build für Windows und Linux, README.
+1. **Gerüst & Repo**: electron-vite-Projekt, ESLint/Prettier, `git init`, privates GitHub-Repo `PhotoPresenter` per `gh repo create`, README.
 2. **Basis-Diashow**: Ordner wählen, Index (ohne Gesichter), zufällige Playlist, PixiJS-Bühne, Contain + Blur-Backdrop, Crossfade, Ken Burns mit Ranges.
 3. **Settings-UI & Konfig-Modell**: zod-Schema, Range-/Gewichtungs-Controls, Live-Vorschau-Fenster, Persistenz.
 4. **Übergangs-Bibliothek & weitere Füllmodi**: 10+ Shader-Übergänge, Ambient-/Edge-Fill, Kamerafahrten.
@@ -117,7 +117,7 @@ Jeder Meilenstein ergibt eine lauffähige Version und einen eigenen Commit/PR.
 - `npm run dev`: Show mit einem Testordner (gemischt Hoch-/Querformat, Panorama, EXIF-rotierte Handyfotos) starten, Füllung, Bewegung und Übergänge visuell prüfen, FPS-Overlay (Debug-Taste) sollte konstant ~60 zeigen.
 - Unit-Tests (Vitest): `random.ts` (Ranges, Gewichtung), ShotPlanner (Ausschnitt bleibt im Bild, Face-Zielzoom), Playlist (keine Wiederholung, Fülltext-Frequenz), Settings-Schema-Migration.
 - Gesichtserkennung: Testset mit 3–5 bekannten Personen, Treffer- und Fehlerquote bei Standard-Schwelle protokollieren.
-- CI: Build auf windows-latest und ubuntu-latest grün, Installer manuell auf Windows 11 und einem Linux (z. B. Ubuntu/Mint) testen.
+- Installer lokal bauen und manuell auf Windows 11 und einem Linux (z. B. Ubuntu/Mint) testen.
 
 ## Offene Punkte für später (nicht im ersten Wurf)
 

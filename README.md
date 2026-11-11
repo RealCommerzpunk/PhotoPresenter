@@ -27,15 +27,14 @@ npm run typecheck
 npm run lint
 ```
 
-Installer bauen:
+Installer bauen (nur lokal, GitHub speichert nur den Code):
 
 ```bash
 npm run dist:win     # Windows: NSIS-Installer in dist/
-npm run dist:linux   # Linux: AppImage und .deb in dist/
+npm run dist:linux   # Linux: AppImage und .deb in dist/ (auf einem Linux-Rechner oder in WSL ausführen)
 ```
 
-Installer für beide Plattformen baut auch GitHub Actions bei jedem Push.
-Ein Tag `v*` (z. B. `v0.1.0`) hängt sie zusätzlich an ein GitHub-Release.
+Tests, Typprüfung und Lint vor jedem Commit lokal ausführen: `npm run typecheck && npm run lint && npm test`.
 
 > Hinweis: Ist in der Shell `ELECTRON_RUN_AS_NODE=1` gesetzt (manche Editor-Umgebungen tun das),
 > startet Electron als reines Node und die App bricht mit `Cannot read properties of undefined (reading 'whenReady')` ab.
@@ -54,7 +53,7 @@ resources/      Modelle und Fonts, die mit ausgeliefert werden
 
 ## Fahrplan
 
-1. ✅ Gerüst, Repo, CI
+1. ✅ Gerüst und Repo
 2. Basis-Diashow: Ordner, zufällige Playlist, Auffüllen der Ränder, Ken Burns, Überblenden
 3. Einstellungsfenster und Konfigurationsmodell
 4. Übergangs-Bibliothek, weitere Füllmodi, Kamerafahrten
