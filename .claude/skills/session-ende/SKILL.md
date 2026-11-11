@@ -39,7 +39,7 @@ Veraltetes streichen. Kurz halten; keine Sitzungsprotokolle, die gehören in den
 
 Memory-Verzeichnis: `C:\Users\haugu\.claude\projects\c--service-hunda-PhotoPresenter\memory\` mit Index `MEMORY.md`.
 
-- Vorlieben und Rückmeldungen des Nutzers (wie er arbeiten will, was er nicht will) als `feedback`/`user`-Einträge sichern oder bestehende aktualisieren.
+- Vorlieben und Rückmeldungen des Nutzers (gewünschte Arbeitsweise, was vermieden werden soll) als `feedback`/`user`-Einträge sichern oder bestehende aktualisieren.
 - Laufender Projektstand (aktueller Meilenstein, nächster Schritt, offene Fragen) als ein `project`-Eintrag, absolute Daten.
 - Nichts doppeln, was schon in CLAUDE.md, Changelog oder Git steht. Falsch gewordene Einträge löschen, Index aktualisieren.
 
