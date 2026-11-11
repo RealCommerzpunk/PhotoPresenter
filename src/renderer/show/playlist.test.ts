@@ -30,6 +30,14 @@ describe('Playlist', () => {
     expect(p.previous()).toBeUndefined()
   })
 
+  it('springt mit before() vor ein Foto und spielt danach weiter', () => {
+    const p = new Playlist(['a', 'b', 'c', 'd'], seededRng(5))
+    const shown = [p.next(), p.next(), p.next()]
+    expect(p.before(shown[2]!)).toBe(shown[1])
+    expect(p.next()).toBe(shown[2])
+    expect(p.before(shown[0]!)).toBeUndefined()
+  })
+
   it('liefert undefined ohne Fotos', () => {
     expect(new Playlist([]).next()).toBeUndefined()
   })

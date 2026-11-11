@@ -8,6 +8,8 @@ import {
 } from '@shared/settings'
 import type { PhotoList } from '@shared/ipc'
 import { Card, Field, RangeInput, Toggle, WeightedList } from './controls'
+import { StylesPage } from './StylesPage'
+import { TextsPage } from './TextsPage'
 import { useSettings } from './useSettings'
 
 const sections = ['Allgemein', 'Bewegung', 'Übergänge', 'Personen', 'Texte', 'Stile'] as const
@@ -172,7 +174,11 @@ function Transitions({ s, update }: { s: Settings; update: Update }): React.JSX.
 
 export function App(): React.JSX.Element {
   const [version, setVersion] = useState('')
-  const [active, setActive] = useState<Section>('Allgemein')
+  // Startseite über den URL-Anker wählbar (z. B. #Texte), sonst „Allgemein“.
+  const [active, setActive] = useState<Section>(() => {
+    const hash = decodeURIComponent(window.location.hash.slice(1))
+    return (sections as readonly string[]).includes(hash) ? (hash as Section) : 'Allgemein'
+  })
   const [settings, update] = useSettings()
 
   useEffect(() => {
@@ -229,6 +235,10 @@ export function App(): React.JSX.Element {
             <Motion s={settings} update={update} />
           ) : active === 'Übergänge' ? (
             <Transitions s={settings} update={update} />
+          ) : active === 'Texte' ? (
+            <TextsPage s={settings} update={update} />
+          ) : active === 'Stile' ? (
+            <StylesPage s={settings} update={update} />
           ) : (
             <p className="text-white/50">
               Die Einstellungen für „{active}“ folgen in späteren Meilensteinen.

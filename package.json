@@ -1,7 +1,7 @@
 {
   "name": "photopresenter",
   "productName": "PhotoPresenter",
-  "version": "0.4.0",
+  "version": "0.5.0",
   "description": "Zufällige Vollbild-Foto-Diashow mit Kamerafahrten, Übergängen, Gesichtsfokus und animierten Texten",
   "main": "./out/main/index.js",
   "author": "RealCommerzpunk",
@@ -20,6 +20,14 @@
     "dist:linux": "npm run build && electron-builder --linux"
   },
   "dependencies": {
+    "@fontsource/bebas-neue": "^5.3.0",
+    "@fontsource/caveat": "^5.3.0",
+    "@fontsource/cinzel": "^5.3.0",
+    "@fontsource/courier-prime": "^5.3.0",
+    "@fontsource/dancing-script": "^5.3.0",
+    "@fontsource/montserrat": "^5.3.0",
+    "@fontsource/pacifico": "^5.3.0",
+    "@fontsource/playfair-display": "^5.3.0",
     "gsap": "^3.15.1",
     "pixi.js": "^8.23.0",
     "react": "^19.3.1",

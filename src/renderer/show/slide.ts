@@ -1,31 +1,34 @@
 import { Container, Sprite } from 'pixi.js'
 import { pick, pickWeighted } from '@shared/random'
 import type { Settings } from '@shared/settings'
+import type { TextItem, TextStyle } from '@shared/text'
+import { TextOverlay } from '../text/overlay'
 import type { LoadedPhoto } from './loader'
 import { evaluateShot, planShot, type Shot, type Size } from './motion'
+import { OverlayTrack, TimedScene, type Scene } from './scene'
 
-/** Ein Foto auf der Bühne: Randfüllung, Foto und seine Bewegung über die ganze Lebensdauer. */
-export class Slide {
+export interface OverlayText {
+  item: TextItem
+  style: TextStyle
+}
+
+/** Ein Foto auf der Bühne: Randfüllung, Foto, Bewegung und ggf. Texte darüber. */
+export class Slide extends TimedScene implements Scene {
   readonly view = new Container()
   private readonly backdrop: Sprite
   private readonly photo: Sprite
   private readonly shot: Shot
-
-  elapsed = 0
-  /** Dauer des Einblendens (= Ausblenddauer des Vorgängers). */
-  readonly fadeIn: number
-  /** Standzeit nach dem Einblenden; 0 setzt ein vorzeitiges Weiterschalten in Gang. */
-  display: number
-  /** Dauer der Überblendung zum nächsten Foto. */
-  fadeOut: number
+  private readonly track = new OverlayTrack()
 
   constructor(
     readonly loaded: LoadedPhoto,
     screen: Size,
     settings: Settings,
-    fadeIn: number
+    fadeIn: number,
+    texts: OverlayText[] = [],
+    textHost?: HTMLElement
   ) {
-    this.fadeIn = fadeIn
+    super(fadeIn)
     this.display = pick(settings.displayDuration)
     this.fadeOut = pick(settings.transitionDuration)
 
@@ -46,23 +49,33 @@ export class Slide {
       kind,
       pick(settings.motionIntensity)
     )
+
+    // Texte über dem Foto nacheinander; die Standzeit wird bei Bedarf verlängert.
+    if (textHost && texts.length) {
+      let t = fadeIn + 0.4
+      for (const { item, style } of texts) {
+        // Mittig gesetzte Stile über Fotos nach unten, damit Gesichter frei bleiben.
+        const position = style.position === 'center' ? 'bottom' : style.position
+        const overlay = new TextOverlay(textHost, item.text, style, position)
+        const end = t + overlay.inDuration + pick(settings.textDuration)
+        this.track.add(overlay, t, end)
+        t = end + overlay.outDuration + 0.3
+      }
+      this.display = Math.max(this.display, t - fadeIn)
+    }
   }
 
-  /** Gesamte Lebensdauer: Einblenden, Stehen, Ausblenden. Die Bewegung läuft durchgehend. */
-  get lifetime(): number {
-    return this.fadeIn + this.display + this.fadeOut
+  get label(): string {
+    return this.loaded.name
   }
 
-  get readyForNext(): boolean {
-    return this.elapsed >= this.fadeIn + this.display
-  }
-
-  get fadedIn(): boolean {
-    return this.elapsed >= this.fadeIn
+  get photoName(): string {
+    return this.loaded.name
   }
 
   update(dt: number, screen: Size): void {
     this.elapsed += dt
+    this.track.update(this.elapsed)
     const { size, fit } = this.loaded
     const t = Math.min(1, this.elapsed / Math.max(0.001, this.lifetime))
     const k = evaluateShot(this.shot, t, size, screen, fit.scale)
@@ -87,12 +100,13 @@ export class Slide {
     }
   }
 
-  /** Fortschritt des Einblendens 0..1. */
-  get fadeProgress(): number {
-    return this.fadeIn > 0 ? Math.min(1, this.elapsed / this.fadeIn) : 1
+  hurry(fade: number): void {
+    this.shorten(fade)
+    this.track.leaveAll()
   }
 
   destroy(): void {
+    this.track.destroy()
     this.view.destroy({ children: true })
     this.loaded.destroy()
   }

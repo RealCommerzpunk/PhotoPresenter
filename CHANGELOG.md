@@ -2,6 +2,21 @@
 
 Alle Änderungen je Version. Format: neueste Version oben, Datum im Format JJJJ-MM-TT.
 
+## 0.5.0 – 2026-11-11
+
+Texte (Meilenstein 5).
+
+- Fülltexte zwischen den Fotos, Abstand „alle X–Y Fotos“ einstellbar; derselbe Text kommt nie direkt zweimal
+- Texte an Fotos binden: vor, nach oder über dem Foto; Auswahl der Fotos mit Suche und Vorschaubildern
+- Textfolien haben das zugehörige Foto weichgezeichnet als Hintergrund, langsam zoomend
+- 12 Stilvorlagen (Elegant, Kino, Schreibmaschine, Handschrift, Notiz, Plakat, Neon, Minimal, Retro, Festlich, Untertitel, Zitat) mit 8 mitgelieferten Schriften (OFL, ohne Internet)
+- 9 Einblend- und 5 Ausblendanimationen (u. a. Schreibmaschine mit Cursor, Handschrift, Glitch, Welle, Wörter springen)
+- Stil pro Text fest oder „Zufall“ aus den aktiven Stilen mit Häufigkeit
+- Eigene Stile: Vorlage ableiten und Schrift, Größe, Farben, Effekt, Kasten, Position und Animation ändern, mit Live-Vorschau
+- Texte über Fotos stehen unten statt mittig, damit Gesichter frei bleiben; die Standzeit des Fotos verlängert sich bei Bedarf
+- Pause hält auch die Textanimationen an
+- Einstellungsfenster startet in der Entwicklung mit `PP_SETTINGS_PAGE=<Seite>` direkt auf einer Seite
+
 ## 0.4.0 – 2026-11-11
 
 Einstellungen ausgebaut, Übergänge, Randfüllung und Kamerafahrt (Meilensteine 3 und 4).

@@ -10,6 +10,11 @@ export interface LoadedPhoto {
   /** Randfüllung im Seitenverhältnis des Bildschirms. */
   backdrop: Texture
   fill: FillMode
+  /**
+   * Weichgezeichnete Kleinfassung als Hintergrund für Textfolien. Gehört dem Aufrufer
+   * und wird von `destroy()` nicht freigegeben.
+   */
+  soft: ImageBitmap
   /** Größe der Foto-Textur in Pixeln. */
   size: Size
   fit: Fit
@@ -166,6 +171,31 @@ function mirrorBackdrop(
   ctx.drawImage(layer, 0, 0)
 }
 
+/** Weichgezeichnete Kleinfassung im Seitenverhältnis des Bildschirms. */
+function makeSoft(bitmap: ImageBitmap, screen: Size): ImageBitmap {
+  const bw = BACKDROP_WIDTH
+  const bh = Math.max(1, Math.round((bw * screen.h) / screen.w))
+  const canvas = new OffscreenCanvas(bw, bh)
+  blurBackdrop(canvas.getContext('2d')!, bitmap, bw, bh)
+  return canvas.transferToImageBitmap()
+}
+
+async function fetchBitmap(name: string): Promise<ImageBitmap> {
+  const response = await fetch(photoUrl(name))
+  if (!response.ok) throw new Error(`${name}: HTTP ${response.status}`)
+  return createImageBitmap(await response.blob(), { imageOrientation: 'from-image' })
+}
+
+/** Lädt nur die weichgezeichnete Kleinfassung eines Fotos (für Textfolien). */
+export async function loadSoft(name: string, screen: Size): Promise<ImageBitmap> {
+  const original = await fetchBitmap(name)
+  try {
+    return makeSoft(original, screen)
+  } finally {
+    original.close()
+  }
+}
+
 function makeBackdrop(
   bitmap: ImageBitmap,
   screen: Size,
@@ -195,11 +225,7 @@ export async function loadPhoto(
   maxCrop: number,
   fill: FillMode
 ): Promise<LoadedPhoto> {
-  const response = await fetch(photoUrl(name))
-  if (!response.ok) throw new Error(`${name}: HTTP ${response.status}`)
-  const original = await createImageBitmap(await response.blob(), {
-    imageOrientation: 'from-image'
-  })
+  const original = await fetchBitmap(name)
 
   const fit = fitImage({ w: original.width, h: original.height }, screen, maxCrop)
   // Ränder links/rechts, wenn das Bild schmaler ist als der Bildschirm, sonst oben/unten.
@@ -228,6 +254,7 @@ export async function loadPhoto(
   }
 
   const backdropBitmap = makeBackdrop(original, screen, fill, horizontalGaps)
+  const soft = makeSoft(original, screen)
   if (photoBitmap !== original) original.close()
 
   const photo = textureFrom(photoBitmap, true)
@@ -239,6 +266,7 @@ export async function loadPhoto(
     photo,
     backdrop,
     fill,
+    soft,
     size,
     fit: fitImage(size, screen, maxCrop),
     destroy() {

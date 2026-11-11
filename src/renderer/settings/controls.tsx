@@ -138,7 +138,7 @@ export function RangeInput({
           />
         </>
       )}
-      <span className="w-6">{unit}</span>
+      <span className="min-w-6 pr-2">{unit}</span>
       <Toggle
         checked={random}
         label="Zufall"
@@ -206,5 +206,30 @@ export function WeightedList<T extends string>({
         ))}
       </div>
     </div>
+  )
+}
+
+/** Auswahlliste im Stil der übrigen Bedienelemente. */
+export function Select({
+  value,
+  options,
+  onChange
+}: {
+  value: string
+  options: { value: string; label: string }[]
+  onChange: (v: string) => void
+}): React.JSX.Element {
+  return (
+    <select
+      value={value}
+      onChange={(e) => onChange(e.target.value)}
+      className="rounded-md border border-white/15 bg-[#14161d] px-2 py-1 text-sm text-white/90 outline-none focus:border-indigo-400"
+    >
+      {options.map((o) => (
+        <option key={o.value} value={o.value}>
+          {o.label}
+        </option>
+      ))}
+    </select>
   )
 }

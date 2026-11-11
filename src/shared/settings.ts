@@ -1,5 +1,14 @@
 import { z } from 'zod'
 import type { Range, WeightedOption } from './random'
+import {
+  defaultTexts,
+  parseList,
+  PRESET_STYLES,
+  textItemSchema,
+  textStyleSchema,
+  type TextItem,
+  type TextStyle
+} from './text'
 
 /**
  * Einstellungen der Diashow. Jedes Feld hat einen Standardwert und fällt bei
@@ -100,6 +109,19 @@ const defaultTransitions: WeightedOption<TransitionId>[] = TRANSITIONS.map((id) 
   weight: id === 'fade' ? 4 : ['zoomBlur', 'dissolve', 'glow', 'wipe'].includes(id) ? 2 : 1
 }))
 
+// ---------- Textstile für den Zufall ----------
+
+/** Alle Vorlagen aktiv, außer „Untertitel“ (passt nur über Fotos, nicht als Fülltext). */
+const defaultTextStyles: WeightedOption[] = PRESET_STYLES.map((st) => ({
+  id: st.id,
+  enabled: st.id !== 'untertitel',
+  weight: 1
+}))
+
+const looseWeighted = z.array(
+  z.object({ id: z.string(), enabled: z.boolean(), weight: z.number().min(0) })
+)
+
 // ---------- Schema ----------
 
 export const settingsSchema = z.object({
@@ -121,10 +143,23 @@ export const settingsSchema = z.object({
    * Darüber wird eingepasst und der Rand aufgefüllt. 0.12 = 12 %.
    */
   maxCrop: field(z.number().min(0).max(0.5), 0.12),
-  fillModes: field(weightedSchema(FILL_MODES), defaultFillModes)
+  fillModes: field(weightedSchema(FILL_MODES), defaultFillModes),
+  /** Nach wie vielen Fotos ein Fülltext erscheint. */
+  textFillerEvery: field(rangeSchema, { min: 8, max: 15, mode: 'random' } satisfies Range),
+  /** Wie lange ein Text steht (ohne Ein- und Ausblenden), in Sekunden. */
+  textDuration: field(rangeSchema, { min: 4, max: 6, mode: 'random' } satisfies Range),
+  /** Stile, aus denen bei „Zufall“ gewählt wird (Vorlagen und eigene). */
+  textStyles: field(looseWeighted, defaultTextStyles),
+  /** Texte und eigene Stile werden einzeln geprüft (siehe parseSettings). */
+  texts: z.unknown().optional(),
+  customStyles: z.unknown().optional()
 })
 
-export type Settings = z.infer<typeof settingsSchema>
+type ParsedSchema = z.infer<typeof settingsSchema>
+export type Settings = Omit<ParsedSchema, 'texts' | 'customStyles'> & {
+  texts: TextItem[]
+  customStyles: TextStyle[]
+}
 
 /**
  * Gespeicherte Auswahllisten um neue Optionen ergänzen (aus den Standardwerten),
@@ -143,9 +178,20 @@ function completeWeighted<T extends string>(
 export function parseSettings(raw: unknown): Settings {
   const input = raw && typeof raw === 'object' ? raw : {}
   const s = settingsSchema.parse(input)
+  const customStyles = parseList(s.customStyles, textStyleSchema, []).map((st) => ({
+    ...st,
+    custom: true
+  }))
+  const styleDefaults: WeightedOption[] = [
+    ...defaultTextStyles,
+    ...customStyles.map((st) => ({ id: st.id, enabled: true, weight: 1 }))
+  ]
   return {
     ...s,
     version: SETTINGS_VERSION,
+    texts: parseList(s.texts, textItemSchema, defaultTexts),
+    customStyles,
+    textStyles: completeWeighted(s.textStyles, styleDefaults),
     transitions: completeWeighted(s.transitions, defaultTransitions),
     motionKinds: completeWeighted(s.motionKinds, defaultMotionKinds),
     fillModes: completeWeighted(s.fillModes, defaultFillModes)

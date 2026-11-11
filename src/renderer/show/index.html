@@ -21,6 +21,13 @@
         position: fixed;
         inset: 0;
       }
+      #texts {
+        position: fixed;
+        inset: 0;
+        container-type: size;
+        pointer-events: none;
+        overflow: hidden;
+      }
       .overlay {
         position: fixed;
         color: #fff;
@@ -59,6 +66,7 @@
   </head>
   <body>
     <div id="stage"></div>
+    <div id="texts"></div>
     <div id="message" class="overlay" style="opacity: 1">Lade Fotos …</div>
     <div id="info" class="overlay"></div>
     <div id="status" class="overlay"></div>

@@ -25,13 +25,17 @@ Plan und Meilensteine: `docs/PLAN.md` · Änderungen je Version: `CHANGELOG.md` 
 - `src/main/`: Fenster, IPC, Einstellungen (`settings.ts`, JSON in userData, atomar geschrieben), Fotoliste und `photo://`-Protokoll (`photos.ts`, liefert nur Dateien aus dem gewählten Ordner, CORS freigegeben)
 - `src/preload/`: `window.api` (Typ `PhotoPresenterApi` in `src/shared/ipc.ts`)
 - `src/shared/`: `random.ts` (Range „von … bis“ + Zufall, gewichtete Auswahl, `seededRng`), `settings.ts` (zod-Schema; jedes Feld hat Standardwert und fällt bei ungültigem Inhalt darauf zurück)
-- `src/renderer/settings/`: React + Tailwind v4; Bausteine `RangeInput`, `WeightedList`, `Card`, `Field` in `controls.tsx`
+- `src/renderer/settings/`: React + Tailwind v4; Bausteine `RangeInput`, `WeightedList`, `Select`, `Card`, `Field` in `controls.tsx`; Seiten `TextsPage`, `StylesPage`; `TextPreview` spielt Texte live ab
+- `src/renderer/text/`: von Show und Einstellungen gemeinsam genutzt: `overlay.ts` (HTML-Text mit GSAP SplitText), `animations.ts`, `fonts.ts` (Fontsource-Imports), `resolve.ts` (Stil inkl. Zufall)
+- `src/shared/text.ts`: Schemas für Texte und Stile, die 12 Stilvorlagen, Schriften, Animationsnamen
 - `src/renderer/show/`: PixiJS v8
   - `loader.ts`: Laden mit EXIF-Drehung, Verkleinern auf Bildschirm × 1,35, weiche Kanten, Randfüllung (blur/ambient/mirror; mirror liegt deckungsgleich unter dem Foto)
   - `motion.ts`: reine Bewegungsmathematik (`fitImage`, `planShot`, `evaluateShot`); Versatz wird immer an den Bildrand begrenzt
   - `slide.ts`: ein Foto mit Bewegung über Einblenden + Stehen + Ausblenden
   - `transitions/`: `engine.ts` rendert altes und neues Foto je Frame in RenderTextures und mischt per Mesh-Shader; `shaders.ts` enthält die Effekte (`vec4 transition(vec2 uv)` mit `fromColor`/`toColor`). Neuer Effekt = Eintrag in `TRANSITIONS` (`settings.ts`) + GLSL-Body
   - `playlist.ts`: Zufall ohne Wiederholung, Verlauf für ←
+  - `sequencer.ts`: Reihenfolge aus Fotos, Fülltexten und gebundenen Texten (vor/über/nach)
+  - `scene.ts`: gemeinsame Schnittstelle `Scene` für `Slide` (Foto) und `TextSlide`; `OverlayTrack` steuert Texte zeitlich
   - `main.ts`: Ablauf, Vorladen, Tasten
 
 ## Stolperfallen
@@ -40,4 +44,7 @@ Plan und Meilensteine: `docs/PLAN.md` · Änderungen je Version: `CHANGELOG.md` 
 - `import 'pixi.js/unsafe-eval'` muss vor PixiJS geladen werden, weil die CSP kein eval erlaubt.
 - Neue Datenquellen in der Show brauchen einen Eintrag in der CSP beider `index.html`.
 - Neue Auswahl-Optionen (Effekte, Bewegungsarten, Füllmodi) nur hinten an die Konstanten in `settings.ts` anhängen; `parseSettings` ergänzt sie in gespeicherten Einstellungen. Ein entfernter Eintrag setzt die ganze Liste auf Standard zurück.
+- Textgrößen sind in `cqh` angegeben: Der Host-Container eines `TextOverlay` braucht `container-type: size`.
+- Texte und eigene Stile werden in `parseSettings` Eintrag für Eintrag geprüft (`parseList`), damit ein kaputter Eintrag nicht alle Texte löscht. In zod 4 müssen solche losen Felder `z.unknown().optional()` sein.
+- Visuelle Tests der Einstellungen: `PP_SETTINGS_PAGE=Texte` (Seitenname) zusammen mit `PP_CAPTURE_DIR`.
 - npm 11 blockiert Install-Skripte; Freigaben stehen in `allowScripts` in `package.json`. Electron lädt seine Binärdatei beim ersten Start selbst.

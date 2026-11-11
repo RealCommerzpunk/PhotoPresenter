@@ -1,0 +1,53 @@
+/* Texte über dem Bild. Der Host braucht container-type: size (Schriftgröße in cqh). */
+
+.pp-text-root {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  padding: 6cqh 8cqw;
+  visibility: hidden;
+  pointer-events: none;
+  box-sizing: border-box;
+}
+
+.pp-text-box {
+  max-width: 84cqw;
+  box-sizing: border-box;
+}
+
+.pp-text {
+  line-height: 1.18;
+  perspective: 600px;
+  white-space: normal;
+  overflow-wrap: break-word;
+}
+
+.pp-line {
+  padding: 0.04em 0;
+}
+
+.pp-box-glass {
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(18px) saturate(1.2);
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  border-radius: 1.4cqh;
+  padding: 2.4cqh 4cqh;
+  box-shadow: 0 1cqh 4cqh rgba(0, 0, 0, 0.25);
+}
+
+.pp-box-band {
+  background: rgba(0, 0, 0, 0.55);
+  padding: 1.6cqh 5cqh;
+  border-radius: 0.6cqh;
+}
+
+.pp-box-solid {
+  padding: 2cqh 4cqh;
+  border-radius: 1cqh;
+}
+
+.pp-caret {
+  display: inline-block;
+  margin-left: 0.05em;
+  opacity: 0.85;
+}

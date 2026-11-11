@@ -47,6 +47,17 @@ export class Playlist {
     return item
   }
 
+  /**
+   * Springt im Verlauf auf das Foto vor `name` (letztes Vorkommen).
+   * Danach liefert `next()` wieder `name` und die folgenden.
+   */
+  before(name: string): string | undefined {
+    const idx = this.history.lastIndexOf(name)
+    if (idx <= 0) return undefined
+    this.cursor = idx - 1
+    return this.history[this.cursor]
+  }
+
   previous(): string | undefined {
     if (this.cursor <= 0) return undefined
     this.cursor--

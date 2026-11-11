@@ -64,6 +64,6 @@ resources/      Modelle und Fonts, die mit ausgeliefert werden
 2. ✅ Basis-Diashow: Ordner, zufällige Playlist, Auffüllen der Ränder, Ken Burns, Überblenden
 3. ✅ Einstellungsfenster und Konfigurationsmodell
 4. ✅ Übergangs-Bibliothek, weitere Füllmodi, Kamerafahrten
-5. Texte: Editor, Stile, Animationen
+5. ✅ Texte: Editor, Stile, Animationen
 6. Gesichtserkennung und Fokus-Person
 7. Feinschliff und erstes Release

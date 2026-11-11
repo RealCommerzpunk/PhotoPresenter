@@ -14,7 +14,7 @@ let powerBlockId: number | null = null
 
 const preload = join(__dirname, '../preload/index.js')
 
-function loadPage(win: BrowserWindow, page: 'settings' | 'show'): void {
+function loadPage(win: BrowserWindow, page: 'settings' | 'show', hash = ''): void {
   if (!app.isPackaged) {
     // Warnungen und Fehler der Fenster im Terminal zeigen.
     win.webContents.on('console-message', ({ level, message }) => {
@@ -23,9 +23,9 @@ function loadPage(win: BrowserWindow, page: 'settings' | 'show'): void {
   }
   const devUrl = process.env['ELECTRON_RENDERER_URL']
   if (!app.isPackaged && devUrl) {
-    void win.loadURL(`${devUrl}/${page}/index.html`)
+    void win.loadURL(`${devUrl}/${page}/index.html${hash ? '#' + hash : ''}`)
   } else {
-    void win.loadFile(join(__dirname, `../renderer/${page}/index.html`))
+    void win.loadFile(join(__dirname, `../renderer/${page}/index.html`), { hash })
   }
 }
 
@@ -48,7 +48,9 @@ function createSettingsWindow(): void {
     settingsWindow = null
     if (!showWindow) app.quit()
   })
-  loadPage(settingsWindow, 'settings')
+  // Für Tests in der Entwicklung: Startseite über PP_SETTINGS_PAGE wählen.
+  const page = !app.isPackaged ? (process.env['PP_SETTINGS_PAGE'] ?? '') : ''
+  loadPage(settingsWindow, 'settings', page)
   captureForTests(settingsWindow, 'settings')
 }
 
