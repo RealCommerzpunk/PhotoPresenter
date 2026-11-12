@@ -31,6 +31,11 @@ export interface FocusTarget {
   partner?: FaceBox
 }
 
+export interface SlideOptions {
+  /** Sekunden, die das Foto zu Beginn ruhig im Gesamtbild steht (z. B. nach der 3D-Welt). */
+  stillStart?: number
+}
+
 /** Ein Foto auf der Bühne: Randfüllung, Foto, Bewegung und ggf. Texte darüber. */
 export class Slide extends TimedScene implements Scene {
   readonly view = new Container()
@@ -39,6 +44,7 @@ export class Slide extends TimedScene implements Scene {
   private readonly photo = new Container()
   private readonly shot: Shot
   private readonly track = new OverlayTrack()
+  private readonly stillStart: number
 
   constructor(
     readonly loaded: LoadedPhoto,
@@ -47,9 +53,11 @@ export class Slide extends TimedScene implements Scene {
     fadeIn: number,
     texts: OverlayText[] = [],
     textHost?: HTMLElement,
-    readonly focus?: FocusTarget
+    readonly focus?: FocusTarget,
+    options: SlideOptions = {}
   ) {
     super(fadeIn)
+    this.stillStart = options.stillStart ?? 0
     this.display = pick(settings.displayDuration)
     this.fadeOut = pick(settings.transitionDuration)
 
@@ -78,7 +86,10 @@ export class Slide extends TimedScene implements Scene {
           loaded.fit.scale,
           focus.face,
           focus.others,
-          focus.plan,
+          // Nach einer Ruhephase immer vom Gesamtbild aus starten (keine Fahrt von der Seite).
+          this.stillStart && focus.plan.mode === 'journey'
+            ? { ...focus.plan, mode: 'slowZoom' }
+            : focus.plan,
           Math.random,
           focus.partner
         ),
@@ -88,12 +99,15 @@ export class Slide extends TimedScene implements Scene {
       const stations = this.shot.path?.length ?? 2
       this.display = Math.max(this.display, 5, stations * 2)
     } else {
-      const kind = pickWeighted(settings.motionKinds) ?? 'zoomIn'
+      // Nach einer Ruhephase vom Gesamtbild aus hineinzoomen, sonst nach Einstellung.
+      const kind = this.stillStart ? 'zoomIn' : (pickWeighted(settings.motionKinds) ?? 'zoomIn')
       this.shot = limitShot(
         planShot(loaded.size, screen, loaded.fit.scale, kind, pick(settings.motionIntensity)),
         maxZoom
       )
     }
+
+    this.display += this.stillStart
 
     // Texte über dem Foto nacheinander; die Standzeit wird bei Bedarf verlängert.
     if (textHost && texts.length) {
@@ -124,7 +138,9 @@ export class Slide extends TimedScene implements Scene {
     this.elapsed += dt
     this.track.update(this.elapsed)
     const { size, fit } = this.loaded
-    const t = Math.min(1, this.elapsed / Math.max(0.001, this.lifetime))
+    // Während der Ruhephase steht das Bild; danach läuft die Bewegung über die restliche Zeit.
+    const moving = Math.max(0, this.elapsed - this.stillStart)
+    const t = Math.min(1, moving / Math.max(0.001, this.lifetime - this.stillStart))
     const k = evaluateShot(this.shot, t, size, screen, fit.scale)
 
     const cx = screen.w / 2

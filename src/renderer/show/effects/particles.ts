@@ -286,8 +286,19 @@ export class ParticleEffect {
     this.view.blendMode = spec.additive ? 'add' : 'normal'
   }
 
+  /** Restzeit des schnellen Ausblendens (null = läuft normal). */
+  private fading: number | null = null
+  /** Per Hand ausgelöst: endet mit dem nächsten Übergang. */
+  manual = false
+
   get done(): boolean {
+    if (this.fading !== null && this.fading <= 0) return true
     return this.elapsed > this.duration && this.sims.length === 0
+  }
+
+  /** Keine neuen Partikel mehr, die vorhandenen in kurzer Zeit ausblenden. */
+  fadeOut(seconds = 0.7): void {
+    if (this.fading === null) this.fading = seconds
   }
 
   private add(init: Omit<Sim, 'p'> & { shape: Shape; tint: number; x: number; y: number }): void {
@@ -329,8 +340,10 @@ export class ParticleEffect {
   update(dt: number, screen: Size): void {
     this.elapsed += dt
     const k = screen.h / 1080
+    if (this.fading !== null) this.fading -= dt
+    const fadeFactor = this.fading === null ? 1 : Math.max(0, this.fading / 0.7)
     // Neue Partikel nur während der Laufzeit, mit sanftem Anlauf in der ersten halben Sekunde.
-    if (this.elapsed <= this.duration) {
+    if (this.elapsed <= this.duration && this.fading === null) {
       const ramp = Math.min(1, this.elapsed / 0.5)
       this.carry += this.rate * ramp * dt
       while (this.carry >= 1) {
@@ -350,7 +363,7 @@ export class ParticleEffect {
       p.y += s.vy * dt
       p.rotation += s.spin * dt
       const t = s.life / s.maxLife
-      let alpha = s.alpha * this.alphaScale
+      let alpha = s.alpha * this.alphaScale * fadeFactor
       if (s.twinkle)
         alpha *= Math.sin(Math.PI * Math.min(1, t)) * (0.75 + 0.25 * Math.sin(s.phase * 5))
       else if (s.maxLife < 100) alpha *= 1 - t * t
@@ -385,10 +398,16 @@ export class EffectLayer {
 
   constructor(private readonly host: { addChild(c: ParticleContainer): void }) {}
 
-  start(kind: EffectId, intensity: number, duration: number): void {
+  start(kind: EffectId, intensity: number, duration: number, manual = false): void {
     const effect = new ParticleEffect(kind, intensity, duration)
+    effect.manual = manual
     this.effects.push(effect)
     this.host.addChild(effect.view)
+  }
+
+  /** Per Hand ausgelöste Effekte beenden (beim Übergang zum nächsten Bild). */
+  endManual(): void {
+    for (const e of this.effects) if (e.manual) e.fadeOut()
   }
 
   update(dt: number, screen: Size): void {

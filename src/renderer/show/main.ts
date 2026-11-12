@@ -99,12 +99,15 @@ async function main(): Promise<void> {
   let effectAt = Math.max(1, Math.round(pick(settings.effectEvery)))
 
   /** Einen zufälligen Effekt aus den aktiven starten (auch per Fernbedienung). */
-  function startEffect(wanted?: string): void {
+  function startEffect(wanted?: string, manual = false): EffectId | undefined {
     const kind = EFFECTS.includes(wanted as EffectId)
       ? (wanted as EffectId)
       : pickWeighted(settings.effects)
-    if (!kind) return
-    effects.start(kind, pick(settings.effectIntensity), pick(settings.effectDuration))
+    if (!kind) return undefined
+    // Per Hand ausgelöste Effekte laufen nur bis zum nächsten Übergang (dann länger erlaubt).
+    const duration = manual ? 60 : pick(settings.effectDuration)
+    effects.start(kind, pick(settings.effectIntensity), duration, manual)
+    return kind
   }
 
   /** Nach „alle X–Y Fotos“ einen Effekt starten. */
@@ -375,7 +378,11 @@ async function main(): Promise<void> {
     if (p.kind === 'photo') {
       lastPhoto = p.photo.name
       photosSinceWorld++
-      return new Slide(p.photo, screen(), settings, fade, p.texts, textHost, p.focus)
+      // Nach der 3D-Welt erst kurz im Vollbild stehen, dann die Bewegung beginnen.
+      const stillStart = current instanceof WorldScene ? 2 : 0
+      return new Slide(p.photo, screen(), settings, fade, p.texts, textHost, p.focus, {
+        stillStart
+      })
     }
     const backgroundKind = pickWeighted(settings.textBackgrounds) ?? 'photo'
     return new TextSlide(
@@ -393,6 +400,8 @@ async function main(): Promise<void> {
   function startTransition(fade: number): void {
     if (!ready) return
     mark('Übergang startet')
+    // Per Hand ausgelöste Texte und Effekte gehören zum bisherigen Bild.
+    if (current) endManualExtras()
     incoming = createScene(ready, fade)
     maybeStartEffect()
     ready = null
@@ -463,7 +472,7 @@ async function main(): Promise<void> {
     else if (cmd === 'pause') setPaused(true)
     else if (cmd === 'resume') setPaused(false)
     else if (cmd === 'qr') void toggleQr()
-    else if (cmd === 'effect') startEffect(arg)
+    else if (cmd === 'effect') startEffect(arg, true)
     else if (cmd === 'world') startWorldNow(arg)
     else if (cmd === 'text') {
       const item = settings.texts.find((t) => t.id === arg)
@@ -494,6 +503,15 @@ async function main(): Promise<void> {
     const end = 0.05 + overlay.inDuration + pick(settings.textDuration)
     track.add(overlay, 0.05, end)
     instantTexts.push({ track, elapsed: 0, until: end + overlay.outDuration + 0.5 })
+  }
+
+  /** Sofort-Texte und Hand-Effekte ausblenden (beim Übergang zum nächsten Bild). */
+  function endManualExtras(): void {
+    effects.endManual()
+    for (const t of instantTexts) {
+      t.track.leaveAll()
+      t.until = Math.min(t.until, t.elapsed + 1.6)
+    }
   }
 
   function updateInstantTexts(dt: number): void {

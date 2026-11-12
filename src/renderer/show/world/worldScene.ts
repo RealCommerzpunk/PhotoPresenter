@@ -166,7 +166,12 @@ export class WorldScene extends TimedScene implements Scene {
       tex.flipY = false
       tex.needsUpdate = true
       this.tileTextures.push(tex)
-      const mat = new THREE.MeshBasicMaterial({ map: tex, side: THREE.DoubleSide })
+      // transparent, damit die übrigen Kacheln beim Eintauchen ausblenden können
+      const mat = new THREE.MeshBasicMaterial({
+        map: tex,
+        side: THREE.DoubleSide,
+        transparent: true
+      })
       this.jellify(mat)
       this.materials.push(mat)
       const mesh = new THREE.Mesh(tile, mat)
@@ -315,6 +320,16 @@ export class WorldScene extends TimedScene implements Scene {
       }
       mesh.position.set(p.pos[0], p.pos[1], p.pos[2])
       mesh.quaternion.copy(q)
+
+      // Beim Eintauchen verschwinden alle Kacheln außer dem Zielfoto: Am Ende steht nur
+      // noch das Foto da, mit dem die Show weitergeht.
+      let opacity = 1
+      if (phase.kind === 'dive' && i !== this.finalIndex) {
+        const k = (t - phase.start) / phase.duration
+        opacity = 1 - Math.min(1, Math.max(0, (k - 0.2) / 0.5))
+      }
+      ;(mesh.material as ThreeNS.MeshBasicMaterial).opacity = opacity
+      mesh.children[0].visible = opacity > 0.6
     }
 
     // Wackelpudding-Stärke: wächst beim Einflug, beruhigt sich beim Eintauchen,

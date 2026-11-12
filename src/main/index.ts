@@ -155,6 +155,20 @@ function startShow(options: ShowOptions = {}): void {
   // Für Tests in der Entwicklung: Frame-Messung mit PP_PERF=1.
   loadPage(showWindow, 'show', !app.isPackaged && process.env['PP_PERF'] ? 'perf' : '')
   captureForTests(showWindow, 'show')
+  commandsForTests()
+}
+
+/**
+ * Nur für Tests in der Entwicklung: PP_TEST_COMMANDS="8:say:Hallo;8:effect:hearts;20:freeze"
+ * schickt Befehle nach so vielen Sekunden an die Show (wie von der Fernbedienung).
+ */
+function commandsForTests(): void {
+  const list = process.env['PP_TEST_COMMANDS']
+  if (app.isPackaged || !list) return
+  for (const entry of list.split(';')) {
+    const [sec, cmd, ...rest] = entry.split(':')
+    setTimeout(() => showCommand(cmd as ShowCommand, rest.join(':') || undefined), Number(sec) * 1000)
+  }
 }
 
 /**
