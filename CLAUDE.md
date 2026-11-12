@@ -5,6 +5,7 @@ Plan und Meilensteine: `docs/PLAN.md` · Änderungen je Version: `CHANGELOG.md` 
 
 ## Befehle
 
+- `npm run demo`: App mit dem Demo-Datenordner `Data/` des Repos (Einstellungen + Gesichtsindex des Demo-Sets, nur `settings.json`/`faces.json` sind im Git). Das Demo-Set pflegt der Nutzer: in Tests nie `Data/` benutzen, sondern eine Kopie im Scratchpad per `PP_USER_DATA`
 - `npm run dev`: App mit Hot Reload; `npm run dev -- --show` startet direkt die Show
 - `npm run typecheck`, `npm run lint`, `npm test` (Vitest): vor jedem Commit alle drei
 - `npm run models`: Modelle für die Gesichtserkennung nach `resources/models/` (nicht im Git, Prüfsummen im Skript); `dist` ruft das selbst auf

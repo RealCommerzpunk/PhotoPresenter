@@ -31,7 +31,8 @@ Voraussetzung: Node.js ≥ 22.12.
 ```bash
 npm install
 npm run models       # Modelle für die Gesichtserkennung laden (einmalig, ca. 39 MB)
-npm run dev          # App mit Hot Reload starten (erster Start nimmt die Demo-Fotos aus Photos/)
+npm run demo         # mit Demo-Fotos (Photos/) und Demo-Einstellungen (Data/) starten; Änderungen landen in Data/ und damit im Git
+npm run dev          # App mit Hot Reload und den eigenen Einstellungen starten
 npm run dev -- --show  # direkt die Diashow starten
 npm test             # Unit-Tests (Vitest)
 npm run typecheck

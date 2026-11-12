@@ -48,12 +48,13 @@ git clone https://github.com/RealCommerzpunk/PhotoPresenter.git
 cd PhotoPresenter
 npm install
 npm run models          # download the face recognition models (once, ~39 MB, checksums verified)
-npm run dev -- --show   # start straight into the slideshow
+npm run demo -- --show  # start straight into the slideshow with the demo photos and demo settings
 ```
 
-On the first start the app uses the bundled demo photos in [`Photos/`](Photos/) (163 photos by
-[RDNE Stock project](https://www.pexels.com/@rdne/) on Pexels). Choose your own folder in the settings window
-(**Allgemein → Fotos**). Face analysis runs in the background on first use.
+`npm run demo` uses the bundled demo photos in [`Photos/`](Photos/) (163 photos by
+[RDNE Stock project](https://www.pexels.com/@rdne/) on Pexels) and the demo settings and face index in
+[`Data/`](Data/). Plain `npm run dev` uses your personal settings folder instead; on its very first start it
+also picks up `Photos/`. Choose your own folder in the settings window (**Allgemein → Fotos**).
 
 ### Keys in the slideshow
 

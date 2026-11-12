@@ -12,3 +12,8 @@ resources/models/*.onnx
 
 # Originale der Demo-Fotos (verkleinerte Fassung liegt in Photos/)
 Photos-Original/
+
+# Demo-Daten (npm run demo): nur Einstellungen und Gesichtsindex ins Git, Zwischenspeicher nicht
+Data/*
+!Data/settings.json
+!Data/faces.json

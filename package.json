@@ -24,7 +24,8 @@
     "dist:win": "npm run models && npm run build && electron-builder --win",
     "dist:linux": "npm run models && npm run build && electron-builder --linux",
     "models": "node scripts/fetch-models.mjs",
-    "quickstart": "electron scripts/quickstart-pdf.mjs"
+    "quickstart": "electron scripts/quickstart-pdf.mjs",
+    "demo": "node scripts/demo.mjs"
   },
   "dependencies": {
     "@fontsource/bebas-neue": "^5.3.0",
