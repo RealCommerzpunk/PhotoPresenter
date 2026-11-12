@@ -16,6 +16,7 @@ import {
   type Size
 } from './motion'
 import { OverlayTrack, TimedScene, type Scene } from './scene'
+import { faceOnScreen, type Rect } from './faceAvoid'
 
 export interface OverlayText {
   item: TextItem
@@ -34,6 +35,8 @@ export interface FocusTarget {
 export interface SlideOptions {
   /** Sekunden, die das Foto zu Beginn ruhig im Gesamtbild steht (z. B. nach der 3D-Welt). */
   stillStart?: number
+  /** Alle Gesichter auf dem Foto (null = noch nicht analysiert): Texte weichen ihnen aus. */
+  faces?: FaceBox[] | null
 }
 
 /** Messwerte für die Info-Einblendung (Taste I). */
@@ -77,6 +80,8 @@ export class Slide extends TimedScene implements Scene {
   private loop: FreezeLoop | null = null
   private lastProgress = 0
   private lastZoom = 1
+  private readonly faces: FaceBox[] | null
+  private screen: Size
 
   constructor(
     readonly loaded: LoadedPhoto,
@@ -90,6 +95,8 @@ export class Slide extends TimedScene implements Scene {
   ) {
     super(fadeIn)
     this.stillStart = options.stillStart ?? 0
+    this.faces = options.faces ?? null
+    this.screen = screen
     this.display = pick(settings.displayDuration)
     this.fadeOut = pick(settings.transitionDuration)
 
@@ -153,16 +160,61 @@ export class Slide extends TimedScene implements Scene {
     // Texte über dem Foto nacheinander; die Standzeit wird bei Bedarf verlängert.
     if (textHost && texts.length) {
       let t = fadeIn + 0.4
+      const placed: { overlay: TextOverlay; from: number; to: number; style: TextStyle }[] = []
       for (const { item, style } of texts) {
-        // Mittig gesetzte Stile über Fotos nach unten, damit Gesichter frei bleiben.
-        const position = style.position === 'center' ? 'bottom' : style.position
-        const overlay = new TextOverlay(textHost, item.text, style, position)
+        const overlay = new TextOverlay(textHost, item.text, style)
         const end = t + overlay.inDuration + pick(settings.textDuration)
         this.track.add(overlay, t, end)
+        placed.push({ overlay, from: t, to: end + overlay.outDuration, style })
         t = end + overlay.outDuration + 0.3
       }
       this.display = Math.max(this.display, t - fadeIn)
+      // Erst jetzt steht die Dauer fest: Platz je Text so wählen, dass er die Gesichter
+      // in seinem Zeitfenster nicht verdeckt.
+      for (const p of placed) {
+        p.overlay.placeAvoiding(
+          this.preferredPosition(p.style),
+          this.facesBetween(this.progressAt(p.from), this.progressAt(p.to))
+        )
+      }
     }
+  }
+
+  /**
+   * Bevorzugter Platz eines Textes über dem Foto. Ohne Gesichtsanalyse kommen mittige Stile
+   * vorsichtshalber nach unten; sind die Gesichter bekannt, darf die Mitte bleiben, wenn frei.
+   */
+  preferredPosition(style: TextStyle): TextStyle['position'] {
+    return this.faces === null && style.position === 'center' ? 'bottom' : style.position
+  }
+
+  /** Bewegungsfortschritt (0–1) nach `seconds` Standzeit, ohne Einfrieren. */
+  private progressAt(seconds: number): number {
+    const moving = Math.max(0, seconds - this.stillStart) + this.motionShift
+    return Math.min(1, Math.max(0, moving / this.motionDuration))
+  }
+
+  /** Gesichter auf dem Bildschirm, während die Bewegung von t0 bis t1 läuft (Stichproben). */
+  private facesBetween(t0: number, t1: number): Rect[] {
+    if (!this.faces?.length) return []
+    const { size, fit } = this.loaded
+    const rects: Rect[] = []
+    const steps = Math.abs(t1 - t0) < 0.02 ? 1 : 5
+    for (let i = 0; i < steps; i++) {
+      const t = steps === 1 ? t0 : t0 + ((t1 - t0) * i) / (steps - 1)
+      const k = evaluateShot(this.shot, t, size, this.screen, fit.scale)
+      for (const f of this.faces) rects.push(faceOnScreen(f, size, this.screen, fit.scale, k))
+    }
+    return rects
+  }
+
+  /**
+   * Gesichter auf dem Bildschirm in den nächsten `seconds` Sekunden (für Sofort-Texte und
+   * Emojis). Eingefroren: über die ganze Schleife.
+   */
+  upcomingFaces(seconds: number): Rect[] {
+    if (this.loop) return this.facesBetween(this.loop.c - this.loop.a, this.loop.c + this.loop.a)
+    return this.facesBetween(this.progressAt(this.elapsed), this.progressAt(this.elapsed + seconds))
   }
 
   get label(): string {
@@ -222,6 +274,7 @@ export class Slide extends TimedScene implements Scene {
   }
 
   update(dt: number, screen: Size): void {
+    this.screen = screen
     let t: number
     if (this.loop) {
       // Eingefroren: Standzeit läuft nicht weiter, nur die Schleife.

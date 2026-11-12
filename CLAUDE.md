@@ -48,6 +48,7 @@ Plan und Meilensteine: `docs/PLAN.md` · Änderungen je Version: `CHANGELOG.md` 
   - `playlist.ts`: Zufall ohne Wiederholung, Verlauf für ←
   - `sequencer.ts`: Reihenfolge aus Fotos, Fülltexten und gebundenen Texten (vor/über/nach)
   - `scene.ts`: gemeinsame Schnittstelle `Scene` für `Slide` (Foto) und `TextSlide`; `OverlayTrack` steuert Texte zeitlich
+  - `faceAvoid.ts`: Gesichter auf dem Bildschirm (`faceOnScreen`, mit Rand) und Platzwahl (`bestPlace`); `Slide.upcomingFaces(s)` liefert sie für Sofort-Texte/Emojis, Texte über Fotos wählen per `TextOverlay.placeAvoiding` (gemessen ohne Animations-Transform). Die Show lädt die Gesichter je Foto immer (`faces: null` = nicht analysiert)
   - `emojis.ts`: schwebende Emojis (HTML + GSAP) über dem Foto; `info.ts`: Info-Tafel (Taste I)
   - `main.ts`: Ablauf, Vorladen, Tasten. Per Hand Ausgelöstes (Effekte, Sofort-Texte, Emojis) endet in `endManualExtras()` beim nächsten Übergang. Einfrieren: `Slide.setFrozen` (Fortschritt pendelt als Sinus um die aktuelle Stelle, Auftauen setzt dort fort)
 

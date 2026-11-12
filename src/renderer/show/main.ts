@@ -4,6 +4,7 @@ import { Application, Container, RenderTexture, Sprite, type Texture } from 'pix
 import { gsap } from 'gsap'
 import { pick, pickWeighted } from '@shared/random'
 import type { PhotoDetails } from '@shared/ipc'
+import type { FaceInfo } from '@shared/faces'
 import type { PhotoQueue, QueueItem, ShowNotice } from '@shared/remote'
 import {
   EFFECT_LABELS,
@@ -58,6 +59,8 @@ type Prepared =
       photo: LoadedPhoto
       texts: OverlayText[]
       focus?: FocusTarget
+      /** Alle Gesichter (null = Foto noch nicht analysiert). */
+      faces: FaceBox[] | null
       /** Eintrag der manuellen Reihenfolge (Galerie der Fernbedienung). */
       queueId?: string
     }
@@ -186,9 +189,8 @@ async function main(): Promise<void> {
   }
 
   /** Fokusplan für ein Foto, wenn die Fokus-Person darauf erkannt wurde. */
-  async function focusFor(name: string): Promise<{ target: FocusTarget; zoom: number } | null> {
+  function focusFor(info: FaceInfo | null): { target: FocusTarget; zoom: number } | null {
     if (!settings.focusEnabled || !settings.focusPersonId) return null
-    const info = await window.api.getFaces(name).catch(() => null)
     const focusFace = info?.faces.find((f) => f.focus)
     if (!info || !focusFace) return null
     const partnerFace = info.faces.find((f) => f.partner)
@@ -249,7 +251,9 @@ async function main(): Promise<void> {
   async function prepareInner(entry: Entry): Promise<Prepared> {
     if (entry.kind === 'photo') {
       const fill = pickWeighted(settings.fillModes) ?? 'blur'
-      const focus = await focusFor(entry.name)
+      // Gesichter: für den Fokus und damit Texte und Emojis ihnen ausweichen
+      const faceInfo = await window.api.getFaces(entry.name).catch(() => null)
+      const focus = focusFor(faceInfo)
       const photo = await loadPhoto(
         entry.name,
         screen(),
@@ -265,7 +269,14 @@ async function main(): Promise<void> {
       remember(entry.name, photo.soft)
       const texts = entry.overlays.map((item) => ({ item, style: resolveStyle(item, settings) }))
       await Promise.all(texts.map((t) => loadFont(t.style)))
-      return { kind: 'photo', photo, texts, focus: focus?.target, queueId: entry.queueId }
+      return {
+        kind: 'photo',
+        photo,
+        texts,
+        focus: focus?.target,
+        faces: faceInfo ? faceInfo.faces.map((f) => f.box) : null,
+        queueId: entry.queueId
+      }
     }
     if (entry.kind === 'world') return prepareWorld()
     const style = resolveStyle(entry.item, settings)
@@ -372,7 +383,9 @@ async function main(): Promise<void> {
     for (const id of usedQueueIds) if (!known.has(id) && id !== pending) usedQueueIds.delete(id)
     // Während der 3D-Welt steht das nächste Foto fest (Zielfoto); danach greift die Liste.
     if (current instanceof WorldScene || incoming) return
-    const head = q.items.find((i) => i.id !== q.playing && (i.id === pending || !usedQueueIds.has(i.id)))
+    const head = q.items.find(
+      (i) => i.id !== q.playing && (i.id === pending || !usedQueueIds.has(i.id))
+    )
     if (pending ? head?.id === pending : !head) return
     // Das vorbereitete Foto passt nicht mehr zur Liste: verwerfen und neu vorbereiten.
     const dropped = ready?.kind === 'photo' ? ready : null
@@ -455,7 +468,8 @@ async function main(): Promise<void> {
       // Nach der 3D-Welt erst kurz im Vollbild stehen, dann die Bewegung beginnen.
       const stillStart = current instanceof WorldScene ? 2 : 0
       return new Slide(p.photo, screen(), settings, fade, p.texts, textHost, p.focus, {
-        stillStart
+        stillStart,
+        faces: p.faces
       })
     }
     const backgroundKind = pickWeighted(settings.textBackgrounds) ?? 'photo'
@@ -602,7 +616,8 @@ async function main(): Promise<void> {
       void showTextNow(arg, RANDOM_STYLE)
       notice('Text eingeblendet')
     } else if (cmd === 'emoji' && arg) {
-      emojis.show(arg)
+      const slide = photoOnScreen()
+      emojis.show(arg, slide ? slide.upcomingFaces(6) : [])
       notice(`${arg} eingeblendet`)
     } else if (cmd === 'freeze') setFrozen(arg === 'on' ? true : arg === 'off' ? false : undefined)
   })
@@ -644,13 +659,28 @@ async function main(): Promise<void> {
     }
     const style = resolveStyle(item, settings)
     await loadFont(style)
-    // über Fotos unten statt mittig, damit Gesichter frei bleiben
-    const position = style.position === 'center' ? 'bottom' : style.position
-    const overlay = new TextOverlay(textHost, text, style, position)
+    const overlay = new TextOverlay(textHost, text, style)
     const track = new OverlayTrack()
     const end = 0.05 + overlay.inDuration + pick(settings.textDuration)
+    // Über Fotos so platzieren, dass der Text keine Gesichter verdeckt.
+    const slide = photoOnScreen()
+    if (slide) {
+      overlay.placeAvoiding(
+        slide.preferredPosition(style),
+        slide.upcomingFaces(end + overlay.outDuration)
+      )
+    } else if (style.position === 'center') overlay.setPosition('bottom')
     track.add(overlay, 0.05, end)
     instantTexts.push({ track, elapsed: 0, until: end + overlay.outDuration + 0.5 })
+  }
+
+  /**
+   * Das Foto, über dem per Hand Ausgelöstes erscheint: im Übergang schon das neue
+   * (Emojis und Sofort-Texte bleiben dann bis zum übernächsten Übergang stehen).
+   */
+  function photoOnScreen(): Slide | null {
+    const scene = incoming ?? current
+    return scene instanceof Slide ? scene : null
   }
 
   /** Sofort-Texte und Hand-Effekte ausblenden (beim Übergang zum nächsten Bild). */

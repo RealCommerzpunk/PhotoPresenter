@@ -2,6 +2,10 @@
 
 Alle Änderungen je Version. Format: neueste Version oben, Datum im Format JJJJ-MM-TT.
 
+## 0.12.1 – 2026-11-12
+
+- **Texte und Emojis verdecken keine Gesichter mehr**: Texte über Fotos wählen den Platz (Stil-Position, sonst unten, oben, Ecken, Mitte), an dem sie in ihrer Einblendzeit keine erkannten Gesichter überdecken – die Kamerabewegung wird mitgerechnet. Emojis von der Fernbedienung suchen sich ebenfalls freie Stellen neben den Gesichtern. Mittig gesetzte Stile dürfen jetzt in der Mitte bleiben, wenn dort kein Gesicht ist (bei noch nicht analysierten Fotos weiter vorsichtshalber unten)
+
 ## 0.12.0 – 2026-11-12
 
 Zum Mitnehmen.

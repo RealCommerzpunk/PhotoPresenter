@@ -3,11 +3,24 @@ import { SplitText } from 'gsap/SplitText'
 import type { TextStyle } from '@shared/text'
 import { IN, OUT, type TextParts } from './animations'
 import { fontFamily } from './fonts'
+import { bestPlace, type Rect } from '../show/faceAvoid'
 import './overlay.css'
 
 gsap.registerPlugin(SplitText)
 
-type Position = TextStyle['position']
+/** Positionen der Stile plus zusätzliche Ecken, auf die Texte über Fotos ausweichen können. */
+export type Position = TextStyle['position'] | 'upperLeft' | 'upperRight' | 'lowerRight'
+
+/** Ausweichplätze über Fotos in der Reihenfolge der Vorliebe (nach der Position des Stils). */
+const FALLBACKS: Position[] = [
+  'bottom',
+  'top',
+  'lowerThird',
+  'lowerRight',
+  'upperLeft',
+  'upperRight',
+  'center'
+]
 
 function escapeHtml(text: string): string {
   return text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
@@ -35,6 +48,24 @@ const POSITION_CSS: Record<Position, Partial<CSSStyleDeclaration>> = {
     alignItems: 'flex-end',
     paddingBottom: '13cqh',
     paddingLeft: '7cqw'
+  },
+  upperLeft: {
+    justifyContent: 'flex-start',
+    alignItems: 'flex-start',
+    paddingTop: '9cqh',
+    paddingLeft: '7cqw'
+  },
+  upperRight: {
+    justifyContent: 'flex-end',
+    alignItems: 'flex-start',
+    paddingTop: '9cqh',
+    paddingRight: '7cqw'
+  },
+  lowerRight: {
+    justifyContent: 'flex-end',
+    alignItems: 'flex-end',
+    paddingBottom: '13cqh',
+    paddingRight: '7cqw'
   }
 }
 
@@ -44,6 +75,7 @@ const POSITION_CSS: Record<Position, Partial<CSSStyleDeclaration>> = {
  */
 export class TextOverlay {
   private readonly root: HTMLDivElement
+  private readonly box: HTMLDivElement
   private readonly split: SplitText
   private readonly tlIn: gsap.core.Timeline
   private readonly tlOut: gsap.core.Timeline
@@ -52,7 +84,6 @@ export class TextOverlay {
   constructor(host: HTMLElement, text: string, style: TextStyle, position?: Position) {
     const root = document.createElement('div')
     root.className = 'pp-text-root'
-    Object.assign(root.style, POSITION_CSS[position ?? style.position])
 
     const box = document.createElement('div')
     box.className = `pp-text-box pp-box-${style.box}`
@@ -82,6 +113,8 @@ export class TextOverlay {
     root.appendChild(box)
     host.appendChild(root)
     this.root = root
+    this.box = box
+    this.setPosition(position ?? style.position)
 
     this.split = SplitText.create(el, { type: 'lines,words,chars', linesClass: 'pp-line' })
     if (style.effect === 'gradient') {
@@ -108,6 +141,35 @@ export class TextOverlay {
     this.tlOut.eventCallback('onComplete', () => {
       this.state = 'done'
     })
+  }
+
+  setPosition(position: Position): void {
+    const s = this.root.style
+    s.paddingTop = s.paddingBottom = s.paddingLeft = s.paddingRight = ''
+    Object.assign(s, POSITION_CSS[position])
+  }
+
+  /**
+   * Platz wählen, an dem der Text möglichst keine Gesichter verdeckt: zuerst `preferred`,
+   * dann die Ausweichplätze. Gemessen wird der Textkasten ohne Animations-Transform.
+   */
+  placeAvoiding(preferred: Position, faces: Rect[]): Position {
+    const order = [preferred, ...FALLBACKS.filter((p) => p !== preferred)]
+    if (!faces.length) {
+      this.setPosition(preferred)
+      return preferred
+    }
+    const candidates = order.map((value) => {
+      this.setPosition(value)
+      const b = this.box
+      return {
+        value,
+        rect: { x: b.offsetLeft, y: b.offsetTop, w: b.offsetWidth, h: b.offsetHeight }
+      }
+    })
+    const chosen = bestPlace(candidates, faces)
+    this.setPosition(chosen)
+    return chosen
   }
 
   /** Dauer des Einblendens in Sekunden. */

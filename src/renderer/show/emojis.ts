@@ -1,4 +1,5 @@
 import { gsap } from 'gsap'
+import { coveredArea, type Rect } from './faceAvoid'
 
 /** Höchstens so viele Emojis gleichzeitig; das älteste weicht. */
 const MAX_EMOJIS = 14
@@ -47,18 +48,20 @@ export class EmojiLayer {
     window.setTimeout(() => el.remove(), 1500)
   }
 
-  show(emoji: string): void {
+  /** `faces`: Gesichter auf dem Bildschirm (CSS-Pixel), die frei bleiben sollen. */
+  show(emoji: string, faces: Rect[] = []): void {
     if (this.items.length >= MAX_EMOJIS) this.remove(this.items[0], 0.3)
-    const { x, y } = this.freeSpot()
+    const vmin = Math.min(window.innerWidth, window.innerHeight) / 100
+    const size = rand(13, 21)
+    const { x, y } = this.freeSpot(faces, size * vmin)
     const el = document.createElement('div')
     el.className = 'emoji'
     el.textContent = emoji
     el.style.left = `${x}%`
     el.style.top = `${y}%`
-    el.style.fontSize = `${rand(13, 21).toFixed(1)}vmin`
+    el.style.fontSize = `${size.toFixed(1)}vmin`
     this.host.appendChild(el)
 
-    const vmin = Math.min(window.innerWidth, window.innerHeight) / 100
     const item: Floating = { el, x, y, tweens: [] }
     gsap.set(el, { xPercent: -50, yPercent: -50 })
     const tilt = rand(-12, 12)
@@ -113,19 +116,30 @@ export class EmojiLayer {
     })
   }
 
-  /** Platz möglichst weit weg von den vorhandenen Emojis (aus einigen Zufallskandidaten). */
-  private freeSpot(): { x: number; y: number } {
+  /**
+   * Platz aus Zufallskandidaten: zuerst keine Gesichter verdecken (Emoji samt Schwebeweg),
+   * dann möglichst weit weg von den vorhandenen Emojis.
+   */
+  private freeSpot(faces: Rect[], sizePx: number): { x: number; y: number } {
+    const W = window.innerWidth
+    const H = window.innerHeight
+    // Glyphe ist etwa so groß wie die Schrift, dazu der Schwebeweg (±2,5 vmin seitlich, 5 hoch)
+    const vmin = Math.min(W, H) / 100
+    const half = sizePx * 0.55 + 2.5 * vmin
     let best = { x: 50, y: 45 }
-    let bestDist = -1
-    for (let i = 0; i < 14; i++) {
+    let bestScore = -Infinity
+    for (let i = 0; i < 40; i++) {
       const c = { x: rand(12, 88), y: rand(14, 80) }
-      const dist = Math.min(
-        Infinity,
-        ...this.items.map((o) => Math.hypot((o.x - c.x) * 1.6, o.y - c.y))
-      )
-      if (dist > bestDist) {
+      const px = (c.x / 100) * W
+      const py = (c.y / 100) * H
+      const rect = { x: px - half, y: py - half - 5 * vmin, w: 2 * half, h: 2 * half + 5 * vmin }
+      const covered = coveredArea(rect, faces) / (rect.w * rect.h)
+      const dist = Math.min(100, ...this.items.map((o) => Math.hypot((o.x - c.x) * 1.6, o.y - c.y)))
+      // Gesichter frei zu halten ist wichtiger als Abstand zu anderen Emojis.
+      const score = dist - covered * 400
+      if (score > bestScore) {
         best = c
-        bestDist = dist
+        bestScore = score
       }
     }
     return best

@@ -48,7 +48,10 @@ export function infoHtml(d: InfoData): string {
         (d.details ? ` · ${fileSize(d.details.size)}` : '')
     ])
     rows.push(['Geladen', `${size.w} × ${size.h} px`])
-    rows.push(['Bildschirm', `${screenPx} px` + (d.resolution !== 1 ? ` (Skalierung ${de(d.resolution)})` : '')])
+    rows.push([
+      'Bildschirm',
+      `${screenPx} px` + (d.resolution !== 1 ? ` (Skalierung ${de(d.resolution)})` : '')
+    ])
     const s = p.stats
     rows.push([
       'Zoom',
@@ -65,7 +68,9 @@ export function infoHtml(d: InfoData): string {
     rows.push(['Bewegung', `${escapeHtml(s.motion)} · ${de(s.progress * 100, 0)} %`])
     rows.push([
       'Rand',
-      fit.covers ? 'füllt den Bildschirm' : `${FILL_LABELS[fill]}` + (fit.capped ? ' (Grundgröße begrenzt)' : '')
+      fit.covers
+        ? 'füllt den Bildschirm'
+        : `${FILL_LABELS[fill]}` + (fit.capped ? ' (Grundgröße begrenzt)' : '')
     ])
     if (d.faces !== undefined) {
       const who = p.focus ? (p.partner ? ' · Fokus-Person und Partner' : ' · Fokus-Person') : ''
