@@ -1,7 +1,7 @@
 # PhotoPresenter
 
 Zufällige Vollbild-Foto-Diashow für Windows und Linux (Electron + TypeScript).
-Plan und Meilensteine: `docs/PLAN.md` · Änderungen je Version: `CHANGELOG.md` · Sitzungsprotokolle: `docs/sessions/Session-NNN.md` · Überblick für Menschen: `README.md`.
+Plan und Meilensteine: `docs/PLAN.md` · Änderungen je Version: `CHANGELOG.md` · Sitzungsprotokolle: `docs/sessions/Session-NNN.md` · Überblick für Menschen: `README.md` (Englisch, Haupt-README auf GitHub) und `README.de.md` (Deutsch) – beide inhaltlich gleich halten.
 
 ## Befehle
 
@@ -18,6 +18,7 @@ Plan und Meilensteine: `docs/PLAN.md` · Änderungen je Version: `CHANGELOG.md` 
 - **Kein CI.** GitHub (`RealCommerzpunk/PhotoPresenter`, privat) speichert nur den Code. Keine GitHub-Actions-Workflows anlegen, Builds und Tests laufen lokal (Actions-Minuten sparen, schneller).
 - **Nie den Bildschirm aufnehmen.** Zum visuellen Prüfen `PP_CAPTURE_DIR=<ordner>` setzen: Die App speichert dann im Entwicklungsmodus alle 2 s Bilder ihrer eigenen Fenster (`captureForTests` in `src/main/index.ts`). Testbilder und Aufnahmen gehören ins Scratchpad, nicht ins Repo.
 - **Nie im echten Datenordner testen** (`%APPDATA%/PhotoPresenter`: Einstellungen, Personen, Gesichtsindex des Nutzers). Für jeden Testlauf `PP_USER_DATA=<scratchpad>/userdata` setzen (nur Entwicklung) und Testeinstellungen nur dort ablegen. Das gepackte Programm nutzt immer den echten Ordner.
+- Demo-Fotos: `Photos/` (163 Pexels-Fotos von RDNE Stock project, auf 2560 px verkleinert, Nachweis in `Photos/CREDITS.md`, nicht MIT). Originale liegen in `Photos-Original/` (gitignored). Ohne `settings.json` nimmt der erste Start den Ordner `Photos` neben dem Programm (`firstStartSettings` in `src/main/settings.ts`). Code steht unter MIT (`LICENSE`); neue Fremdinhalte (Bilder, Schriften, Modelle) in README/README.de.md unter „Credits“ nennen.
 - In der Claude-Code-Umgebung ist `ELECTRON_RUN_AS_NODE=1` gesetzt: vor dem Start von Electron `unset ELECTRON_RUN_AS_NODE`, sonst startet es als reines Node.
 - Oberfläche, Kommentare, Commit-Nachrichten und Doku auf Deutsch.
 - Versionen: `0.<meilenstein>.<patch>` in `package.json`, jeder Meilenstein ein Eintrag in `CHANGELOG.md`.

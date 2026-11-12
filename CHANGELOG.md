@@ -2,6 +2,14 @@
 
 Alle Änderungen je Version. Format: neueste Version oben, Datum im Format JJJJ-MM-TT.
 
+## 0.12.3 – 2026-11-12
+
+Vorbereitung auf ein öffentliches Repository.
+
+- **Demo-Fotos** im Ordner `Photos` (163 Fotos von RDNE Stock project, Pexels-Lizenz): Ein frisch geklontes Repo bzw. ein Programm ohne Einstellungen startet gleich damit
+- Code unter **MIT-Lizenz**; Nachweise für Fotos, Icon, Gesichtsmodelle, Schriften und GSAP
+- README auf Englisch (Haupt-README) mit Bild der Show, deutsche Fassung `README.de.md`; Hinweis zur Fernbedienung ohne Passwort
+
 ## 0.12.2 – 2026-11-12
 
 - **Eigenes Programm-Icon** für die .exe, die Fenster, die Fernbedienung (auch als Lesezeichen und auf dem Startbildschirm des Handys) und GitHub. Icon von Three Musketeers (Flaticon), Nennung in README, Einstellungen und Paket

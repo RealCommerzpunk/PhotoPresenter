@@ -33,7 +33,7 @@ Veraltetes streichen. Kurz halten; keine Sitzungsprotokolle, die gehören in den
 
 - Erledigte Meilensteine/Punkte als erledigt markieren (✅), Abweichungen vom ursprünglichen Plan nachtragen.
 - Neue Entscheidungen des Nutzers einarbeiten; „Offene Punkte für später“ pflegen.
-- Den Fahrplan in `README.md` gleich halten.
+- Den Fahrplan bzw. Status in `README.md` (Englisch) und `README.de.md` gleich halten.
 
 ## 5b. Session-Log
 
@@ -43,7 +43,7 @@ Veraltetes streichen. Kurz halten; keine Sitzungsprotokolle, die gehören in den
 
 ## 6. Memory
 
-Memory-Verzeichnis: `C:\Users\haugu\.claude\projects\c--service-hunda-PhotoPresenter\memory\` mit Index `MEMORY.md`.
+Memory-Verzeichnis: das im Systemprompt genannte Memory-Verzeichnis dieses Projekts, mit Index `MEMORY.md`.
 
 - Vorlieben und Rückmeldungen des Nutzers (gewünschte Arbeitsweise, was vermieden werden soll) als `feedback`/`user`-Einträge sichern oder bestehende aktualisieren.
 - Laufender Projektstand (aktueller Meilenstein, nächster Schritt, offene Fragen) als ein `project`-Eintrag, absolute Daten.

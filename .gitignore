@@ -9,3 +9,6 @@ dist/
 
 # Modelle für die Gesichtserkennung (npm run models)
 resources/models/*.onnx
+
+# Originale der Demo-Fotos (verkleinerte Fassung liegt in Photos/)
+Photos-Original/

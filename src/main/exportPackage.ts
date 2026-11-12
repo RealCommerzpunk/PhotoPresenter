@@ -6,9 +6,10 @@ import type { Settings } from '@shared/settings'
 import { listPhotos } from './photos'
 import { DATA_DIR_NAME } from './portable'
 import { resourcePath } from './resources'
+import { DEFAULT_PHOTO_DIR } from './settings'
 
 /** Ordnername der Fotos im Paket (relativ zum Programm). Technische Namen sind englisch. */
-const PHOTOS_DIR = 'Photos'
+const PHOTOS_DIR = DEFAULT_PHOTO_DIR
 
 const QUICKSTART = 'Quickstart.pdf'
 

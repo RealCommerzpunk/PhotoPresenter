@@ -1,4 +1,4 @@
-import { readFileSync } from 'node:fs'
+import { existsSync, readFileSync } from 'node:fs'
 import { mkdir, rename, writeFile } from 'node:fs/promises'
 import { dirname, join } from 'node:path'
 import { app } from 'electron'
@@ -16,9 +16,23 @@ export function loadSettings(): Settings {
   try {
     current = parseSettings(JSON.parse(readFileSync(settingsPath(), 'utf8')))
   } catch {
-    current = defaultSettings
+    current = firstStartSettings()
   }
   return current
+}
+
+/** Name des Fotoordners neben dem Programm (Demo-Fotos im Repo, Weitergabe-Paket). */
+export const DEFAULT_PHOTO_DIR = 'Photos'
+
+/**
+ * Erster Start ohne Einstellungsdatei: Liegt ein Ordner „Photos“ neben dem Programm,
+ * wird er gleich als Fotoordner genommen (so läuft ein frisch geklontes Repo sofort).
+ */
+function firstStartSettings(): Settings {
+  if (!existsSync(settingsPath()) && existsSync(join(programDir(), DEFAULT_PHOTO_DIR))) {
+    return { ...defaultSettings, photoFolder: DEFAULT_PHOTO_DIR }
+  }
+  return defaultSettings
 }
 
 let writing: Promise<void> = Promise.resolve()
