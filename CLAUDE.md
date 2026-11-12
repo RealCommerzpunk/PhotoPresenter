@@ -83,5 +83,6 @@ Plan und Meilensteine: `docs/PLAN.md` · Änderungen je Version: `CHANGELOG.md` 
 - Windows kann zusammengeschaltete Monitore als einen Bildschirm melden (z. B. 5760×1134). Dafür gibt es `showDisplay` (Display-ID, leer = Maus) und `showArea` (Drittel/Hälften, Rechnung in `src/shared/display.ts`); ein Teilbereich ist ein randloses Fenster mit `alwaysOnTop('screen-saver')` statt Vollbild. Für Tests `PP_SHOW_WINDOWED=1` (Fenster-Vorschau im Seitenverhältnis des Bereichs) – nie die echte Vollbild-Show über den Bildschirm des Nutzers legen.
 - Zoom immer mit `limitShot(…, zoomLimit(…))` begrenzen (Einstellung `maxUpscale`).
 - Shell-Fallen: Backslashes, Regex und Template-Strings in `node -e`/Heredocs gehen leicht kaputt – bei so etwas Edit/Write oder ein Skript im Scratchpad benutzen.
+- `npm run quickstart` scheitert mit EBUSY, wenn der Nutzer `Quickstart.pdf` geöffnet hat: Nutzer bitten, sie zu schließen. Für Clips gibt es kein ffmpeg (Download wurde abgelehnt) → animierte WebP mit Pillow; Edge headless liefert hier keine Screenshots → Seiten mit einem Electron-Fenster (`offscreen`) abfotografieren.
 - Visuelle Tests der Einstellungen: `PP_SETTINGS_PAGE=Texte` (Seitenname) zusammen mit `PP_CAPTURE_DIR`.
 - npm 11 blockiert Install-Skripte; Freigaben stehen in `allowScripts` in `package.json`. Electron lädt seine Binärdatei beim ersten Start selbst.
