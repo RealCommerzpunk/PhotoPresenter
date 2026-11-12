@@ -474,7 +474,7 @@ export function PersonsPage({ s, update }: { s: Settings; update: Update }): Rea
                 <span className="ml-2 text-xs text-amber-300">★ Fokus</span>
               )}
               {p.id === s.focusPartnerId && (
-                <span className="ml-2 text-xs text-sky-300">🫂 Partner</span>
+                <span className="ml-2 text-xs text-sky-300">☆ Partner</span>
               )}
             </button>
           ))}
@@ -520,7 +520,7 @@ export function PersonsPage({ s, update }: { s: Settings; update: Update }): Rea
                     })
                   }
                 />
-                🫂 Fokus-Partner
+                ☆ Fokus-Partner
               </label>
               {!marking && (
                 <button
@@ -560,7 +560,7 @@ export function PersonsPage({ s, update }: { s: Settings; update: Update }): Rea
         </Field>
         <Field
           label="Gemeinsam fokussieren"
-          hint="Der 🫂 Fokus-Partner ist eine zweite wichtige Person – Partnerin, bester Freund, Kollegin, Vater … Sind ★ Fokus-Person und Fokus-Partner auf demselben Foto, fährt die Kamera erst den Partner und dann die Fokus-Person an (bei „Andere Gesichter: nachher“ umgekehrt)."
+          hint="Der ☆ Fokus-Partner ist eine zweite wichtige Person – Partnerin, bester Freund, Kollegin, Vater … Sind ★ Fokus-Person und Fokus-Partner auf demselben Foto, fährt die Kamera erst den Partner und dann die Fokus-Person an (bei „Andere Gesichter: nachher“ umgekehrt)."
         >
           <div className="flex flex-col gap-1">
             <Toggle
@@ -570,7 +570,7 @@ export function PersonsPage({ s, update }: { s: Settings; update: Update }): Rea
             />
             {!s.focusPartnerId && (
               <span className="text-xs text-white/40">
-                Noch kein Fokus-Partner gewählt (oben bei einer Person „🫂 Fokus-Partner“ ankreuzen).
+                Noch kein Fokus-Partner gewählt (oben bei einer Person „☆ Fokus-Partner“ ankreuzen).
               </span>
             )}
           </div>
@@ -647,5 +647,5 @@ function focusTitle(s: Settings): string {
   const focus = name(s.focusPersonId)
   const partner = name(s.focusPartnerId)
   if (!focus) return 'Fokus in der Show – noch keine Fokus-Person gewählt'
-  return `Fokus in der Show – gilt für ★ ${focus}${partner ? ` und 🫂 ${partner}` : ''}`
+  return `Fokus in der Show – gilt für ★ ${focus}${partner ? ` und ☆ ${partner}` : ''}`
 }

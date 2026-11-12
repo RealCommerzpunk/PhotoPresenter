@@ -150,4 +150,5 @@ Jeder Meilenstein ergibt eine lauffähige Version und einen eigenen Commit/PR.
 ## Offene Punkte für später (nicht im ersten Wurf)
 
 - **Internationalisierung (Nutzerwunsch 2026-11-12):** Die App soll übersetzbar sein, vor allem die Oberfläche (Einstellungen, Fernbedienung, Show-Meldungen). Entwickelt und dokumentiert wird weiter vornehmlich auf Deutsch, übersetzt wird später. Grundsprache für Einstellungen und Technisches ist Englisch (Ordner-, Datei- und Schlüsselnamen, z. B. `Data\`, `Photos\`, `README.txt`). Vorgehen später: Texte aus dem Code in Sprachdateien (Schlüssel englisch), Sprache wählbar, Fallback Deutsch/Englisch.
+- **Dublettenprüfung (Nutzerwunsch 2026-11-12):** Doppelte Fotos im Ordner erkennen (auch umbenannt, verkleinert oder neu gespeichert, z. B. per Wahrnehmungs-Hash) und in der Show nur einmal zeigen; in den Einstellungen anzeigen, welche Fotos doppelt sind.
 - Weitere: HEIC/RAW-Support, Videos in der Show, Hintergrundmusik, mehrere Fokus-Personen, Erkennung kleiner Gesichter in großen Gruppenfotos (Kacheln statt eines 640er-Durchgangs), Texte über Fotos neben statt unter Gesichter setzen.

@@ -108,7 +108,7 @@ More in [CLAUDE.md](CLAUDE.md) (German), the plan in [docs/PLAN.md](docs/PLAN.md
 ## Status
 
 In active development (version 0.x). Roadmap: performance on 4K screens, Linux installer testing, first
-release `v0.1.0`, internationalization (English UI), HEIC/RAW support, videos, background music.
+release `v0.1.0`, internationalization (English UI), duplicate photo detection, HEIC/RAW support, videos, background music.
 
 ## License and credits
 
