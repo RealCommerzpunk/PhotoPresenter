@@ -70,3 +70,5 @@ resources/      Modelle und Fonts, die mit ausgeliefert werden
 5. ✅ Texte: Editor, Stile, Animationen
 6. ✅ Gesichtserkennung und Fokus-Person
 7. Feinschliff und erstes Release (Ruckelfreiheit erledigt in 0.6.2)
+
+Dazugekommen (0.7–0.10): Fernbedienung per Handy mit QR-Code, Fokus-Partner, Zoomgrenze und Begrenzung kleiner Fotos, relativer Fotopfad und portable Windows-Version, Partikel-Effekte, animierte Textfolien-Hintergründe, 3D-Fotowelt (inkl. Wackelpudding-Würfel).
