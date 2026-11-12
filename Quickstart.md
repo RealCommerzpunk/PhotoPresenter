@@ -10,7 +10,7 @@ Diese Anleitung erklärt, wie du mit einem **Weitergabe-Ordner** loslegst. Das i
 
 ```
 PhotoPresenter\
-├── PhotoPresenter 0.12.1.exe   ← das Programm (Doppelklick zum Starten)
+├── PhotoPresenter x.y.z.exe    ← das Programm (Doppelklick zum Starten)
 ├── Photos\                     ← die Fotos der Diashow
 ├── Data\                       ← Einstellungen, Texte, Personen, Gesichtserkennung
 ├── Quickstart.pdf              ← diese Anleitung
@@ -32,7 +32,7 @@ Mehr ist nicht nötig, keine weitere Software.
 ## 3. Erster Start
 
 1. **Ordner auf den PC kopieren**, z. B. nach `C:\PhotoPresenter`. Vom USB-Stick geht es auch, ist aber langsamer.
-2. **`PhotoPresenter 0.12.1.exe` doppelklicken.** Der Start dauert ein paar Sekunden, weil sich das Programm erst entpackt.
+2. **Die Programmdatei `PhotoPresenter <Version>.exe` doppelklicken.** Der Start dauert ein paar Sekunden, weil sich das Programm erst entpackt.
 3. **Windows warnt** beim ersten Mal, weil das Programm nicht signiert ist: auf **„Weitere Informationen“** und dann auf **„Trotzdem ausführen“** klicken.
 4. **Die Windows-Firewall fragt** wegen der Handy-Fernbedienung: **„Private Netzwerke“ zulassen.**
 5. Es öffnet sich das **Einstellungsfenster**. Oben rechts:
