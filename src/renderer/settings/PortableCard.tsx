@@ -40,7 +40,7 @@ export function PortableCard(): React.JSX.Element {
             </span>
             <button
               onClick={() => void window.api.openPath(info.dir)}
-              className="self-start truncate text-left text-xs text-indigo-300 hover:text-indigo-200"
+              className="max-w-full self-start break-all text-left text-xs text-indigo-300 hover:text-indigo-200"
               title="Ordner öffnen"
             >
               {info.dir}

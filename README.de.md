@@ -2,7 +2,7 @@
 
 <h1 align="center">PhotoPresenter</h1>
 
-<p align="center"><a href="README.md">English</a> · <b>Deutsch</b></p>
+<p align="center"><a href="README.md">English</a> · <b>Deutsch</b> · <a href="https://realcommerzpunk.github.io/PhotoPresenter/">Produktseite</a></p>
 
 <p align="center"><img src="docs/images/show.jpg" width="720" alt="PhotoPresenter mit einem Demo-Foto"></p>
 

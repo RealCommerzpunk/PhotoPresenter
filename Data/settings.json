@@ -1,0 +1,478 @@
+{
+  "version": 1,
+  "photoFolder": "Photos",
+  "includeSubfolders": true,
+  "displayDuration": {
+    "min": 6,
+    "max": 10,
+    "mode": "random"
+  },
+  "transitionDuration": {
+    "min": 1.2,
+    "max": 2.5,
+    "mode": "random"
+  },
+  "transitions": [
+    {
+      "id": "fade",
+      "enabled": true,
+      "weight": 4
+    },
+    {
+      "id": "fadeBlack",
+      "enabled": true,
+      "weight": 1
+    },
+    {
+      "id": "wipe",
+      "enabled": true,
+      "weight": 2
+    },
+    {
+      "id": "push",
+      "enabled": true,
+      "weight": 1
+    },
+    {
+      "id": "circle",
+      "enabled": true,
+      "weight": 1
+    },
+    {
+      "id": "zoomBlur",
+      "enabled": true,
+      "weight": 2
+    },
+    {
+      "id": "dissolve",
+      "enabled": true,
+      "weight": 2
+    },
+    {
+      "id": "clock",
+      "enabled": true,
+      "weight": 1
+    },
+    {
+      "id": "pixelize",
+      "enabled": true,
+      "weight": 1
+    },
+    {
+      "id": "ripple",
+      "enabled": true,
+      "weight": 1
+    },
+    {
+      "id": "glow",
+      "enabled": true,
+      "weight": 2
+    },
+    {
+      "id": "blinds",
+      "enabled": true,
+      "weight": 1
+    },
+    {
+      "id": "swirl",
+      "enabled": true,
+      "weight": 1
+    }
+  ],
+  "motionIntensity": {
+    "min": 0.08,
+    "max": 0.2,
+    "mode": "random"
+  },
+  "motionKinds": [
+    {
+      "id": "zoomIn",
+      "enabled": true,
+      "weight": 2
+    },
+    {
+      "id": "zoomOut",
+      "enabled": true,
+      "weight": 1
+    },
+    {
+      "id": "pan",
+      "enabled": true,
+      "weight": 1
+    },
+    {
+      "id": "journey",
+      "enabled": true,
+      "weight": 2
+    }
+  ],
+  "maxUpscale": 1.25,
+  "maxCrop": 0.12,
+  "maxBaseScale": 0,
+  "fillModes": [
+    {
+      "id": "blur",
+      "enabled": true,
+      "weight": 3
+    },
+    {
+      "id": "ambient",
+      "enabled": true,
+      "weight": 1
+    },
+    {
+      "id": "mirror",
+      "enabled": true,
+      "weight": 1
+    }
+  ],
+  "textFillerEvery": {
+    "min": 8,
+    "max": 15,
+    "mode": "random"
+  },
+  "textDuration": {
+    "min": 4,
+    "max": 6,
+    "mode": "random"
+  },
+  "textStyles": [
+    {
+      "id": "elegant",
+      "enabled": true,
+      "weight": 1
+    },
+    {
+      "id": "kino",
+      "enabled": true,
+      "weight": 1
+    },
+    {
+      "id": "schreibmaschine",
+      "enabled": true,
+      "weight": 1
+    },
+    {
+      "id": "handschrift",
+      "enabled": true,
+      "weight": 1
+    },
+    {
+      "id": "notiz",
+      "enabled": true,
+      "weight": 1
+    },
+    {
+      "id": "plakat",
+      "enabled": true,
+      "weight": 1
+    },
+    {
+      "id": "neon",
+      "enabled": true,
+      "weight": 1
+    },
+    {
+      "id": "minimal",
+      "enabled": true,
+      "weight": 1
+    },
+    {
+      "id": "retro",
+      "enabled": true,
+      "weight": 1
+    },
+    {
+      "id": "festlich",
+      "enabled": true,
+      "weight": 1
+    },
+    {
+      "id": "untertitel",
+      "enabled": true,
+      "weight": 1
+    },
+    {
+      "id": "zitat",
+      "enabled": true,
+      "weight": 1
+    }
+  ],
+  "focusEnabled": true,
+  "focusPersonId": "pmwe2lpit",
+  "focusPartnerId": "pmwe2mkfq",
+  "focusTogether": true,
+  "focusThreshold": 0.38,
+  "focusModes": [
+    {
+      "id": "slowZoom",
+      "enabled": true,
+      "weight": 2
+    },
+    {
+      "id": "fastZoom",
+      "enabled": true,
+      "weight": 1
+    },
+    {
+      "id": "journey",
+      "enabled": true,
+      "weight": 2
+    }
+  ],
+  "focusFaceSize": {
+    "min": 0.28,
+    "max": 0.42,
+    "mode": "random"
+  },
+  "focusPanOthers": "random",
+  "focusBoost": 1,
+  "effectsEnabled": true,
+  "effectEvery": {
+    "min": 6,
+    "max": 12,
+    "mode": "random"
+  },
+  "effectDuration": {
+    "min": 5,
+    "max": 9,
+    "mode": "random"
+  },
+  "effectIntensity": {
+    "min": 0.4,
+    "max": 0.7,
+    "mode": "random"
+  },
+  "effects": [
+    {
+      "id": "confetti",
+      "enabled": true,
+      "weight": 1
+    },
+    {
+      "id": "snow",
+      "enabled": true,
+      "weight": 1
+    },
+    {
+      "id": "sparkles",
+      "enabled": true,
+      "weight": 2
+    },
+    {
+      "id": "hearts",
+      "enabled": true,
+      "weight": 1
+    },
+    {
+      "id": "bubbles",
+      "enabled": true,
+      "weight": 1
+    },
+    {
+      "id": "fireworks",
+      "enabled": true,
+      "weight": 1
+    },
+    {
+      "id": "petals",
+      "enabled": true,
+      "weight": 2
+    },
+    {
+      "id": "goldDust",
+      "enabled": true,
+      "weight": 2
+    }
+  ],
+  "textBackgrounds": [
+    {
+      "id": "photo",
+      "enabled": true,
+      "weight": 3
+    },
+    {
+      "id": "aurora",
+      "enabled": true,
+      "weight": 1
+    },
+    {
+      "id": "nebula",
+      "enabled": true,
+      "weight": 1
+    },
+    {
+      "id": "waves",
+      "enabled": true,
+      "weight": 1
+    },
+    {
+      "id": "bokeh",
+      "enabled": true,
+      "weight": 1
+    },
+    {
+      "id": "stars",
+      "enabled": true,
+      "weight": 1
+    }
+  ],
+  "worldEnabled": true,
+  "worldEvery": {
+    "min": 15,
+    "max": 25,
+    "mode": "random"
+  },
+  "worldDuration": {
+    "min": 18,
+    "max": 26,
+    "mode": "random"
+  },
+  "worldTiles": {
+    "min": 40,
+    "max": 60,
+    "mode": "random"
+  },
+  "worldCameraSpeed": {
+    "min": 1,
+    "max": 1,
+    "mode": "fixed"
+  },
+  "worldFormations": [
+    {
+      "id": "sphere",
+      "enabled": true,
+      "weight": 2
+    },
+    {
+      "id": "helix",
+      "enabled": true,
+      "weight": 2
+    },
+    {
+      "id": "grid",
+      "enabled": true,
+      "weight": 2
+    },
+    {
+      "id": "table",
+      "enabled": true,
+      "weight": 2
+    },
+    {
+      "id": "frames",
+      "enabled": true,
+      "weight": 1
+    },
+    {
+      "id": "cube",
+      "enabled": true,
+      "weight": 1
+    },
+    {
+      "id": "carousel",
+      "enabled": true,
+      "weight": 1
+    },
+    {
+      "id": "tunnel",
+      "enabled": true,
+      "weight": 1
+    },
+    {
+      "id": "wave",
+      "enabled": true,
+      "weight": 1
+    },
+    {
+      "id": "jelly",
+      "enabled": true,
+      "weight": 1
+    }
+  ],
+  "showDisplay": "",
+  "showArea": "full",
+  "emojis": [
+    "❤️",
+    "😂",
+    "🎉",
+    "👏",
+    "😍",
+    "🥳",
+    "🔥",
+    "⭐",
+    "🥂",
+    "😮",
+    "🙈",
+    "👍"
+  ],
+  "remoteEnabled": true,
+  "remotePort": 8765,
+  "texts": [
+    {
+      "id": "tmwe2q677f4l0",
+      "enabled": true,
+      "text": "HAHA!",
+      "kind": "filler",
+      "photos": [],
+      "placement": "before",
+      "style": "random",
+      "adhoc": true
+    },
+    {
+      "id": "tmwe2ps18wcay",
+      "enabled": true,
+      "text": "Cheers!",
+      "kind": "filler",
+      "photos": [],
+      "placement": "before",
+      "style": "random",
+      "adhoc": true
+    },
+    {
+      "id": "beispiel-1",
+      "enabled": true,
+      "text": "Great!",
+      "kind": "filler",
+      "photos": [],
+      "placement": "over",
+      "style": "random"
+    },
+    {
+      "id": "beispiel-2",
+      "enabled": true,
+      "text": "Fantastic!",
+      "kind": "filler",
+      "photos": [],
+      "placement": "over",
+      "style": "random"
+    }
+  ],
+  "customStyles": [],
+  "persons": [
+    {
+      "id": "pmwe2lpit",
+      "name": "Maya",
+      "samples": [
+        {
+          "photo": "pexels-7683685.jpg",
+          "face": 2,
+          "emb": "e1wBvlHeKb0CmWs83VTqPau2Yb3KWte8Ta2RvRhNfzxaxZc98h6oPbDyOb0cu8a9bAruvdgnHj3LGpy9LqOgPf9eHj25sUW+T135vfi0pb2ILJm9MctfvGKUiTwctsm8BSjHu93mOz534/U9U4QFvCNggD0h93G9wCQ1vejzTjrp0FE8+mSrvQOy1D1uNY49gyeiveOYCT6JAOI9ha9wvawKlrw3BQ6+LqQ5vd61fb0Bl++7hBkqPi3sIb3sWqE9MbcNvh/JejxzggO99q9EPPJnjr3LksY94iG9PSOl1L3l3og9+DwwvZIOmr2TGP09jArTukuUp7xbwto8qBN3vb8R7jxRT+C9M6E5PRCSFT466Cy99HbavEAx/zzOTwW+kuvrvRIGUbywjBK9xFjgvWMM0bwKLdm9MoavvUv10b0KEri8NMT1PdIo+L2jsRM94V8yPqbCpT3cunc9DD6zvfnWEj4L4Mk9ytyWvbBfUL3qtKO9wFwQPn/PKb4o2F8+xzKtO0cPCz4or7q9sOXHvBxlfD0vdBC9wiHpPO/DwLyNjYu8BDchvVCoYz03MKK5W3pxPUbHar22GYk9UZiFvKufCz0Z2pc95deePRAxjj1kOgc+F523vUkDvj3TLDs9j7+2PHwQOz2g2Qw9he8IPrgMkD3LgoC+ihAZPtxMKT4="
+        }
+      ],
+      "negatives": []
+    },
+    {
+      "id": "pmwe2mkfq",
+      "name": "Peter",
+      "samples": [
+        {
+          "photo": "pexels-7683704.jpg",
+          "face": 3,
+          "emb": "qzklvrGCpjuLg2k+FrkOPsahFj6nyxC+UoSOvVn7+T2ywgc9ybzlPffCib1rl9o9emyzO5JTpz3SxcY9l5TOPSm3A76Y5r08h4TYvQpQlrxuBLk9CVhnPMAk9z3h4pC9YLRBvetr3z0qH4O8QeMHPQKVuTypgrg9eYK/vcJEQzzs9yi9152ivH6cIT1+B9o8ro4cvpbAF7701+q9298kvvifcD72qJU8fMuaPMq/yryJKtq9ABY2O+n35zwjjNA9h3FoPeMVXz0lYXm92LdpPPhiazwK1QE+VKP0vHTpCj39bjU9/542PIxqsbz4egW8jPIkPsAxPL295eC9RRRiPZR/wjskJLA9DUqPPZOvKj11PME9iC2+vQ0omD1uhQA+34aEvfxGF76Gu7A8V609vdQPrz2CylA+/oycO4cAuTyqUmi9XoMaO79Yaj5cAoA9lvNFvBmJCj3ZJ709hiHDvUhiY70U9RQ9esb2vbEauT0CN7U90XLbPZ8x7ryLyW0+d1PmO/gIgT2hb3I9esgiOr4HGr1uvZG9Yk+KPGGgbb0CFpU9c1hWPaivVb3vBX89u9iDPVgtjrx+AtG8ncWzvBp4Gb5HSR+9Ta+KPcAuqz345P680DOpvEyj/z1JHSm9BSC6PUqZmj13CpE9PTjhvSuKTj2UVXc7sUaNvZgP5z0="
+        }
+      ],
+      "negatives": []
+    }
+  ]
+}

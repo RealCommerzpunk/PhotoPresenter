@@ -7,7 +7,7 @@
   creative transitions, face focus, animated texts and a phone remote control.
 </p>
 
-<p align="center"><b>English</b> · <a href="README.de.md">Deutsch</a></p>
+<p align="center"><b>English</b> · <a href="README.de.md">Deutsch</a> · <a href="https://realcommerzpunk.github.io/PhotoPresenter/">Product page (German)</a></p>
 
 <p align="center"><img src="docs/images/show.jpg" width="720" alt="PhotoPresenter showing a demo photo"></p>
 

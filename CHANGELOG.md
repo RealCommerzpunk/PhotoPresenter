@@ -2,6 +2,12 @@
 
 Alle Änderungen je Version. Format: neueste Version oben, Datum im Format JJJJ-MM-TT.
 
+## 0.12.4 – 2026-11-12
+
+- **Produktseite** `docs/index.html` (für GitHub Pages) mit Clips der Show, Einstellungen und Fernbedienung
+- **Fokus-Partner** ohne Herz: Symbol 🫂, der Partner kann jede zweite wichtige Person sein (Freundin, Kollege, Vater …)
+- Behoben: Ein langer Pfad zum Datenordner machte die Seite „Allgemein“ breiter als das Fenster
+
 ## 0.12.3 – 2026-11-12
 
 Vorbereitung auf ein öffentliches Repository.

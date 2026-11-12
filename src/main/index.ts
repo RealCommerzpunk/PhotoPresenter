@@ -186,12 +186,20 @@ function startShow(options: ShowOptions = {}): void {
   let placement: Electron.BrowserWindowConstructorOptions
   if (options.windowed) {
     // Vorschau im Seitenverhältnis des gewählten Bereichs, handlich auch bei sehr breiten Bildschirmen.
-    const width = Math.round(Math.min(1280, work.width * 0.55))
-    const height = Math.round(Math.min(work.height * 0.8, (width * area.height) / area.width))
+    let width = Math.round(Math.min(1280, work.width * 0.55))
+    let height = Math.round(Math.min(work.height * 0.8, (width * area.height) / area.width))
+    width = Math.round((height * area.width) / area.height)
+    // Nur Entwicklung: feste Größe für Aufnahmen, z. B. PP_SHOW_SIZE=1280x720
+    const fixed = !app.isPackaged && /^(\d+)x(\d+)$/.exec(process.env['PP_SHOW_SIZE'] ?? '')
+    if (fixed) {
+      width = Number(fixed[1])
+      height = Number(fixed[2])
+    }
     placement = {
-      width: Math.round((height * area.width) / area.height),
+      width,
       height,
-      x: Math.round(work.x + (work.width - (height * area.width) / area.height) / 2),
+      useContentSize: !!fixed,
+      x: Math.round(work.x + (work.width - width) / 2),
       y: Math.round(work.y + (work.height - height) / 2),
       title: 'PhotoPresenter – Vorschau',
       autoHideMenuBar: true
@@ -392,7 +400,7 @@ function captureForTests(win: BrowserWindow, prefix: string): void {
         await mkdir(dir, { recursive: true })
         await writeFile(
           join(dir, `${prefix}${String(++n).padStart(2, '0')}.jpg`),
-          image.resize({ width: 960 }).toJPEG(80)
+          image.resize({ width: Number(process.env['PP_CAPTURE_WIDTH']) || 960 }).toJPEG(88)
         )
       } catch {
         // Fenster gerade verdeckt oder im Aufbau: diese Aufnahme auslassen.

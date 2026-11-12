@@ -1,0 +1,1012 @@
+<!doctype html>
+<html lang="de">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>PhotoPresenter – lebendige Foto-Diashow</title>
+    <meta
+      name="description"
+      content="PhotoPresenter macht aus einem Fotoordner eine lebendige Vollbild-Diashow: Kamerafahrten, Gesichtsfokus, Texte, Effekte, 3D-Fotowelt und Handy-Fernbedienung. Kostenlos, offline, für Windows und Linux."
+    />
+    <meta property="og:title" content="PhotoPresenter – lebendige Foto-Diashow" />
+    <meta property="og:description" content="Kamerafahrten, Gesichtsfokus, Texte, Effekte, 3D-Fotowelt und Handy-Fernbedienung." />
+    <meta property="og:image" content="https://realcommerzpunk.github.io/PhotoPresenter/images/social-preview.png" />
+    <link rel="icon" type="image/png" href="media/icon.png" />
+    <style>
+      :root {
+        --bg: #0b0d12;
+        --bg2: #12151d;
+        --card: #171b25;
+        --line: rgba(255, 255, 255, 0.09);
+        --text: #e8ebf2;
+        --muted: #9aa3b5;
+        --accent: #ff7a5c;
+        --accent2: #7c8cff;
+        --radius: 18px;
+        color-scheme: dark;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      html {
+        scroll-behavior: smooth;
+      }
+      body {
+        margin: 0;
+        background: var(--bg);
+        color: var(--text);
+        font: 17px/1.6 'Segoe UI', system-ui, -apple-system, 'Noto Sans', Roboto, Arial, sans-serif;
+        -webkit-font-smoothing: antialiased;
+      }
+      img {
+        max-width: 100%;
+        display: block;
+      }
+      a {
+        color: var(--accent);
+        text-decoration: none;
+      }
+      a:hover {
+        text-decoration: underline;
+      }
+      .wrap {
+        max-width: 1180px;
+        margin: 0 auto;
+        padding: 0 24px;
+      }
+
+      /* Navigation */
+      nav {
+        position: sticky;
+        top: 0;
+        z-index: 20;
+        backdrop-filter: blur(14px);
+        background: rgba(11, 13, 18, 0.78);
+        border-bottom: 1px solid var(--line);
+      }
+      nav .wrap {
+        display: flex;
+        align-items: center;
+        gap: 22px;
+        height: 60px;
+      }
+      nav .brand {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        font-weight: 700;
+        color: var(--text);
+        margin-right: auto;
+      }
+      nav .brand img {
+        width: 32px;
+        height: 32px;
+        background: #fff;
+        border-radius: 8px;
+        padding: 2px;
+      }
+      nav a.link {
+        color: var(--muted);
+        font-size: 15px;
+      }
+      nav a.link:hover {
+        color: var(--text);
+        text-decoration: none;
+      }
+      .btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 12px 22px;
+        border-radius: 999px;
+        font-weight: 600;
+        background: var(--accent);
+        color: #1b0f0b;
+        border: 0;
+        transition: transform 0.15s, box-shadow 0.15s;
+      }
+      .btn:hover {
+        text-decoration: none;
+        transform: translateY(-1px);
+        box-shadow: 0 8px 26px rgba(255, 122, 92, 0.35);
+      }
+      .btn.ghost {
+        background: transparent;
+        color: var(--text);
+        border: 1px solid var(--line);
+      }
+      .btn.ghost:hover {
+        box-shadow: none;
+        background: rgba(255, 255, 255, 0.05);
+      }
+      nav .btn {
+        padding: 8px 16px;
+        font-size: 14px;
+      }
+
+      /* Hero */
+      .hero {
+        position: relative;
+        padding: 72px 0 40px;
+        overflow: hidden;
+      }
+      .hero::before {
+        content: '';
+        position: absolute;
+        inset: -30% -10% auto;
+        height: 120%;
+        background:
+          radial-gradient(40% 50% at 20% 20%, rgba(124, 140, 255, 0.22), transparent 70%),
+          radial-gradient(40% 50% at 85% 10%, rgba(255, 122, 92, 0.22), transparent 70%);
+        pointer-events: none;
+      }
+      .hero .wrap {
+        position: relative;
+        text-align: center;
+      }
+      .eyebrow {
+        display: inline-block;
+        font-size: 13px;
+        letter-spacing: 0.14em;
+        text-transform: uppercase;
+        color: var(--accent);
+        font-weight: 700;
+        margin-bottom: 14px;
+      }
+      h1 {
+        font-size: clamp(38px, 6vw, 68px);
+        line-height: 1.05;
+        margin: 0 0 18px;
+        letter-spacing: -0.02em;
+      }
+      h1 .grad {
+        background: linear-gradient(90deg, #ffb199, var(--accent) 45%, var(--accent2));
+        -webkit-background-clip: text;
+        background-clip: text;
+        color: transparent;
+      }
+      .lead {
+        font-size: clamp(17px, 2vw, 21px);
+        color: var(--muted);
+        max-width: 760px;
+        margin: 0 auto 30px;
+      }
+      .cta {
+        display: flex;
+        gap: 14px;
+        justify-content: center;
+        flex-wrap: wrap;
+        margin-bottom: 48px;
+      }
+      .screen {
+        position: relative;
+        border-radius: var(--radius);
+        overflow: hidden;
+        border: 1px solid var(--line);
+        box-shadow:
+          0 30px 80px rgba(0, 0, 0, 0.55),
+          0 0 0 8px rgba(255, 255, 255, 0.03);
+        background: #000;
+      }
+      .hero .screen {
+        max-width: 1040px;
+        margin: 0 auto;
+      }
+      .screen img {
+        width: 100%;
+        aspect-ratio: 16 / 9;
+        object-fit: cover;
+      }
+      .badge {
+        position: absolute;
+        left: 14px;
+        bottom: 14px;
+        background: rgba(0, 0, 0, 0.62);
+        backdrop-filter: blur(8px);
+        border: 1px solid var(--line);
+        color: #fff;
+        font-size: 13px;
+        padding: 6px 12px;
+        border-radius: 999px;
+      }
+      .facts {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: center;
+        gap: 10px 28px;
+        margin-top: 34px;
+        color: var(--muted);
+        font-size: 15px;
+      }
+      .facts b {
+        color: var(--text);
+      }
+
+      /* Abschnitte */
+      section {
+        padding: 84px 0;
+        border-top: 1px solid var(--line);
+      }
+      section.alt {
+        background: var(--bg2);
+      }
+      .head {
+        max-width: 760px;
+        margin-bottom: 40px;
+      }
+      .head.center {
+        margin-left: auto;
+        margin-right: auto;
+        text-align: center;
+      }
+      h2 {
+        font-size: clamp(28px, 4vw, 42px);
+        line-height: 1.15;
+        margin: 0 0 14px;
+        letter-spacing: -0.01em;
+      }
+      h3 {
+        font-size: 20px;
+        margin: 0 0 6px;
+      }
+      .head p {
+        color: var(--muted);
+        font-size: 18px;
+        margin: 0;
+      }
+      .split {
+        display: grid;
+        grid-template-columns: 1.35fr 1fr;
+        gap: 48px;
+        align-items: center;
+      }
+      .split.rev {
+        grid-template-columns: 1fr 1.35fr;
+      }
+      .split.rev .media {
+        order: 2;
+      }
+      .points {
+        list-style: none;
+        padding: 0;
+        margin: 22px 0 0;
+        display: grid;
+        gap: 14px;
+      }
+      .points li {
+        display: grid;
+        grid-template-columns: 34px 1fr;
+        gap: 12px;
+        color: var(--muted);
+      }
+      .points li b {
+        color: var(--text);
+        display: block;
+      }
+      .points .ico {
+        width: 34px;
+        height: 34px;
+        border-radius: 10px;
+        display: grid;
+        place-items: center;
+        background: rgba(255, 122, 92, 0.12);
+        font-size: 18px;
+      }
+
+      /* Clip-Raster */
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 22px;
+      }
+      .grid.two {
+        grid-template-columns: repeat(2, 1fr);
+      }
+      .tile {
+        background: var(--card);
+        border: 1px solid var(--line);
+        border-radius: var(--radius);
+        overflow: hidden;
+      }
+      .tile img {
+        width: 100%;
+        aspect-ratio: 16 / 9;
+        object-fit: cover;
+        background: #000;
+      }
+      .tile .txt {
+        padding: 16px 18px 20px;
+      }
+      .tile .txt p {
+        margin: 0;
+        color: var(--muted);
+        font-size: 15px;
+      }
+
+      /* Einstellungen: Reiter mit Screenshots */
+      .tabs {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin-bottom: 18px;
+      }
+      .tabs button {
+        font: inherit;
+        font-size: 15px;
+        color: var(--muted);
+        background: var(--card);
+        border: 1px solid var(--line);
+        padding: 8px 16px;
+        border-radius: 999px;
+        cursor: pointer;
+      }
+      .tabs button[aria-selected='true'] {
+        color: #1b0f0b;
+        background: var(--accent);
+        border-color: var(--accent);
+        font-weight: 600;
+      }
+      .window {
+        border-radius: 14px;
+        overflow: hidden;
+        border: 1px solid var(--line);
+        background: #0b0d12;
+        box-shadow: 0 24px 60px rgba(0, 0, 0, 0.5);
+      }
+      .window .bar {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        height: 34px;
+        padding: 0 14px;
+        background: #1a1e28;
+        font-size: 13px;
+        color: var(--muted);
+      }
+      .window .bar i {
+        width: 11px;
+        height: 11px;
+        border-radius: 50%;
+        background: #3a4050;
+        display: block;
+      }
+      .window img {
+        width: 100%;
+        cursor: zoom-in;
+      }
+      .caption {
+        color: var(--muted);
+        font-size: 15px;
+        margin: 14px 2px 0;
+        min-height: 3em;
+      }
+
+      /* Fernbedienung: Handys */
+      .phones {
+        display: flex;
+        gap: 26px;
+        justify-content: center;
+        align-items: flex-start;
+        flex-wrap: wrap;
+      }
+      .phone {
+        width: 250px;
+        border-radius: 38px;
+        padding: 10px;
+        background: linear-gradient(160deg, #2a2f3c, #12151c);
+        box-shadow:
+          0 30px 70px rgba(0, 0, 0, 0.55),
+          inset 0 0 0 1px rgba(255, 255, 255, 0.08);
+        transition: transform 0.25s;
+      }
+      .phone:hover {
+        transform: translateY(-6px);
+      }
+      .phone img {
+        border-radius: 29px;
+        width: 100%;
+        aspect-ratio: 390 / 844;
+        object-fit: cover;
+        object-position: top;
+        cursor: zoom-in;
+      }
+      .phone figcaption {
+        text-align: center;
+        font-size: 14px;
+        color: var(--muted);
+        padding: 12px 6px 4px;
+      }
+      .phone figcaption b {
+        color: var(--text);
+        display: block;
+      }
+      .phone.mid {
+        margin-top: -24px;
+      }
+      .more-phones {
+        margin-top: 34px;
+        display: flex;
+        gap: 14px;
+        justify-content: center;
+        flex-wrap: wrap;
+      }
+      .more-phones figure {
+        margin: 0;
+        width: 150px;
+      }
+      .more-phones img {
+        border-radius: 16px;
+        border: 1px solid var(--line);
+        aspect-ratio: 390 / 844;
+        object-fit: cover;
+        object-position: top;
+        cursor: zoom-in;
+      }
+      .more-phones figcaption {
+        text-align: center;
+        font-size: 13px;
+        color: var(--muted);
+        margin-top: 6px;
+      }
+
+      /* Tasten */
+      .keys {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+        gap: 12px;
+        margin-top: 30px;
+      }
+      .key {
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        background: var(--card);
+        border: 1px solid var(--line);
+        border-radius: 14px;
+        padding: 12px 16px;
+        color: var(--muted);
+        font-size: 15px;
+      }
+      kbd {
+        min-width: 44px;
+        text-align: center;
+        font: 600 14px/1 ui-monospace, Consolas, monospace;
+        color: var(--text);
+        background: #222838;
+        border: 1px solid #343b4f;
+        border-bottom-width: 3px;
+        border-radius: 8px;
+        padding: 8px 10px;
+      }
+
+      /* Schritte */
+      .steps {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 22px;
+        counter-reset: s;
+      }
+      .step {
+        background: var(--card);
+        border: 1px solid var(--line);
+        border-radius: var(--radius);
+        padding: 26px 24px;
+        position: relative;
+      }
+      .step::before {
+        counter-increment: s;
+        content: counter(s);
+        display: grid;
+        place-items: center;
+        width: 36px;
+        height: 36px;
+        border-radius: 50%;
+        background: var(--accent);
+        color: #1b0f0b;
+        font-weight: 800;
+        margin-bottom: 14px;
+      }
+      .step p {
+        color: var(--muted);
+        margin: 0;
+        font-size: 15px;
+      }
+      pre {
+        background: #0a0c10;
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        padding: 14px 16px;
+        overflow-x: auto;
+        font-size: 14px;
+        color: #cfd6e4;
+      }
+
+      footer {
+        padding: 48px 0 60px;
+        border-top: 1px solid var(--line);
+        color: var(--muted);
+        font-size: 14px;
+      }
+      footer .cols {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 24px 48px;
+        justify-content: space-between;
+      }
+      footer ul {
+        margin: 8px 0 0;
+        padding-left: 18px;
+      }
+
+      /* Großansicht */
+      .lightbox {
+        position: fixed;
+        inset: 0;
+        z-index: 50;
+        background: rgba(0, 0, 0, 0.88);
+        display: none;
+        place-items: center;
+        padding: 24px;
+        cursor: zoom-out;
+      }
+      .lightbox.open {
+        display: grid;
+      }
+      .lightbox img {
+        max-height: 92vh;
+        width: auto;
+        border-radius: 12px;
+        box-shadow: 0 30px 80px rgba(0, 0, 0, 0.6);
+      }
+
+      .reveal {
+        opacity: 0;
+        transform: translateY(22px);
+        transition:
+          opacity 0.7s ease,
+          transform 0.7s ease;
+      }
+      .reveal.in {
+        opacity: 1;
+        transform: none;
+      }
+      @media (prefers-reduced-motion: reduce) {
+        .reveal {
+          opacity: 1;
+          transform: none;
+          transition: none;
+        }
+        html {
+          scroll-behavior: auto;
+        }
+      }
+
+      @media (max-width: 900px) {
+        .split,
+        .split.rev {
+          grid-template-columns: 1fr;
+          gap: 28px;
+        }
+        .split.rev .media {
+          order: 0;
+        }
+        .grid,
+        .steps {
+          grid-template-columns: 1fr;
+        }
+        .grid.two {
+          grid-template-columns: 1fr;
+        }
+        nav a.link {
+          display: none;
+        }
+        .phone.mid {
+          margin-top: 0;
+        }
+        section {
+          padding: 60px 0;
+        }
+      }
+      @media (max-width: 560px) {
+        .wrap {
+          padding: 0 16px;
+        }
+        .phone {
+          width: 100%;
+          max-width: 300px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <nav>
+      <div class="wrap">
+        <a class="brand" href="#top"><img src="media/icon.png" alt="" />PhotoPresenter</a>
+        <a class="link" href="#show">Diashow</a>
+        <a class="link" href="#fokus">Gesichtsfokus</a>
+        <a class="link" href="#einstellungen">Einstellungen</a>
+        <a class="link" href="#fernbedienung">Fernbedienung</a>
+        <a class="btn" href="#loslegen">Loslegen</a>
+      </div>
+    </nav>
+
+    <header class="hero" id="top">
+      <div class="wrap">
+        <span class="eyebrow">Kostenlos · Offline · Windows &amp; Linux</span>
+        <h1>Deine Fotos.<br /><span class="grad">Lebendig erzählt.</span></h1>
+        <p class="lead">
+          PhotoPresenter macht aus einem einfachen Fotoordner eine Diashow, die sich wie ein Film anfühlt –
+          mit Kamerafahrten, Gesichtsfokus, Texten, Effekten, einer 3D-Fotowelt und einer Fernbedienung auf dem Handy.
+        </p>
+        <div class="cta">
+          <a class="btn" href="#loslegen">Jetzt ausprobieren</a>
+          <a class="btn ghost" href="https://github.com/RealCommerzpunk/PhotoPresenter">Auf GitHub ansehen</a>
+        </div>
+        <div class="screen reveal">
+          <img src="media/focus.webp" alt="Die Kamera schwenkt über eine Gruppe und zoomt auf die Fokus-Person" />
+          <span class="badge">Echte Aufnahme: Kamerafahrt über die Gesichter der Gruppe</span>
+        </div>
+        <div class="facts">
+          <span><b>13</b> Übergänge</span>
+          <span><b>8</b> Partikel-Effekte</span>
+          <span><b>12</b> Textstile</span>
+          <span><b>10</b> 3D-Formationen</span>
+          <span><b>0</b> Cloud – alles bleibt auf deinem PC</span>
+        </div>
+      </div>
+    </header>
+
+    <section id="show">
+      <div class="wrap">
+        <div class="head reveal">
+          <span class="eyebrow">Die Diashow</span>
+          <h2>Jedes Foto bekommt seinen Auftritt.</h2>
+          <p>
+            Zufällige Reihenfolge ohne Wiederholung, sanfte Zooms, Schwenks und Kamerafahrten. Freie Ränder werden
+            unauffällig aus dem Foto selbst gefüllt – kein schwarzer Rand, kein verzerrtes Bild.
+          </p>
+        </div>
+        <div class="grid">
+          <figure class="tile reveal" style="margin: 0">
+            <img src="media/transition.webp" alt="Übergang mit Zoom-Unschärfe" loading="lazy" />
+            <div class="txt">
+              <h3>13 Übergänge</h3>
+              <p>Überblenden, Wischen, Strudel, Welle, Zoom-Unschärfe … zufällig gemischt, Dauer frei wählbar.</p>
+            </div>
+          </figure>
+          <figure class="tile reveal" style="margin: 0">
+            <img src="media/pixelate.webp" alt="Übergang durch Verpixeln" loading="lazy" />
+            <div class="txt">
+              <h3>Butterweich auf der Grafikkarte</h3>
+              <p>Alle Effekte laufen als WebGL-Shader – flüssig auch auf einem Mini-PC mit Onboard-Grafik.</p>
+            </div>
+          </figure>
+          <figure class="tile reveal" style="margin: 0">
+            <img src="media/info.webp" alt="Info-Tafel mit Daten zum Foto" loading="lazy" />
+            <div class="txt">
+              <h3>Alles im Blick</h3>
+              <p>Taste <kbd>I</kbd> zeigt Datum, Kamera, Auflösung, Zoom und erkannte Personen zum aktuellen Foto.</p>
+            </div>
+          </figure>
+        </div>
+      </div>
+    </section>
+
+    <section class="alt" id="fokus">
+      <div class="wrap split">
+        <div class="media reveal">
+          <div class="screen">
+            <img src="media/hero.webp" alt="Gruppenfoto im Fokus" loading="lazy" />
+            <span class="badge">★ Fokus-Person &amp; 🫂 Fokus-Partner</span>
+          </div>
+        </div>
+        <div class="reveal">
+          <span class="eyebrow">Gesichtsfokus</span>
+          <h2>Die wichtigsten Menschen stehen im Mittelpunkt.</h2>
+          <p class="head" style="color: var(--muted); margin: 0">
+            Zeig PhotoPresenter ein paar Fotos einer Person – das Programm findet sie in allen anderen wieder und fährt mit
+            der Kamera auf ihr Gesicht zu.
+          </p>
+          <ul class="points">
+            <li><span class="ico">★</span><span><b>Fokus-Person</b>Das Geburtstagskind, die Braut, der Jubilar.</span></li>
+            <li>
+              <span class="ico">🫂</span
+              ><span><b>Fokus-Partner</b>Eine zweite wichtige Person: Partnerin, bester Freund, Kollegin, Vater …</span>
+            </li>
+            <li>
+              <span class="ico">🎥</span
+              ><span><b>Schwenk über die Gruppe</b>Vorher oder nachher über die anderen Gesichter – wie ein Kameramann.</span>
+            </li>
+            <li>
+              <span class="ico">🔒</span
+              ><span><b>Komplett offline</b>Die Gesichtserkennung läuft auf deinem PC. Nichts wird hochgeladen.</span>
+            </li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <section id="texte">
+      <div class="wrap">
+        <div class="head reveal">
+          <span class="eyebrow">Texte, Effekte, Emotionen</span>
+          <h2>Mehr als Bilder: Momente.</h2>
+          <p>
+            Grüße zwischen den Fotos, Sprüche über bestimmten Bildern, Konfetti im richtigen Moment – und Texte und Emojis
+            suchen sich automatisch einen Platz, an dem sie keine Gesichter verdecken.
+          </p>
+        </div>
+        <div class="grid two">
+          <figure class="tile reveal" style="margin: 0">
+            <img src="media/textslide.webp" alt="Textfolie mit animiertem Nebel-Hintergrund" loading="lazy" />
+            <div class="txt">
+              <h3>Textfolien mit lebendigem Hintergrund</h3>
+              <p>Nebel, Polarlicht, Wellen, Lichter – die Farben stammen aus dem vorherigen Foto.</p>
+            </div>
+          </figure>
+          <figure class="tile reveal" style="margin: 0">
+            <img src="media/waves.webp" alt="Textfolie mit Wellen-Hintergrund" loading="lazy" />
+            <div class="txt">
+              <h3>12 Textstile – oder eigene</h3>
+              <p>Elegant, Kino, Schreibmaschine, Handschrift … jeweils mit eigener Ein- und Ausblend-Animation.</p>
+            </div>
+          </figure>
+          <figure class="tile reveal" style="margin: 0">
+            <img src="media/confetti.webp" alt="Konfetti über einem Foto" loading="lazy" />
+            <div class="txt">
+              <h3>Partikel-Effekte</h3>
+              <p>Konfetti, Herzen, Funkeln, Seifenblasen, Feuerwerk, Schnee – automatisch oder auf Knopfdruck.</p>
+            </div>
+          </figure>
+          <figure class="tile reveal" style="margin: 0">
+            <img src="media/emojis.webp" alt="Schwebende Emojis über einem Foto" loading="lazy" />
+            <div class="txt">
+              <h3>Emojis live vom Handy</h3>
+              <p>Ein Tipp auf dem Handy, und ❤️ 🎉 😂 schweben über das Foto – neben die Gesichter, nicht darauf.</p>
+            </div>
+          </figure>
+        </div>
+      </div>
+    </section>
+
+    <section class="alt" id="welt">
+      <div class="wrap split rev">
+        <div class="media reveal">
+          <div class="screen">
+            <img src="media/world.webp" alt="3D-Fotowelt als Kugel, die Kamera taucht in ein Foto ein" loading="lazy" />
+            <span class="badge">Kugel → Eintauchen ins nächste Foto</span>
+          </div>
+        </div>
+        <div class="reveal">
+          <span class="eyebrow">3D-Fotowelt</span>
+          <h2>Ab und zu ein Wow-Moment.</h2>
+          <p style="color: var(--muted)">
+            Zwischendurch fliegen die Fotos zu einer Kugel, Spirale, Wand, einem Tunnel oder einem wackelnden
+            Pudding-Würfel zusammen. Die Kamera fliegt durch die Formation und taucht nahtlos in das nächste Foto ein – genau in
+            dessen Größe, ohne Sprung.
+          </p>
+          <ul class="points">
+            <li><span class="ico">🌐</span><span><b>10 Formationen</b>Zufällig oder gezielt per Fernbedienung.</span></li>
+            <li><span class="ico">⏱️</span><span><b>Wann und wie lange</b>Alle 15–25 Fotos, 18–26 Sekunden – oder wie du willst.</span></li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <section id="einstellungen">
+      <div class="wrap">
+        <div class="head reveal">
+          <span class="eyebrow">Einstellungen</span>
+          <h2>Ruhiger Bilderrahmen oder Party-Show? Du entscheidest.</h2>
+          <p>
+            Fast jeder Wert ist ein Bereich „von … bis“ – fest oder bei jedem Foto neu gewürfelt. Änderungen wirken sofort, auch
+            in der laufenden Show.
+          </p>
+        </div>
+        <div class="reveal">
+          <div class="tabs" role="tablist" id="settingsTabs"></div>
+          <div class="window">
+            <div class="bar"><i></i><i></i><i></i><span style="margin-left: 8px">PhotoPresenter – Einstellungen</span></div>
+            <img id="settingsImg" src="media/settings-allgemein.webp" alt="Einstellungen: Allgemein" />
+          </div>
+          <p class="caption" id="settingsCaption"></p>
+        </div>
+      </div>
+    </section>
+
+    <section class="alt" id="fernbedienung">
+      <div class="wrap">
+        <div class="head center reveal">
+          <span class="eyebrow">Fernbedienung</span>
+          <h2>Das Handy wird zur Regie.</h2>
+          <p>
+            QR-Code scannen – fertig. Keine App, kein Konto, nur dein WLAN. Pausieren, weiterschalten, ein Foto einfrieren,
+            Emojis und Texte einspielen oder die nächsten Fotos aus der Galerie wählen.
+          </p>
+        </div>
+        <div class="phones reveal">
+          <figure class="phone" style="margin: 0">
+            <img src="media/remote-live.webp" alt="Fernbedienung: Live" loading="lazy" />
+            <figcaption><b>Live</b>Emojis, Texte, Effekte, 3D – sofort</figcaption>
+          </figure>
+          <figure class="phone mid" style="margin: 0">
+            <img src="media/remote-fotos.webp" alt="Fernbedienung: Fotos" loading="lazy" />
+            <figcaption><b>Fotos</b>Antippen = kommt als Nächstes</figcaption>
+          </figure>
+          <figure class="phone" style="margin: 0">
+            <img src="media/remote-fokus.webp" alt="Fernbedienung: Fokus" loading="lazy" />
+            <figcaption><b>Fokus</b>Person und Partner wählen</figcaption>
+          </figure>
+        </div>
+        <div class="more-phones reveal">
+          <figure>
+            <img src="media/remote-ablauf.webp" alt="Fernbedienung: Ablauf" loading="lazy" />
+            <figcaption>Ablauf</figcaption>
+          </figure>
+          <figure>
+            <img src="media/remote-texte.webp" alt="Fernbedienung: Texte" loading="lazy" />
+            <figcaption>Texte</figcaption>
+          </figure>
+          <figure>
+            <img src="media/remote-effekte.webp" alt="Fernbedienung: Effekte" loading="lazy" />
+            <figcaption>Effekte</figcaption>
+          </figure>
+          <figure>
+            <img src="media/remote-3d.webp" alt="Fernbedienung: 3D" loading="lazy" />
+            <figcaption>3D-Welt</figcaption>
+          </figure>
+        </div>
+        <div class="keys reveal">
+          <div class="key"><kbd>Leer</kbd>Pause / weiter</div>
+          <div class="key"><kbd>← →</kbd>Foto zurück / vor</div>
+          <div class="key"><kbd>I</kbd>Info zum Foto</div>
+          <div class="key"><kbd>Q</kbd>QR-Code fürs Handy</div>
+          <div class="key"><kbd>R</kbd>Fernbedienung am PC</div>
+          <div class="key"><kbd>Esc</kbd>Show beenden</div>
+        </div>
+      </div>
+    </section>
+
+    <section id="mitnehmen">
+      <div class="wrap split">
+        <div class="reveal">
+          <span class="eyebrow">Zum Mitnehmen</span>
+          <h2>Ein Ordner. Alles drin.</h2>
+          <p style="color: var(--muted)">
+            Die portable Version speichert alles neben dem Programm. Ein Klick erstellt einen Weitergabe-Ordner mit Programm,
+            Fotos, Einstellungen, angelernten Gesichtern und Anleitung – auf den USB-Stick, und die Show läuft auf jedem
+            anderen PC genau so weiter.
+          </p>
+        </div>
+        <div class="reveal">
+<pre>PhotoPresenter\
+├── PhotoPresenter x.y.z.exe   ← Doppelklick
+├── Photos\                    ← deine Fotos
+├── Data\                      ← Einstellungen &amp; Gesichter
+├── Quickstart.pdf             ← Anleitung
+└── README.txt</pre>
+        </div>
+      </div>
+    </section>
+
+    <section class="alt" id="loslegen">
+      <div class="wrap">
+        <div class="head center reveal">
+          <span class="eyebrow">Loslegen</span>
+          <h2>In drei Schritten zur ersten Show.</h2>
+          <p>Nichts installieren, kein Konto, keine Cloud.</p>
+        </div>
+        <div class="steps">
+          <div class="step reveal">
+            <h3>Herunterladen</h3>
+            <p>
+              Die portable <code>PhotoPresenter x.y.z.exe</code> von den
+              <a href="https://github.com/RealCommerzpunk/PhotoPresenter/releases">Releases</a> laden und in einen eigenen
+              Ordner legen.
+            </p>
+          </div>
+          <div class="step reveal">
+            <h3>Starten</h3>
+            <p>
+              Doppelklick. Windows warnt, weil das Programm nicht signiert ist: „Weitere Informationen“ → „Trotzdem
+              ausführen“.
+            </p>
+          </div>
+          <div class="step reveal">
+            <h3>Fotos wählen &amp; genießen</h3>
+            <p>Fotoordner auswählen, <b>▶ Diashow starten</b> – und mit dem Handy die Regie übernehmen.</p>
+          </div>
+        </div>
+        <div class="reveal" style="margin-top: 40px; display: grid; gap: 10px; max-width: 760px; margin-left: auto; margin-right: auto">
+          <p style="color: var(--muted); margin: 0">
+            Lieber aus dem Quellcode, mit den Demo-Fotos und Demo-Einstellungen? (Node.js ≥ 22.12)
+          </p>
+<pre>git clone https://github.com/RealCommerzpunk/PhotoPresenter.git
+cd PhotoPresenter
+npm install
+npm run models          # Modelle für die Gesichtserkennung (einmalig)
+npm run demo -- --show  # Demo-Diashow starten</pre>
+          <p style="color: var(--muted); margin: 0">
+            Ausführliche Anleitung: <a href="https://github.com/RealCommerzpunk/PhotoPresenter/blob/main/Quickstart.md">Quickstart</a>
+            (<a href="https://github.com/RealCommerzpunk/PhotoPresenter/raw/main/Quickstart.pdf">PDF</a>)
+          </p>
+        </div>
+      </div>
+    </section>
+
+    <footer>
+      <div class="wrap cols">
+        <div>
+          <b style="color: var(--text)">PhotoPresenter</b><br />
+          Quellcode unter <a href="https://github.com/RealCommerzpunk/PhotoPresenter/blob/main/LICENSE">MIT-Lizenz</a> ·
+          <a href="https://github.com/RealCommerzpunk/PhotoPresenter">GitHub</a>
+        </div>
+        <div>
+          Nachweise
+          <ul>
+            <li>
+              Demo-Fotos: <a href="https://www.pexels.com/@rdne/">RDNE Stock project</a> auf Pexels
+              (<a href="https://www.pexels.com/license/">Pexels-Lizenz</a>)
+            </li>
+            <li>Icon: <a href="https://www.flaticon.com/authors/three-musketeers">Three Musketeers – Flaticon</a></li>
+            <li>Gesichtsmodelle: YuNet &amp; SFace aus dem <a href="https://github.com/opencv/opencv_zoo">OpenCV Model Zoo</a></li>
+          </ul>
+        </div>
+      </div>
+    </footer>
+
+    <div class="lightbox" id="lightbox" role="dialog" aria-label="Großansicht"><img alt="" /></div>
+
+    <script>
+      // Einstellungen: Reiter wechseln das Bildschirmfoto
+      const pages = [
+        ['allgemein', 'Allgemein', 'Fotoordner, Bildschirm und Bereich (auch für zusammengeschaltete Monitore), Randfüllung, Fernbedienung und „Mitnehmen“.'],
+        ['bewegung', 'Bewegung', 'Anzeigedauer, Stärke der Bewegung, höchste Vergrößerung für kleine Fotos und welche Kamerabewegungen wie oft vorkommen.'],
+        ['uebergaenge', 'Übergänge', 'Überblenddauer und 13 Übergänge – jeder mit eigenem Regler, wie oft er drankommt.'],
+        ['personen', 'Personen', 'Gesichter anklicken, um eine Person anzulernen; ★ Fokus-Person und 🫂 Fokus-Partner wählen. Die Analyse läuft im Hintergrund.'],
+        ['texte', 'Texte', 'Fülltexte zwischen Fotos oder Texte zu bestimmten Fotos – im Ablauf oder nur auf Abruf per Handy.'],
+        ['stile', 'Stile', '12 Textstile mit Live-Vorschau; eigene Stile lassen sich von jeder Vorlage ableiten.'],
+        ['effekte', 'Effekte', 'Partikel-Effekte, Hintergründe der Textfolien und die 3D-Fotowelt mit ihren Formationen.']
+      ]
+      const tabs = document.getElementById('settingsTabs')
+      const img = document.getElementById('settingsImg')
+      const cap = document.getElementById('settingsCaption')
+      function select(i) {
+        const [id, name, text] = pages[i]
+        img.src = 'media/settings-' + id + '.webp'
+        img.alt = 'Einstellungen: ' + name
+        cap.textContent = text
+        tabs.querySelectorAll('button').forEach((b, k) => b.setAttribute('aria-selected', String(k === i)))
+      }
+      pages.forEach(([, name], i) => {
+        const b = document.createElement('button')
+        b.type = 'button'
+        b.role = 'tab'
+        b.textContent = name
+        b.onclick = () => select(i)
+        tabs.appendChild(b)
+      })
+      select(0)
+      // Bilder vorladen, damit der Wechsel sofort geht
+      pages.forEach(([id]) => (new Image().src = 'media/settings-' + id + '.webp'))
+
+      // Großansicht für Bildschirmfotos
+      const box = document.getElementById('lightbox')
+      document.querySelectorAll('.window img, .phone img, .more-phones img').forEach((el) => {
+        el.addEventListener('click', () => {
+          box.querySelector('img').src = el.src
+          box.classList.add('open')
+        })
+      })
+      box.addEventListener('click', () => box.classList.remove('open'))
+      document.addEventListener('keydown', (e) => e.key === 'Escape' && box.classList.remove('open'))
+
+      // Sanftes Einblenden beim Scrollen
+      const io = new IntersectionObserver(
+        (entries) => entries.forEach((e) => e.isIntersecting && (e.target.classList.add('in'), io.unobserve(e.target))),
+        { threshold: 0.12 }
+      )
+      document.querySelectorAll('.reveal').forEach((el) => io.observe(el))
+    </script>
+  </body>
+</html>
