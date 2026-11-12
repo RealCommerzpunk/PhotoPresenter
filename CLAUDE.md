@@ -62,6 +62,9 @@ Plan und Meilensteine: `docs/PLAN.md` · Änderungen je Version: `CHANGELOG.md` 
 - Texte und eigene Stile werden in `parseSettings` Eintrag für Eintrag geprüft (`parseList`), damit ein kaputter Eintrag nicht alle Texte löscht. In zod 4 müssen solche losen Felder `z.unknown().optional()` sein.
 - Frame-Messung: `PP_PERF=1` lädt die Show mit `#perf`; langsame Frames (> 25 ms) erscheinen mit den Ereignissen davor im Terminal (`perf.ts`).
 - Fernbedienung testen: per `curl http://127.0.0.1:8765/api/…`; die Handy-Seite selbst mit `PP_REMOTE_PREVIEW=1` (Fenster in iPhone-Größe, mit `PP_CAPTURE_DIR` als Aufnahme). Beim ersten Öffnen des Ports fragt die Windows-Firewall.
+- Befehle an die Show haben einen optionalen Zusatz (`{ cmd, arg }`): `effect`/`world` mit ID, `text` mit Text-ID, `say` mit freiem Text. Sofort eingeblendete Texte laufen unabhängig vom Ablauf (`instantTexts` in `show/main.ts`).
+- 3D-Zwischenspiel: eine Formation; das Zielfoto wird erst beim Eintauchen gewählt (`WorldScene.chooseFinal`), deshalb lädt die Show während der 3D-Welt erst bei `diving` vor. Wackelpudding = `JELLY_VERTEX` (ersetzt three.js `project_vertex`) auf fein unterteilten Kacheln.
+- Testeinstellungen mit Auswahllisten immer vollständig angeben: `parseSettings` ergänzt fehlende Optionen als aktiv.
 - Ein zusätzlicher WebGL-Kontext (wie Three.js für die 3D-Welt) muss sein Bild als Pixi-Textur abgeben (Canvas → `Texture.from`, je Frame `source.update()`), sonst läuft er nicht durch die Übergänge. Kleinere Effekte lieber als Pixi-Partikel oder Mesh-Shader.
 - `electron-vite preview --skipBuild` startet den zuletzt gebauten Stand – nach Codeänderungen ohne `--skipBuild` testen.
 - Windows kann zusammengeschaltete Monitore als einen Bildschirm melden (z. B. 5760×1134): Die Show füllt dann alle. Für Tests `PP_SHOW_WINDOWED=1` (Show als Fenster-Vorschau).

@@ -50,10 +50,10 @@ function remoteState(): RemoteState {
   }
 }
 
-function showCommand(cmd: ShowCommand): void {
+function showCommand(cmd: ShowCommand, arg?: string): void {
   if (cmd === 'start') startShow()
   else if (cmd === 'stop') stopShow()
-  else showWindow?.webContents.send(IPC.showCommand, cmd)
+  else showWindow?.webContents.send(IPC.showCommand, { cmd, arg })
 }
 
 const remote = new RemoteServer({
@@ -231,7 +231,7 @@ app.whenReady().then(() => {
     remote.broadcast()
   })
   ipcMain.handle(IPC.remoteInfo, () => remote.info(loadSettings().remoteEnabled))
-  ipcMain.handle(IPC.sendShowCommand, (_e, cmd: ShowCommand) => showCommand(cmd))
+  ipcMain.handle(IPC.sendShowCommand, (_e, cmd: ShowCommand, arg?: string) => showCommand(cmd, arg))
   if (loadSettings().remoteEnabled) void remote.start(loadSettings().remotePort)
 
   faceStore = new FaceStore(
@@ -280,6 +280,11 @@ app.whenReady().then(() => {
         if (level === 'warning' || level === 'error') console.log(`[remote:${level}] ${message}`)
       })
       void phone.loadURL(`http://127.0.0.1:${loadSettings().remotePort}/`)
+      // PP_REMOTE_PREVIEW=zoom zeigt die ganze Seite verkleinert (für Aufnahmen)
+      if (process.env['PP_REMOTE_PREVIEW'] === 'zoom') {
+        phone.setSize(390, 1900)
+        phone.webContents.once('did-finish-load', () => phone.webContents.setZoomFactor(0.5))
+      }
       captureForTests(phone, 'remote')
     }, 1500)
   }

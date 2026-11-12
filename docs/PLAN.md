@@ -128,6 +128,7 @@ Jeder Meilenstein ergibt eine lauffähige Version und einen eigenen Commit/PR.
 - ✅ Fokus-Partner mit „Gemeinsam fokussieren“ (beantwortet die offene Frage zur Fokus-Karte: Überschrift zeigt jetzt, für wen sie gilt)
 - ✅ Zoomgrenze nach Original- und Bildschirmauflösung
 - ✅ Relativer Fotopfad, portable Windows-Version
+- ✅ 0.10.0: Wackelpudding-Würfel, eine Formation je Zwischenspiel, kleine Fotos begrenzen, gezielte Auslöser und Sofort-Texte auf der Fernbedienung
 - ✅ 3D-Fotowelt (0.9.0): Zwischenspiel mit Three.js, 9 Formationen (Klassiker aus dem Periodic-Table-Beispiel plus Rahmen, Würfel, Karussell, Tunnel, Welle), Eintauchen in ein Foto
 - ✅ Effekte (0.8.0): 8 Partikel-Effekte mit PixiJS und 5 animierte Textfolien-Hintergründe als Shader (statt Vanta.js: kein zweiter WebGL-Kontext, läuft durch die Übergänge), einstellbar nach Häufigkeit, Dauer und Intensität
 

@@ -2,7 +2,26 @@ import type { Settings } from './settings'
 
 /** Befehle an die laufende Show (von Fernbedienung oder Main-Prozess). */
 export type ShowCommand =
-  'start' | 'stop' | 'next' | 'prev' | 'pause' | 'resume' | 'qr' | 'effect' | 'world'
+  | 'start'
+  | 'stop'
+  | 'next'
+  | 'prev'
+  | 'pause'
+  | 'resume'
+  | 'qr'
+  | 'effect'
+  | 'world'
+  | 'text'
+  | 'say'
+
+/**
+ * Befehl mit optionalem Zusatz: bei 'effect' die Effekt-ID, bei 'world' die Formation,
+ * bei 'text' die Text-ID, bei 'say' ein freier Text zum sofortigen Einblenden.
+ */
+export interface ShowCommandMessage {
+  cmd: ShowCommand
+  arg?: string
+}
 
 /** Zustand der Show, den das Show-Fenster an den Main-Prozess meldet. */
 export interface ShowStatus {

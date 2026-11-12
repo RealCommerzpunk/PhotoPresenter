@@ -137,10 +137,10 @@ export interface PhotoPresenterApi {
 
   // Fernbedienung
   /** Show-Fenster: Befehle empfangen (Weiter, Pause, QR …). */
-  onShowCommand(callback: (cmd: ShowCommand) => void): () => void
+  onShowCommand(callback: (cmd: ShowCommand, arg?: string) => void): () => void
   /** Show-Fenster: eigenen Zustand melden. */
   reportShowStatus(status: ShowStatus): void
   remoteInfo(): Promise<RemoteInfo>
   /** Einstellungsfenster: Befehl an die laufende Show senden (z. B. Effekt jetzt). */
-  sendShowCommand(cmd: ShowCommand): Promise<void>
+  sendShowCommand(cmd: ShowCommand, arg?: string): Promise<void>
 }

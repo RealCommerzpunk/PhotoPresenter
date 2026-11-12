@@ -27,7 +27,7 @@ export function localAddresses(): string[] {
 export interface RemoteHandlers {
   state(): RemoteState
   applySettings(patch: Partial<Settings>): void
-  command(cmd: ShowCommand): void
+  command(cmd: ShowCommand, arg?: string): void
 }
 
 /** Kleiner Webserver für die Fernbedienung vom Handy aus (ohne Passwort, nur im lokalen Netz). */
@@ -120,8 +120,8 @@ export class RemoteServer {
         return sendJson(res, this.handlers.state())
       }
       if (req.method === 'POST' && url.pathname === '/api/show') {
-        const { cmd } = (await readJson(req)) as { cmd: ShowCommand }
-        this.handlers.command(cmd)
+        const { cmd, arg } = (await readJson(req)) as { cmd: ShowCommand; arg?: unknown }
+        this.handlers.command(cmd, typeof arg === 'string' ? arg.slice(0, 500) : undefined)
         return sendJson(res, this.handlers.state())
       }
       send(res, 404, 'Nicht gefunden', 'text/plain; charset=utf-8')

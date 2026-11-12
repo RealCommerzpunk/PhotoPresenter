@@ -153,6 +153,17 @@
         border-radius: 10px;
         padding: 10px;
       }
+      .triggers {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 8px;
+      }
+      .triggers button {
+        text-align: left;
+      }
+      .text-item button {
+        flex: none;
+      }
       .chips {
         display: flex;
         flex-wrap: wrap;
@@ -276,6 +287,9 @@
       <div style="margin: 8px 0"><button class="small" data-cmd="world">🧊 3D jetzt</button></div>
       <div id="worldEvery"></div>
       <div id="worldDuration"></div>
+      <div class="label" style="margin-top: 10px">Jetzt zeigen</div>
+      <div class="triggers" id="worldTriggers"></div>
+      <div class="label" style="margin-top: 12px">Beim Zufall dabei</div>
       <div class="chips" id="formations"></div>
     </section>
 
@@ -288,6 +302,9 @@
       <div id="effectEvery"></div>
       <div id="effectDuration"></div>
       <div id="effectIntensity"></div>
+      <div class="label" style="margin-top: 10px">Jetzt zeigen</div>
+      <div class="triggers" id="effectTriggers"></div>
+      <div class="label" style="margin-top: 12px">Beim Zufall dabei</div>
       <div class="chips" id="effects"></div>
     </section>
 
@@ -295,6 +312,14 @@
       <h2>Texte</h2>
       <div id="textFillerEvery"></div>
       <div id="texts"></div>
+      <div class="row">
+        <div class="label">Text sofort einblenden</div>
+        <textarea id="sayText" rows="2" placeholder="z. B. Alles Gute zum Geburtstag!"></textarea>
+        <div style="margin-top: 8px">
+          <button class="small primary" id="sayNow">Jetzt einblenden</button>
+        </div>
+        <div class="hint">Erscheint sofort über dem aktuellen Foto und wird nicht gespeichert.</div>
+      </div>
       <div class="row">
         <div class="label">Neuer Fülltext</div>
         <textarea id="newText" rows="2" placeholder="Text eingeben …"></textarea>
@@ -322,7 +347,7 @@
         }
       }
       const patch = (p) => post('/api/settings', p)
-      const command = (cmd) => post('/api/show', { cmd })
+      const command = (cmd, arg) => post('/api/show', { cmd, arg })
 
       // Änderungen an Reglern kurz sammeln, damit nicht jeder Pixel gesendet wird.
       const timers = {}
@@ -435,6 +460,32 @@
         $('pause').onclick = () => command(state.show.paused ? 'resume' : 'pause')
         $('startstop').onclick = () => command(state.show.running ? 'stop' : 'start')
         $('reload').onclick = () => location.reload()
+        // Knöpfe zum gezielten Auslösen (Effekt bzw. 3D-Formation sofort)
+        const triggers = (id, labels, icon, cmd) => {
+          $(id).innerHTML = Object.entries(labels)
+            .map(
+              ([key, l]) =>
+                '<button class="small" data-arg="' +
+                key +
+                '">' +
+                icon +
+                ' ' +
+                escapeHtml(l) +
+                '</button>'
+            )
+            .join('')
+          $(id)
+            .querySelectorAll('[data-arg]')
+            .forEach((b) => (b.onclick = () => command(cmd, b.dataset.arg)))
+        }
+        triggers('effectTriggers', state.labels.effects, '✨', 'effect')
+        triggers('worldTriggers', state.labels.formations, '🧊', 'world')
+        $('sayNow').onclick = () => {
+          const text = $('sayText').value.trim()
+          if (!text) return
+          command('say', text)
+          $('sayText').value = ''
+        }
         $('addText').onclick = () => {
           const text = $('newText').value.trim()
           if (!text) return
@@ -581,9 +632,14 @@
               escapeHtml(t.text.split('\n')[0] || 'Leerer Text') +
               '</span><small>' +
               (t.kind === 'filler' ? 'Fülltext' : 'an Foto') +
-              '</small></div>'
+              '</small><button class="small" data-show="' +
+              escapeHtml(t.id) +
+              '">Zeigen</button></div>'
           )
           .join('')
+        $('texts')
+          .querySelectorAll('[data-show]')
+          .forEach((b) => (b.onclick = () => command('text', b.dataset.show)))
         $('texts')
           .querySelectorAll('input')
           .forEach((box) => {

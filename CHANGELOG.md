@@ -2,6 +2,17 @@
 
 Alle Änderungen je Version. Format: neueste Version oben, Datum im Format JJJJ-MM-TT.
 
+## 0.10.0 – 2026-11-12
+
+Wackelpudding, kleine Fotos, gezielte Auslöser.
+
+- **3D-Fotowelt: eine Formation je Zwischenspiel** (Einflug → Formation mit Kamerafahrt → Eintauchen); die Einstellung „Formationen je Zwischenspiel“ entfällt
+- **Neue Formation Wackelpudding-Würfel**: Fotos lückenlos um einen Würfel, der sich dreht, umherschwebt, staucht und streckt; die Fotos biegen sich wabbelnd mit und beruhigen sich vor dem Eintauchen
+- Eintauchen jetzt immer in eine der Kamera zugewandte Kachel – kein Flug mehr durch die Formation; Weiterschalten springt direkt ins Eintauchen
+- **Kleine Fotos begrenzen** (Allgemein → Bildschirm füllen): schlecht aufgelöste oder gescannte Fotos höchstens bis X % ihrer Originalauflösung vergrößern; der Rand wird wie gewohnt aufgefüllt, auch rundum
+- **Fernbedienung: gezielt auslösen** – jeden Effekt einzeln, jede 3D-Formation einzeln, jeden Text sofort über dem aktuellen Foto („Zeigen“) sowie freien Text sofort einblenden (nicht gespeichert)
+- „3D jetzt“ während eines Übergangs geht nicht mehr verloren, sondern startet direkt danach
+
 ## 0.9.0 – 2026-11-12
 
 3D-Fotowelt.

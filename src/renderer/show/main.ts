@@ -3,7 +3,16 @@ import 'pixi.js/unsafe-eval'
 import { Application, Container, RenderTexture, Sprite, type Texture } from 'pixi.js'
 import { gsap } from 'gsap'
 import { pick, pickWeighted } from '@shared/random'
-import type { Settings, WorldFormation } from '@shared/settings'
+import {
+  EFFECTS,
+  WORLD_FORMATIONS,
+  type EffectId,
+  type Settings,
+  type WorldFormation
+} from '@shared/settings'
+import { RANDOM_STYLE, type TextItem } from '@shared/text'
+import { TextOverlay } from '../text/overlay'
+import { OverlayTrack } from './scene'
 import type { TextStyle } from '@shared/text'
 import { loadFont } from '../text/fonts'
 import { resolveStyle } from '../text/resolve'
@@ -90,8 +99,10 @@ async function main(): Promise<void> {
   let effectAt = Math.max(1, Math.round(pick(settings.effectEvery)))
 
   /** Einen zufälligen Effekt aus den aktiven starten (auch per Fernbedienung). */
-  function startEffect(): void {
-    const kind = pickWeighted(settings.effects)
+  function startEffect(wanted?: string): void {
+    const kind = EFFECTS.includes(wanted as EffectId)
+      ? (wanted as EffectId)
+      : pickWeighted(settings.effects)
     if (!kind) return
     effects.start(kind, pick(settings.effectIntensity), pick(settings.effectDuration))
   }
@@ -446,28 +457,79 @@ async function main(): Promise<void> {
     qrTimer = window.setTimeout(() => (qrEl.style.opacity = '0'), 30_000)
   }
 
-  window.api.onShowCommand((cmd) => {
+  window.api.onShowCommand((cmd, arg) => {
     if (cmd === 'next') skip(1)
     else if (cmd === 'prev') skip(-1)
     else if (cmd === 'pause') setPaused(true)
     else if (cmd === 'resume') setPaused(false)
     else if (cmd === 'qr') void toggleQr()
-    else if (cmd === 'effect') startEffect()
-    else if (cmd === 'world') startWorldNow()
+    else if (cmd === 'effect') startEffect(arg)
+    else if (cmd === 'world') startWorldNow(arg)
+    else if (cmd === 'text') {
+      const item = settings.texts.find((t) => t.id === arg)
+      if (item) void showTextNow(item.text, item.style)
+    } else if (cmd === 'say' && arg?.trim()) void showTextNow(arg, RANDOM_STYLE)
   })
 
+  // ---------- Texte sofort einblenden (Fernbedienung) ----------
+  const instantTexts: { track: OverlayTrack; elapsed: number; until: number }[] = []
+
+  /** Blendet einen Text sofort über dem aktuellen Bild ein (unabhängig vom Ablauf). */
+  async function showTextNow(text: string, styleId: string): Promise<void> {
+    const item: TextItem = {
+      id: 'sofort',
+      enabled: true,
+      text,
+      kind: 'photo',
+      photos: [],
+      placement: 'over',
+      style: styleId
+    }
+    const style = resolveStyle(item, settings)
+    await loadFont(style)
+    // über Fotos unten statt mittig, damit Gesichter frei bleiben
+    const position = style.position === 'center' ? 'bottom' : style.position
+    const overlay = new TextOverlay(textHost, text, style, position)
+    const track = new OverlayTrack()
+    const end = 0.05 + overlay.inDuration + pick(settings.textDuration)
+    track.add(overlay, 0.05, end)
+    instantTexts.push({ track, elapsed: 0, until: end + overlay.outDuration + 0.5 })
+  }
+
+  function updateInstantTexts(dt: number): void {
+    for (let i = instantTexts.length - 1; i >= 0; i--) {
+      const t = instantTexts[i]
+      t.elapsed += dt
+      t.track.update(t.elapsed)
+      if (t.elapsed > t.until) {
+        t.track.destroy()
+        instantTexts.splice(i, 1)
+      }
+    }
+  }
+
   /** Zwischenspiel sofort (per Fernbedienung oder Einstellungsfenster). */
-  function startWorldNow(): void {
+  function startWorldNow(wanted?: string): void {
     if (thumbs.size < WORLD_MIN_TILES) {
       flashStatus(`3D-Fotowelt lädt noch Vorschaubilder (${thumbs.size}/${WORLD_MIN_TILES})`)
       return
     }
-    if (incoming || current instanceof WorldScene) return
+    if (current instanceof WorldScene && !incoming) return
     worldForced = true
+    if (WORLD_FORMATIONS.includes(wanted as WorldFormation)) {
+      worldFormationWanted = wanted as WorldFormation
+    }
+    if (incoming) {
+      // Mitten im Übergang: direkt nach dem Übergang starten.
+      worldAfterTransition = true
+      return
+    }
     discardReady()
     prefetch()
     current?.hurry(SKIP_FADE)
   }
+  /** „3D jetzt“ kam während eines Übergangs: danach sofort ins Zwischenspiel. */
+  let worldAfterTransition = false
 
   function discardReady(): void {
     generation++
@@ -502,6 +564,7 @@ async function main(): Promise<void> {
     const dt = Math.min(0.1, ticker.deltaMS / 1000)
     const s = screen()
     effects.update(dt, s)
+    updateInstantTexts(dt)
     // In der 3D-Welt wird erst beim Eintauchen vorgeladen (siehe nextEntry).
     if (current instanceof WorldScene && !incoming && !ready && !loading) prefetch()
     // Vorschaubilder für die 3D-Welt nur in ruhigen Phasen nachladen.
@@ -524,6 +587,11 @@ async function main(): Promise<void> {
         incoming = null
         transitions.end()
         mark('Übergang Ende')
+        if (worldAfterTransition) {
+          worldAfterTransition = false
+          discardReady()
+          if (!(current instanceof WorldScene)) current.hurry(SKIP_FADE)
+        }
         prefetch()
         slideLayer.addChild(current.view)
       }
