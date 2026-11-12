@@ -1,7 +1,7 @@
 import { contextBridge, ipcRenderer, type IpcRendererEvent } from 'electron'
 import type { FaceIndexStatus } from '@shared/faces'
-import { IPC, type EmbedRequest, type PhotoPresenterApi } from '@shared/ipc'
-import type { ShowCommandMessage } from '@shared/remote'
+import { IPC, type EmbedRequest, type PhotoPresenterApi, type ThumbRequest } from '@shared/ipc'
+import type { PhotoQueue, ShowCommandMessage } from '@shared/remote'
 import type { Settings } from '@shared/settings'
 
 /** Abonniert ein Ereignis aus dem Main-Prozess; liefert eine Abmeldefunktion. */
@@ -46,7 +46,17 @@ const api: PhotoPresenterApi = {
     subscribe<ShowCommandMessage>(IPC.showCommand, (m) => callback(m.cmd, m.arg)),
   reportShowStatus: (status) => ipcRenderer.send(IPC.showStatus, status),
   remoteInfo: () => ipcRenderer.invoke(IPC.remoteInfo),
-  sendShowCommand: (cmd, arg) => ipcRenderer.invoke(IPC.sendShowCommand, cmd, arg)
+  sendShowCommand: (cmd, arg) => ipcRenderer.invoke(IPC.sendShowCommand, cmd, arg),
+  notice: (notice) => ipcRenderer.send(IPC.showNotice, notice),
+  openRemote: () => ipcRenderer.invoke(IPC.openRemote),
+  photoInfo: (name) => ipcRenderer.invoke(IPC.photoInfo, name),
+
+  getQueue: () => ipcRenderer.invoke(IPC.getQueue),
+  onQueueChanged: (callback) => subscribe<PhotoQueue>(IPC.queueChanged, callback),
+  queuePlaying: (id) => ipcRenderer.send(IPC.queuePlaying, id),
+
+  onThumbRequest: (callback) => subscribe<ThumbRequest>(IPC.thumbRequest, callback),
+  thumbResult: (requestId, data) => ipcRenderer.invoke(IPC.thumbResult, requestId, data)
 }
 
 contextBridge.exposeInMainWorld('api', api)

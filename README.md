@@ -48,7 +48,7 @@ Tests, Typprüfung und Lint vor jedem Commit lokal ausführen: `npm run typechec
 
 ## Bedienung in der Show
 
-Esc beenden · Leertaste Pause · ←/→ blättern · I Dateiname · D fps
+Esc beenden · Leertaste Pause · ←/→ blättern · I Info zum Foto (Auflösung, Zoom, EXIF) · R Fernbedienung als Fenster · Q QR-Code · D fps
 
 ## Aufbau
 
@@ -71,4 +71,4 @@ resources/      Modelle und Fonts, die mit ausgeliefert werden
 6. ✅ Gesichtserkennung und Fokus-Person
 7. Feinschliff und erstes Release (Ruckelfreiheit erledigt in 0.6.2)
 
-Dazugekommen (0.7–0.10): Fernbedienung per Handy mit QR-Code, Fokus-Partner, Zoomgrenze und Begrenzung kleiner Fotos, relativer Fotopfad und portable Windows-Version, Partikel-Effekte, animierte Textfolien-Hintergründe, 3D-Fotowelt (inkl. Wackelpudding-Würfel).
+Dazugekommen (0.7–0.11): Fernbedienung per Handy mit QR-Code (mit Emojis, Einfrieren, Galerie und eigener Reihenfolge), Fokus-Partner, Zoomgrenze und Begrenzung kleiner Fotos, relativer Fotopfad und portable Windows-Version, Partikel-Effekte, animierte Textfolien-Hintergründe, 3D-Fotowelt (inkl. Wackelpudding-Würfel).

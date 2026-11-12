@@ -3,7 +3,8 @@ import type { TextItem } from '@shared/text'
 import type { Playlist } from './playlist'
 
 export type Entry =
-  | { kind: 'photo'; name: string; overlays: TextItem[] }
+  /** Foto; `queueId` ist gesetzt, wenn es aus der manuellen Reihenfolge der Fernbedienung kommt. */
+  | { kind: 'photo'; name: string; overlays: TextItem[]; queueId?: string }
   /** Textfolie; `ref` ist das Foto, dessen Unschärfe den Hintergrund bildet. */
   | { kind: 'text'; item: TextItem; ref?: string }
   /** Zwischenspiel 3D-Fotowelt (wird von der Show eingeschoben, nicht vom Sequencer). */

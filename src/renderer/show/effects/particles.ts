@@ -1,4 +1,11 @@
-import { Particle, ParticleContainer, Rectangle, Texture } from 'pixi.js'
+import {
+  Particle,
+  ParticleContainer,
+  Rectangle,
+  RenderTexture,
+  Texture,
+  type Renderer
+} from 'pixi.js'
 import type { EffectId } from '@shared/settings'
 import type { Size } from '../motion'
 
@@ -397,6 +404,25 @@ export class EffectLayer {
   private readonly effects: ParticleEffect[] = []
 
   constructor(private readonly host: { addChild(c: ParticleContainer): void }) {}
+
+  /**
+   * Formen-Textur und Shader beider Mischarten vorab einmal zeichnen. Sonst ruckelt der
+   * erste Effekt (Textur hochladen, Shader übersetzen) – und der startet mitten im Übergang.
+   */
+  warmUp(renderer: Renderer): void {
+    const target = RenderTexture.create({ width: 4, height: 4 })
+    for (const blend of ['normal', 'add'] as const) {
+      const view = new ParticleContainer({
+        texture: shapes().dot,
+        dynamicProperties: { position: true, rotation: true, vertex: true, color: true }
+      })
+      view.blendMode = blend
+      view.addParticle(new Particle({ texture: shapes().dot, x: 2, y: 2, alpha: 0.01 }))
+      renderer.render({ container: view, target })
+      view.destroy()
+    }
+    target.destroy(true)
+  }
 
   start(kind: EffectId, intensity: number, duration: number, manual = false): void {
     const effect = new ParticleEffect(kind, intensity, duration)

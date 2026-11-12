@@ -3,8 +3,12 @@ import 'pixi.js/unsafe-eval'
 import { Application, Container, RenderTexture, Sprite, type Texture } from 'pixi.js'
 import { gsap } from 'gsap'
 import { pick, pickWeighted } from '@shared/random'
+import type { PhotoDetails } from '@shared/ipc'
+import type { PhotoQueue, QueueItem, ShowNotice } from '@shared/remote'
 import {
+  EFFECT_LABELS,
   EFFECTS,
+  WORLD_FORMATION_LABELS,
   WORLD_FORMATIONS,
   type EffectId,
   type Settings,
@@ -25,6 +29,8 @@ import { Slide, type FocusTarget, type OverlayText } from './slide'
 import { TextSlide } from './textSlide'
 import { TransitionEngine } from './transitions/engine'
 import { EffectLayer } from './effects/particles'
+import { EmojiLayer } from './emojis'
+import { infoHtml } from './info'
 import { frame, mark, measure } from './perf'
 import { ThumbPool } from './world/thumbPool'
 import { loadThree, WorldScene } from './world/worldScene'
@@ -38,10 +44,23 @@ const infoEl = document.getElementById('info')!
 const statusEl = document.getElementById('status')!
 const textHost = document.getElementById('texts')!
 const qrEl = document.getElementById('qr')!
+const emojiHost = document.getElementById('emojis')!
+
+/** Rückmeldung an die Fernbedienung (erscheint dort als kurzer Hinweis). */
+function notice(text: string, kind: ShowNotice['kind'] = 'ok'): void {
+  window.api.notice({ text, kind })
+}
 
 /** Vorbereiteter nächster Eintrag: alles geladen, kann sofort gezeigt werden. */
 type Prepared =
-  | { kind: 'photo'; photo: LoadedPhoto; texts: OverlayText[]; focus?: FocusTarget }
+  | {
+      kind: 'photo'
+      photo: LoadedPhoto
+      texts: OverlayText[]
+      focus?: FocusTarget
+      /** Eintrag der manuellen Reihenfolge (Galerie der Fernbedienung). */
+      queueId?: string
+    }
   | {
       kind: 'text'
       entry: Extract<Entry, { kind: 'text' }>
@@ -95,6 +114,7 @@ async function main(): Promise<void> {
   const effectLayer = new Container()
   app.stage.addChild(slideLayer, transitions.view, effectLayer)
   const effects = new EffectLayer(effectLayer)
+  const emojis = new EmojiLayer(emojiHost)
   let sinceEffect = 0
   let effectAt = Math.max(1, Math.round(pick(settings.effectEvery)))
 
@@ -119,6 +139,8 @@ async function main(): Promise<void> {
     startEffect()
   }
   transitions.warmUp()
+  effects.warmUp(app.renderer)
+  emojis.warmUp(settings.emojis)
   mark(`Bühne ${app.screen.width}×${app.screen.height} @ ${app.renderer.resolution}`)
 
   let current: Scene | null = null
@@ -243,7 +265,7 @@ async function main(): Promise<void> {
       remember(entry.name, photo.soft)
       const texts = entry.overlays.map((item) => ({ item, style: resolveStyle(item, settings) }))
       await Promise.all(texts.map((t) => loadFont(t.style)))
-      return { kind: 'photo', photo, texts, focus: focus?.target }
+      return { kind: 'photo', photo, texts, focus: focus?.target, queueId: entry.queueId }
     }
     if (entry.kind === 'world') return prepareWorld()
     const style = resolveStyle(entry.item, settings)
@@ -310,6 +332,12 @@ async function main(): Promise<void> {
       }
       return sequencer.next()
     }
+    // Manuelle Reihenfolge aus der Galerie der Fernbedienung hat Vorrang.
+    const queued = queueNext()
+    if (queued) {
+      usedQueueIds.add(queued.id)
+      return { kind: 'photo', name: queued.name, overlays: [], queueId: queued.id }
+    }
     if (worldDue()) {
       worldForced = false
       photosSinceWorld = 0
@@ -318,6 +346,43 @@ async function main(): Promise<void> {
     }
     return sequencer.next()
   }
+
+  // ---------- Manuelle Reihenfolge (Galerie der Fernbedienung) ----------
+  let photoQueue: PhotoQueue = await window.api.getQueue()
+  /** Einträge, die die Show schon vorbereitet oder gezeigt hat. */
+  const usedQueueIds = new Set<string>()
+  /** Eintrag, der gerade vorbereitet wird (für das Verwerfen bei Änderungen der Liste). */
+  let loadingEntry: Entry | null = null
+
+  function queueNext(): QueueItem | undefined {
+    return photoQueue.items.find((i) => i.id !== photoQueue.playing && !usedQueueIds.has(i.id))
+  }
+
+  /** queueId des vorbereiteten bzw. gerade ladenden Eintrags. */
+  function pendingQueueId(): string | undefined {
+    if (ready) return ready.kind === 'photo' ? ready.queueId : undefined
+    return loadingEntry?.kind === 'photo' ? loadingEntry.queueId : undefined
+  }
+
+  window.api.onQueueChanged((q) => {
+    photoQueue = q
+    const known = new Set(q.items.map((i) => i.id))
+    const pending = pendingQueueId()
+    // Gelöschte Einträge dürfen nicht mehr als „schon benutzt“ gelten (Speicher sauber halten).
+    for (const id of usedQueueIds) if (!known.has(id) && id !== pending) usedQueueIds.delete(id)
+    // Während der 3D-Welt steht das nächste Foto fest (Zielfoto); danach greift die Liste.
+    if (current instanceof WorldScene || incoming) return
+    const head = q.items.find((i) => i.id !== q.playing && (i.id === pending || !usedQueueIds.has(i.id)))
+    if (pending ? head?.id === pending : !head) return
+    // Das vorbereitete Foto passt nicht mehr zur Liste: verwerfen und neu vorbereiten.
+    const dropped = ready?.kind === 'photo' ? ready : null
+    if (pending) usedQueueIds.delete(pending)
+    else if (dropped && !dropped.queueId) sequencer.insertNext(dropped.photo.name)
+    else if (loadingEntry?.kind === 'photo' && !loadingEntry.queueId)
+      sequencer.insertNext(loadingEntry.name)
+    discardReady()
+    prefetch()
+  })
 
   /** Fotos mit der Fokus-Person häufiger zeigen. */
   async function refreshFocusPhotos(): Promise<void> {
@@ -346,6 +411,7 @@ async function main(): Promise<void> {
     const entry = next()
     if (!entry) return
     loading = true
+    loadingEntry = entry
     const gen = generation
     mark('Vorladen startet')
     prepare(entry)
@@ -364,12 +430,15 @@ async function main(): Promise<void> {
       .finally(() => {
         if (gen !== generation) return
         loading = false
+        loadingEntry = null
         // Bei Fehlern den nächsten versuchen, aber nicht endlos, wenn alle defekt sind.
         if (!ready && failures < Math.max(5, playlist.size)) prefetch()
       })
   }
 
   function createScene(p: Prepared, fade: number): Scene {
+    // Main-Prozess: welcher Eintrag der manuellen Reihenfolge jetzt zu sehen ist.
+    window.api.queuePlaying(p.kind === 'photo' ? (p.queueId ?? null) : null)
     if (p.kind === 'world') {
       worldFinalQueued = false
       p.scene.fadeIn = fade
@@ -419,17 +488,57 @@ async function main(): Promise<void> {
     // Grafikkarte am stärksten ausgelastet, jede zusätzliche Arbeit lässt ihn ruckeln.
   }
 
+  // Info-Tafel (Taste I): Datei- und EXIF-Angaben je Foto einmal holen.
+  let infoFor: string | undefined
+  let infoDetails: PhotoDetails | null | undefined
+  let infoFaces: number | undefined
   function updateInfo(): void {
-    const scene = incoming ?? current
-    infoEl.textContent = scene?.label ?? ''
-    infoEl.style.opacity = showInfo && scene ? '1' : '0'
     reportStatus()
+    const scene = incoming ?? current
+    infoEl.style.opacity = showInfo && scene ? '1' : '0'
+    if (!showInfo || !scene) return
+    const slide = scene instanceof Slide ? scene : null
+    const name = slide?.photoName
+    if (name && name !== infoFor) {
+      infoFor = name
+      infoDetails = undefined
+      infoFaces = undefined
+      void window.api.photoInfo(name).then((d) => {
+        if (infoFor === name) infoDetails = d
+      })
+      void window.api.getFaces(name).then((f) => {
+        if (infoFor === name) infoFaces = f?.faces.length
+      })
+    }
+    infoEl.innerHTML = infoHtml({
+      label: scene.label,
+      screen: screen(),
+      resolution: app.renderer.resolution,
+      photo: slide
+        ? {
+            loaded: slide.loaded,
+            stats: slide.stats(),
+            focus: !!slide.focus,
+            partner: !!slide.focus?.partner
+          }
+        : undefined,
+      details: slide ? infoDetails : undefined,
+      faces: slide ? infoFaces : undefined
+    })
   }
+  // Zoom und Fortschritt ändern sich laufend.
+  window.setInterval(() => showInfo && updateInfo(), 250)
 
   /** Zustand an den Main-Prozess melden (für die Fernbedienung). */
   function reportStatus(): void {
     const scene = incoming ?? current
-    window.api.reportShowStatus({ running: true, paused, label: scene?.label ?? '' })
+    window.api.reportShowStatus({
+      running: true,
+      paused,
+      label: scene?.label ?? '',
+      frozen: current instanceof Slide && current.frozen,
+      photo: scene?.photoName
+    })
   }
 
   function setPaused(value: boolean): void {
@@ -467,18 +576,52 @@ async function main(): Promise<void> {
   }
 
   window.api.onShowCommand((cmd, arg) => {
+    mark(`Befehl ${cmd}${arg ? ' ' + arg : ''}`)
     if (cmd === 'next') skip(1)
     else if (cmd === 'prev') skip(-1)
     else if (cmd === 'pause') setPaused(true)
     else if (cmd === 'resume') setPaused(false)
     else if (cmd === 'qr') void toggleQr()
-    else if (cmd === 'effect') startEffect(arg, true)
-    else if (cmd === 'world') startWorldNow(arg)
+    else if (cmd === 'effect') {
+      const kind = startEffect(arg, true)
+      if (kind) notice(`${EFFECT_LABELS[kind]} läuft bis zum nächsten Foto`)
+      else notice('Kein Effekt ausgewählt', 'warn')
+    } else if (cmd === 'world') startWorldNow(arg)
     else if (cmd === 'text') {
       const item = settings.texts.find((t) => t.id === arg)
-      if (item) void showTextNow(item.text, item.style)
-    } else if (cmd === 'say' && arg?.trim()) void showTextNow(arg, RANDOM_STYLE)
+      if (item) {
+        void showTextNow(item.text, item.style)
+        notice('Text eingeblendet')
+      } else notice('Text nicht gefunden', 'warn')
+    } else if (cmd === 'say' && arg?.trim()) {
+      void showTextNow(arg, RANDOM_STYLE)
+      notice('Text eingeblendet')
+    } else if (cmd === 'emoji' && arg) {
+      emojis.show(arg)
+      notice(`${arg} eingeblendet`)
+    } else if (cmd === 'freeze') setFrozen(arg === 'on' ? true : arg === 'off' ? false : undefined)
   })
+
+  // ---------- Einfrieren (Fernbedienung) ----------
+  /** Einfrieren kam während eines Übergangs: gilt dann für das neue Foto. */
+  let freezeAfterTransition = false
+
+  function setFrozen(wanted?: boolean): void {
+    if (incoming) {
+      freezeAfterTransition = wanted ?? !freezeAfterTransition
+      notice(freezeAfterTransition ? 'Das nächste Foto wird eingefroren' : 'Einfrieren aufgehoben')
+      return
+    }
+    if (!(current instanceof Slide)) {
+      notice('Einfrieren geht nur bei Fotos', 'warn')
+      return
+    }
+    const on = wanted ?? !current.frozen
+    current.setFrozen(on)
+    flashStatus(on ? 'Eingefroren' : 'Weiter im Ablauf')
+    notice(on ? 'Foto eingefroren – Bewegung läuft in einer Schleife' : 'Weiter im Ablauf')
+    reportStatus()
+  }
 
   // ---------- Texte sofort einblenden (Fernbedienung) ----------
   const instantTexts: { track: OverlayTrack; elapsed: number; until: number }[] = []
@@ -508,6 +651,7 @@ async function main(): Promise<void> {
   /** Sofort-Texte und Hand-Effekte ausblenden (beim Übergang zum nächsten Bild). */
   function endManualExtras(): void {
     effects.endManual()
+    emojis.clear()
     for (const t of instantTexts) {
       t.track.leaveAll()
       t.until = Math.min(t.until, t.elapsed + 1.6)
@@ -529,14 +673,23 @@ async function main(): Promise<void> {
   /** Zwischenspiel sofort (per Fernbedienung oder Einstellungsfenster). */
   function startWorldNow(wanted?: string): void {
     if (thumbs.size < WORLD_MIN_TILES) {
-      flashStatus(`3D-Fotowelt lädt noch Vorschaubilder (${thumbs.size}/${WORLD_MIN_TILES})`)
+      const text = `3D-Fotowelt lädt noch Vorschaubilder (${thumbs.size}/${WORLD_MIN_TILES})`
+      flashStatus(text)
+      notice(text, 'warn')
       return
     }
-    if (current instanceof WorldScene && !incoming) return
+    if (current instanceof WorldScene && !incoming) {
+      notice('Die 3D-Fotowelt läuft bereits', 'warn')
+      return
+    }
     worldForced = true
     if (WORLD_FORMATIONS.includes(wanted as WorldFormation)) {
       worldFormationWanted = wanted as WorldFormation
     }
+    notice(
+      `3D-Fotowelt startet` +
+        (worldFormationWanted ? `: ${WORLD_FORMATION_LABELS[worldFormationWanted]}` : '')
+    )
     if (incoming) {
       // Mitten im Übergang: direkt nach dem Übergang starten.
       worldAfterTransition = true
@@ -554,15 +707,18 @@ async function main(): Promise<void> {
     if (ready) dispose(ready)
     ready = null
     loading = false
+    loadingEntry = null
   }
 
   /** Springt vor (+1) oder zurück (-1), mit kurzer Überblendung. */
   function skip(direction: 1 | -1): void {
     if (incoming || !current) return
+    freezeAfterTransition = false
     if (direction === -1) {
       const entry = lastPhoto ? sequencer.back(lastPhoto) : undefined
       if (!entry) {
         flashStatus('Anfang erreicht')
+        notice('Anfang erreicht', 'warn')
         return
       }
       discardReady()
@@ -610,6 +766,11 @@ async function main(): Promise<void> {
           discardReady()
           if (!(current instanceof WorldScene)) current.hurry(SKIP_FADE)
         }
+        if (freezeAfterTransition) {
+          freezeAfterTransition = false
+          setFrozen(true)
+        }
+        reportStatus()
         prefetch()
         slideLayer.addChild(current.view)
       }
@@ -621,6 +782,7 @@ async function main(): Promise<void> {
   })
 
   window.addEventListener('keydown', (e) => {
+    mark(`Taste ${e.key}`)
     switch (e.key) {
       case 'Escape':
         void window.api.stopShow()
@@ -642,6 +804,12 @@ async function main(): Promise<void> {
       case 'I':
         showInfo = !showInfo
         updateInfo()
+        break
+      case 'r':
+      case 'R':
+        void window.api.openRemote().then((r) => {
+          if (!r.ok && r.error) flashStatus(r.error)
+        })
         break
       case 'd':
       case 'D':

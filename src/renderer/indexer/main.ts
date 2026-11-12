@@ -193,7 +193,35 @@ async function loadModels(): Promise<Models> {
   }
 }
 
+// Vorschaubilder für die Galerie der Fernbedienung: nacheinander, unabhängig von der Analyse.
+let thumbChain: Promise<unknown> = Promise.resolve()
+const thumbCanvas = new OffscreenCanvas(1, 1)
+const thumbCtx = thumbCanvas.getContext('2d')!
+
+async function makeThumb(name: string, size: number): Promise<Uint8Array> {
+  const bitmap = await loadBitmap(name)
+  try {
+    const scale = Math.min(1, size / Math.max(bitmap.width, bitmap.height))
+    thumbCanvas.width = Math.max(1, Math.round(bitmap.width * scale))
+    thumbCanvas.height = Math.max(1, Math.round(bitmap.height * scale))
+    thumbCtx.imageSmoothingQuality = 'high'
+    thumbCtx.drawImage(bitmap, 0, 0, thumbCanvas.width, thumbCanvas.height)
+    const blob = await thumbCanvas.convertToBlob({ type: 'image/jpeg', quality: 0.78 })
+    return new Uint8Array(await blob.arrayBuffer())
+  } finally {
+    bitmap.close()
+  }
+}
+
 async function main(): Promise<void> {
+  window.api.onThumbRequest((req) => {
+    const run = thumbChain.then(() => makeThumb(req.name, req.height))
+    thumbChain = run.catch(() => undefined)
+    run
+      .then((data) => window.api.thumbResult(req.requestId, data))
+      .catch(() => window.api.thumbResult(req.requestId, null))
+  })
+
   const ready = loadModels()
 
   // Hand-Markierungen werden zwischen zwei Fotos der laufenden Analyse beantwortet.

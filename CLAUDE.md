@@ -23,7 +23,9 @@ Plan und Meilensteine: `docs/PLAN.md` · Änderungen je Version: `CHANGELOG.md` 
 
 ## Architektur
 
-- `src/main/remote.ts`: Webserver der Fernbedienung (`/` Handy-Seite aus `remote.html` per `?raw`, `/api/state`, `/api/settings` nur für `REMOTE_KEYS` aus `src/shared/remote.ts`, `/api/show`, `/api/events` als SSE). Show meldet Zustand per `reportShowStatus`, Befehle gehen per `IPC.showCommand` ans Show-Fenster.
+- `src/main/remote.ts`: Fernbedienung. Logik in `RemoteServer.fetch` (Request → Response), der Node-Server reicht nur durch; das R-Fenster nutzt dieselbe Logik ohne Netzwerk (Sitzung `fernbedienung` mit `protocol.handle('http')`, Adresse `http://fernbedienung.local/`). Routen: `/` (`remote.html` per `?raw`), `/api/state`, `/api/settings` (nur `REMOTE_KEYS`), `/api/show` (`{cmd, arg}`), `/api/events` (SSE; Ereignis `notice` für Hinweise), `/api/photos`, `/api/thumb?n=`, `/api/queue`. Show meldet Zustand per `reportShowStatus` und Rückmeldungen per `notice`.
+- `src/main/queue.ts`: manuelle Reihenfolge aus der Galerie (`QueueStore`, getestet); der laufende Eintrag (`playing`) steht vorn und fällt beim Weiterschalten heraus. Die Show bekommt die Liste per `IPC.queueChanged`, bevorzugt sie in `nextEntry()` und meldet per `queuePlaying`, was zu sehen ist; ändert sich die Liste, wird das vorbereitete Foto verworfen (ein normales wandert per `insertNext` hinter die Liste).
+- `src/main/thumbs.ts`: Vorschaubilder der Galerie; das Analyse-Fenster rechnet sie (`thumbRequest`), Cache in `userData/thumbs`. `src/main/photoInfo.ts`: EXIF per exifr für die Info-Tafel.
 - `src/main/paths.ts` + `programDir()`/`photoFolder()` in `settings.ts`: Fotoordner immer über `photoFolder()` auflösen, nie `settings.photoFolder` direkt benutzen (kann relativ sein).
 - `src/main/faces.ts`: `FaceStore` – Gesichtsindex `faces.json` (Schlüssel: absoluter Pfad), Warteschlange fürs Analyse-Fenster, Abgleich mit der Fokus-Person, Beispielgesichter
 - `src/renderer/indexer/`: unsichtbares Analyse-Fenster mit onnxruntime-web (WASM, ein Thread): YuNet 640×640 BGR → `decodeYunet`, Ausrichtung per `similarityTransform` auf die ArcFace-Vorlage, SFace 112×112 RGB → 128er-Vektor
@@ -44,7 +46,8 @@ Plan und Meilensteine: `docs/PLAN.md` · Änderungen je Version: `CHANGELOG.md` 
   - `playlist.ts`: Zufall ohne Wiederholung, Verlauf für ←
   - `sequencer.ts`: Reihenfolge aus Fotos, Fülltexten und gebundenen Texten (vor/über/nach)
   - `scene.ts`: gemeinsame Schnittstelle `Scene` für `Slide` (Foto) und `TextSlide`; `OverlayTrack` steuert Texte zeitlich
-  - `main.ts`: Ablauf, Vorladen, Tasten
+  - `emojis.ts`: schwebende Emojis (HTML + GSAP) über dem Foto; `info.ts`: Info-Tafel (Taste I)
+  - `main.ts`: Ablauf, Vorladen, Tasten. Per Hand Ausgelöstes (Effekte, Sofort-Texte, Emojis) endet in `endManualExtras()` beim nächsten Übergang. Einfrieren: `Slide.setFrozen` (Fortschritt pendelt als Sinus um die aktuelle Stelle, Auftauen setzt dort fort)
 
 ## Stolperfallen
 
@@ -61,7 +64,7 @@ Plan und Meilensteine: `docs/PLAN.md` · Änderungen je Version: `CHANGELOG.md` 
 - Textgrößen sind in `cqh` angegeben: Der Host-Container eines `TextOverlay` braucht `container-type: size`.
 - Texte und eigene Stile werden in `parseSettings` Eintrag für Eintrag geprüft (`parseList`), damit ein kaputter Eintrag nicht alle Texte löscht. In zod 4 müssen solche losen Felder `z.unknown().optional()` sein.
 - Frame-Messung: `PP_PERF=1` lädt die Show mit `#perf`; langsame Frames (> 25 ms) erscheinen mit den Ereignissen davor im Terminal (`perf.ts`).
-- Fernbedienung testen: per `curl http://127.0.0.1:8765/api/…`; die Handy-Seite selbst mit `PP_REMOTE_PREVIEW=1` (Fenster in iPhone-Größe, mit `PP_CAPTURE_DIR` als Aufnahme). Beim ersten Öffnen des Ports fragt die Windows-Firewall.
+- Fernbedienung testen: **nicht per curl** – die Sandbox der Shell leitet 127.0.0.1 an den echten Rechner weiter, dort laufen evtl. die echte App oder andere Programme. Stattdessen `PP_TEST_COMMANDS="7:emoji:❤️;8:freeze:on;9:key:i;10:queue:foto.jpg;12:drag:x1,y1,x2,y2"` (Sekunden:Befehl:Zusatz, nur Entwicklung) und die Handy-Seite mit `PP_REMOTE_PREVIEW=1|zoom|fotos` (läuft ohne Netzwerk, mit `PP_CAPTURE_DIR` als Aufnahme). Beim ersten Öffnen des Ports fragt die Windows-Firewall.
 - Befehle an die Show haben einen optionalen Zusatz (`{ cmd, arg }`): `effect`/`world` mit ID, `text` mit Text-ID, `say` mit freiem Text. Sofort eingeblendete Texte laufen unabhängig vom Ablauf (`instantTexts` in `show/main.ts`).
 - 3D-Zwischenspiel: eine Formation; das Zielfoto wird erst beim Eintauchen gewählt (`WorldScene.chooseFinal`), deshalb lädt die Show während der 3D-Welt erst bei `diving` vor. Wackelpudding = `JELLY_VERTEX` (ersetzt three.js `project_vertex`) auf fein unterteilten Kacheln.
 - Testeinstellungen mit Auswahllisten immer vollständig angeben: `parseSettings` ergänzt fehlende Optionen als aktiv.

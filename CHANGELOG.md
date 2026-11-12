@@ -2,6 +2,20 @@
 
 Alle Änderungen je Version. Format: neueste Version oben, Datum im Format JJJJ-MM-TT.
 
+## 0.11.0 – 2026-11-12
+
+Live-Fernbedienung: Rückmeldung, Emojis, Einfrieren, eigene Reihenfolge.
+
+- **Rückmeldung auf der Fernbedienung**: Jeder Auslöser bestätigt sich als kurzer Hinweis („Herzen läuft bis zum nächsten Foto“, „Text eingeblendet“, „3D-Fotowelt startet: Kugel“); Fehler erscheinen gelb (z. B. „Show läuft nicht“, „3D lädt noch Vorschaubilder“)
+- **Per Hand ausgelöste Texte und Effekte gehören zum aktuellen Foto** und blenden beim nächsten Übergang aus
+- **Emojis**: Abschnitt „Jetzt auf dem Foto“ mit einstellbaren Emojis; ein Tipp lässt sie groß und schwebend über dem aktuellen Foto erscheinen, bis zum nächsten Übergang
+- **Foto einfrieren** (❄ auf der Fernbedienung): Das Foto bleibt stehen, Zoom, Schwenk oder Kamerafahrt pendeln weich in einer Schleife weiter; Emojis, Texte und Effekte lassen sich währenddessen auslösen. „Auftauen“ oder Weiterblättern setzt den Ablauf fort
+- **Galerie und eigene Reihenfolge** (Reiter „Fotos“): Vorschau aller Fotos; Antippen zeigt ein Foto als Nächstes, weitere werden angehängt. Die Reihenfolge ist sichtbar, das laufende Foto markiert; Tippen entfernt, Halten und Ziehen ordnet neu. Danach geht es normal weiter. Adresse mit `#fotos` öffnet direkt die Galerie
+- **Taste I**: Info-Tafel mit Auflösung (Original, geladen, Bildschirm), aktuellem Zoom und Vergrößerung, Bewegung, Randfüllung, Gesichtern und EXIF (Aufnahmedatum, Kamera, Objektiv, Belichtung, Brennweite, GPS …); I blendet aus
+- **Taste R**: öffnet die Fernbedienung als Fenster auf dem Laptop, bevorzugt auf einem zweiten Bildschirm; braucht kein Netzwerk und funktioniert auch bei ausgeschalteter Handy-Fernbedienung. Erneut R schließt es
+- Nach der 3D-Fotowelt steht das Zielfoto erst ruhig im Vollbild, dann beginnt der Zoom; die übrigen Kacheln blenden beim Eintauchen aus
+- Erster Effekt, erstes Emoji und die Info-Tafel ruckeln nicht mehr (Vorab-Aufwärmen beim Start)
+
 ## 0.10.0 – 2026-11-12
 
 Wackelpudding, kleine Fotos, gezielte Auslöser.

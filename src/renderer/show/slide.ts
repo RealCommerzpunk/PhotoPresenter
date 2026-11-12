@@ -1,6 +1,6 @@
 import { Container, Sprite } from 'pixi.js'
 import { pick, pickWeighted } from '@shared/random'
-import type { Settings } from '@shared/settings'
+import { FOCUS_LABELS, MOTION_LABELS, type MotionKind, type Settings } from '@shared/settings'
 import type { TextItem, TextStyle } from '@shared/text'
 import { TextOverlay } from '../text/overlay'
 import type { LoadedPhoto } from './loader'
@@ -36,6 +36,31 @@ export interface SlideOptions {
   stillStart?: number
 }
 
+/** Messwerte für die Info-Einblendung (Taste I). */
+export interface SlideStats {
+  /** Bewegungsart bzw. Fokus-Modus als Text. */
+  motion: string
+  /** Aktueller Kamerazoom (1 = eingepasst). */
+  zoom: number
+  /** Größte erlaubte Vergrößerung (Zoomgrenze). */
+  maxZoom: number
+  /** Bildschirmpixel je Originalpixel bei eingepasstem Bild bzw. jetzt. */
+  baseScale: number
+  scale: number
+  /** Fortschritt der Bewegung 0–1. */
+  progress: number
+  frozen: boolean
+}
+
+/** Schleife beim Einfrieren: Fortschritt t = c + a · sin(ω · τ + φ). */
+interface FreezeLoop {
+  c: number
+  a: number
+  omega: number
+  phi: number
+  time: number
+}
+
 /** Ein Foto auf der Bühne: Randfüllung, Foto, Bewegung und ggf. Texte darüber. */
 export class Slide extends TimedScene implements Scene {
   readonly view = new Container()
@@ -45,6 +70,13 @@ export class Slide extends TimedScene implements Scene {
   private readonly shot: Shot
   private readonly track = new OverlayTrack()
   private readonly stillStart: number
+  private readonly motionText: string
+  private readonly maxZoom: number
+  /** Verschiebung der Bewegungszeit nach dem Auftauen (Sekunden). */
+  private motionShift = 0
+  private loop: FreezeLoop | null = null
+  private lastProgress = 0
+  private lastZoom = 1
 
   constructor(
     readonly loaded: LoadedPhoto,
@@ -77,6 +109,7 @@ export class Slide extends TimedScene implements Scene {
     // Zoomgrenze: nie stärker als maxUpscale über die Originalauflösung vergrößern.
     const fitOriginal = (loaded.fit.scale * loaded.size.w) / loaded.original.w
     const maxZoom = zoomLimit(fitOriginal, loaded.pixelRatio, settings.maxUpscale)
+    this.maxZoom = maxZoom
 
     if (focus) {
       this.shot = limitShot(
@@ -95,12 +128,20 @@ export class Slide extends TimedScene implements Scene {
         ),
         maxZoom
       )
+      const mode = this.stillStart && focus.plan.mode === 'journey' ? 'slowZoom' : focus.plan.mode
+      const pan = focus.others.length ? focus.plan.others : 'off'
+      this.motionText =
+        `Fokus: ${FOCUS_LABELS[mode]}` +
+        (pan === 'off' ? '' : `, Schwenk ${pan === 'before' ? 'vorher' : 'nachher'}`)
       // Genug Zeit, damit die Kamera an jedem Gesicht kurz verweilen kann.
       const stations = this.shot.path?.length ?? 2
       this.display = Math.max(this.display, 5, stations * 2)
     } else {
       // Nach einer Ruhephase vom Gesamtbild aus hineinzoomen, sonst nach Einstellung.
-      const kind = this.stillStart ? 'zoomIn' : (pickWeighted(settings.motionKinds) ?? 'zoomIn')
+      const kind: MotionKind = this.stillStart
+        ? 'zoomIn'
+        : (pickWeighted(settings.motionKinds) ?? 'zoomIn')
+      this.motionText = MOTION_LABELS[kind]
       this.shot = limitShot(
         planShot(loaded.size, screen, loaded.fit.scale, kind, pick(settings.motionIntensity)),
         maxZoom
@@ -134,14 +175,70 @@ export class Slide extends TimedScene implements Scene {
     return this.loaded.name
   }
 
+  /** Dauer der Bewegung in Sekunden (nach der Ruhephase). */
+  private get motionDuration(): number {
+    return Math.max(0.001, this.lifetime - this.stillStart)
+  }
+
+  get frozen(): boolean {
+    return this.loop !== null
+  }
+
+  /**
+   * Einfrieren: Das Foto bleibt stehen, die Kamera pendelt weich um die aktuelle Stelle
+   * der Bewegung (ohne Ruck: Startpunkt und Richtung bleiben erhalten). Auftauen setzt
+   * die Bewegung genau an der Stelle fort, an der die Schleife gerade ist.
+   */
+  setFrozen(on: boolean): void {
+    if (on === this.frozen) return
+    if (on) {
+      const t0 = this.lastProgress
+      const a = 0.16
+      const c = Math.min(1 - a, Math.max(a, t0))
+      const phi = Math.asin(Math.max(-1, Math.min(1, (t0 - c) / a)))
+      // Gleiche Geschwindigkeit wie die normale Bewegung, Periode aber zwischen 6 und 24 s.
+      const speed = 1 / this.motionDuration
+      const omega = Math.min((2 * Math.PI) / 6, Math.max((2 * Math.PI) / 24, speed / a))
+      this.loop = { c, a, omega, phi, time: 0 }
+    } else {
+      const moving = Math.max(0, this.elapsed - this.stillStart)
+      this.motionShift = this.lastProgress * this.motionDuration - moving
+      this.loop = null
+    }
+  }
+
+  stats(): SlideStats {
+    const { fit, size, original, pixelRatio } = this.loaded
+    const baseScale = (fit.scale * size.w * pixelRatio) / original.w
+    return {
+      motion: this.motionText,
+      zoom: this.lastZoom,
+      maxZoom: this.maxZoom,
+      baseScale,
+      scale: baseScale * this.lastZoom,
+      progress: this.lastProgress,
+      frozen: this.frozen
+    }
+  }
+
   update(dt: number, screen: Size): void {
-    this.elapsed += dt
+    let t: number
+    if (this.loop) {
+      // Eingefroren: Standzeit läuft nicht weiter, nur die Schleife.
+      const l = this.loop
+      l.time += dt
+      t = l.c + l.a * Math.sin(l.omega * l.time + l.phi)
+    } else {
+      this.elapsed += dt
+      // Während der Ruhephase steht das Bild; danach läuft die Bewegung über die restliche Zeit.
+      const moving = Math.max(0, this.elapsed - this.stillStart) + this.motionShift
+      t = Math.min(1, Math.max(0, moving / this.motionDuration))
+    }
     this.track.update(this.elapsed)
     const { size, fit } = this.loaded
-    // Während der Ruhephase steht das Bild; danach läuft die Bewegung über die restliche Zeit.
-    const moving = Math.max(0, this.elapsed - this.stillStart)
-    const t = Math.min(1, moving / Math.max(0.001, this.lifetime - this.stillStart))
     const k = evaluateShot(this.shot, t, size, screen, fit.scale)
+    this.lastProgress = t
+    this.lastZoom = k.zoom
 
     const cx = screen.w / 2
     const cy = screen.h / 2
@@ -164,6 +261,7 @@ export class Slide extends TimedScene implements Scene {
   }
 
   hurry(fade: number): void {
+    this.setFrozen(false)
     this.shorten(fade)
     this.track.leaveAll()
   }

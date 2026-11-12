@@ -1,5 +1,5 @@
 import type { FaceIndexStatus, FaceInfo, PhotoFaces, StoredFace } from './faces'
-import type { RemoteInfo, ShowCommand, ShowStatus } from './remote'
+import type { PhotoQueue, RemoteInfo, ShowCommand, ShowNotice, ShowStatus } from './remote'
 import type { Settings } from './settings'
 
 /** Kanalnamen für die Kommunikation zwischen Main-Prozess und Fenstern. */
@@ -30,8 +30,34 @@ export const IPC = {
   showCommand: 'show:command',
   showStatus: 'show:status',
   remoteInfo: 'remote:info',
-  sendShowCommand: 'show:sendCommand'
+  sendShowCommand: 'show:sendCommand',
+  showNotice: 'show:notice',
+  openRemote: 'remote:open',
+  photoInfo: 'photos:info',
+  getQueue: 'queue:get',
+  queueChanged: 'queue:changed',
+  queuePlaying: 'queue:playing',
+  thumbRequest: 'thumbs:request',
+  thumbResult: 'thumbs:result'
 } as const
+
+/** Angaben zu einer Fotodatei für die Info-Einblendung (Taste I). */
+export interface PhotoDetails {
+  /** Dateigröße in Bytes. */
+  size: number
+  /** Änderungsdatum der Datei (ISO). */
+  modified: string
+  /** Aufbereitete EXIF-Angaben: Bezeichnung → Wert. */
+  exif: [string, string][]
+}
+
+/** Auftrag an das Analyse-Fenster: kleines Vorschaubild für die Galerie der Fernbedienung. */
+export interface ThumbRequest {
+  requestId: number
+  name: string
+  /** Höhe des Vorschaubilds in Pixeln. */
+  height: number
+}
 
 /** Schema des Protokolls, über das die Show Fotos aus dem gewählten Ordner lädt. */
 export const PHOTO_SCHEME = 'photo'
@@ -143,4 +169,20 @@ export interface PhotoPresenterApi {
   remoteInfo(): Promise<RemoteInfo>
   /** Einstellungsfenster: Befehl an die laufende Show senden (z. B. Effekt jetzt). */
   sendShowCommand(cmd: ShowCommand, arg?: string): Promise<void>
+  /** Show-Fenster: Rückmeldung an die Fernbedienung. */
+  notice(notice: ShowNotice): void
+  /** Fernbedienung als eigenes Fenster auf diesem Rechner öffnen (Taste R). */
+  openRemote(): Promise<{ ok: boolean; error?: string }>
+  /** Dateigröße, Datum und EXIF eines Fotos. */
+  photoInfo(name: string): Promise<PhotoDetails | null>
+
+  // Manuelle Reihenfolge (Galerie der Fernbedienung)
+  getQueue(): Promise<PhotoQueue>
+  onQueueChanged(callback: (queue: PhotoQueue) => void): () => void
+  /** Show-Fenster: dieser Eintrag ist jetzt zu sehen (null: ein normales Foto). */
+  queuePlaying(id: string | null): void
+
+  // Vorschaubilder (Analyse-Fenster)
+  onThumbRequest(callback: (request: ThumbRequest) => void): () => void
+  thumbResult(requestId: number, data: Uint8Array | null): Promise<void>
 }

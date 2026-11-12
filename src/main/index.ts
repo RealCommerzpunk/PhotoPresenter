@@ -1,9 +1,18 @@
 import { mkdir, writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
-import { app, BrowserWindow, dialog, ipcMain, powerSaveBlocker, screen, shell } from 'electron'
+import {
+  app,
+  BrowserWindow,
+  dialog,
+  ipcMain,
+  powerSaveBlocker,
+  screen,
+  session,
+  shell
+} from 'electron'
 import type { PhotoFaces } from '@shared/faces'
 import { IPC, type EmbedResult, type FaceModel, type RelBox, type ShowOptions } from '@shared/ipc'
-import type { ShowCommand, ShowStatus, RemoteState } from '@shared/remote'
+import type { QueueOp, RemoteState, ShowCommand, ShowNotice, ShowStatus } from '@shared/remote'
 import { REMOTE_KEYS } from '@shared/remote'
 import {
   EFFECT_LABELS,
@@ -13,9 +22,12 @@ import {
   type Settings
 } from '@shared/settings'
 import { FaceStore } from './faces'
+import { photoInfo } from './photoInfo'
 import { handlePhotoProtocol, listPhotos, registerPhotoScheme } from './photos'
+import { QueueStore } from './queue'
 import { RemoteServer } from './remote'
 import { loadSettings, photoFolder, updateSettings } from './settings'
+import { ThumbCache } from './thumbs'
 
 registerPhotoScheme()
 
@@ -28,6 +40,7 @@ if (!app.isPackaged && process.env['PP_USER_DATA']) {
 let settingsWindow: BrowserWindow | null = null
 let showWindow: BrowserWindow | null = null
 let indexerWindow: BrowserWindow | null = null
+let remoteWindow: BrowserWindow | null = null
 let powerBlockId: number | null = null
 let faceStore: FaceStore
 let showStatus: ShowStatus = { running: false, paused: false, label: '' }
@@ -39,6 +52,7 @@ function remoteState(): RemoteState {
   return {
     version: app.getVersion(),
     show: showStatus,
+    queue: queue.get(),
     settings,
     persons: s.persons.map((p) => ({ id: p.id, name: p.name })),
     labels: {
@@ -53,13 +67,48 @@ function remoteState(): RemoteState {
 function showCommand(cmd: ShowCommand, arg?: string): void {
   if (cmd === 'start') startShow()
   else if (cmd === 'stop') stopShow()
-  else showWindow?.webContents.send(IPC.showCommand, { cmd, arg })
+  else if (showWindow) showWindow.webContents.send(IPC.showCommand, { cmd, arg })
+  else if (cmd !== 'qr') notify({ text: 'Die Show läuft nicht – erst starten', kind: 'warn' })
 }
+
+/** Rückmeldung an die Fernbedienung. */
+function notify(notice: ShowNotice): void {
+  remote.notify(notice)
+}
+
+/** Manuelle Reihenfolge aus der Galerie der Fernbedienung. */
+const queue = new QueueStore((q) => {
+  if (showWindow && !showWindow.isDestroyed()) showWindow.webContents.send(IPC.queueChanged, q)
+  remote.broadcast()
+})
+
+function applyQueueOp(op: QueueOp): void {
+  // Die Anfrage kommt vom Handy: nur bekannte Befehle mit passenden Werten.
+  if (op?.op === 'add' && typeof op.name === 'string') {
+    queue.apply({ op: 'add', name: op.name })
+    if (!showWindow) notify({ text: 'Vorgemerkt – läuft, sobald die Show startet', kind: 'ok' })
+  } else if (op?.op === 'remove' && typeof op.id === 'string') queue.apply(op)
+  else if (op?.op === 'move' && typeof op.id === 'string' && typeof op.to === 'number')
+    queue.apply(op)
+  else if (op?.op === 'clear') queue.apply(op)
+}
+
+const thumbs = new ThumbCache(
+  () => join(app.getPath('userData'), 'thumbs'),
+  (request) => {
+    if (!indexerWindow || indexerWindow.isDestroyed()) return false
+    indexerWindow.webContents.send(IPC.thumbRequest, request)
+    return true
+  }
+)
 
 const remote = new RemoteServer({
   state: remoteState,
   applySettings: (patch) => setSettings(patch),
-  command: showCommand
+  command: showCommand,
+  photos: async () => (await listPhotos()).files,
+  thumb: (name) => thumbs.get(name),
+  queue: applyQueueOp
 })
 
 /** Sendet an alle sichtbaren Fenster (nicht an das Analyse-Fenster). */
@@ -146,6 +195,7 @@ function startShow(options: ShowOptions = {}): void {
     if (powerBlockId !== null) powerSaveBlocker.stop(powerBlockId)
     powerBlockId = null
     showStatus = { running: false, paused: false, label: '' }
+    queue.stopped()
     remote.broadcast()
     if (!settingsWindow) app.quit()
   })
@@ -160,14 +210,40 @@ function startShow(options: ShowOptions = {}): void {
 
 /**
  * Nur für Tests in der Entwicklung: PP_TEST_COMMANDS="8:say:Hallo;8:effect:hearts;20:freeze"
- * schickt Befehle nach so vielen Sekunden an die Show (wie von der Fernbedienung).
+ * schickt Befehle nach so vielen Sekunden an die Show (wie von der Fernbedienung);
+ * "8:key:i" drückt eine Taste im Show-Fenster, "8:queue:foto.jpg" reiht ein Foto ein.
  */
 function commandsForTests(): void {
   const list = process.env['PP_TEST_COMMANDS']
   if (app.isPackaged || !list) return
   for (const entry of list.split(';')) {
     const [sec, cmd, ...rest] = entry.split(':')
-    setTimeout(() => showCommand(cmd as ShowCommand, rest.join(':') || undefined), Number(sec) * 1000)
+    const arg = rest.join(':') || undefined
+    setTimeout(() => {
+      if (cmd === 'key' && arg) {
+        showWindow?.webContents.sendInputEvent({ type: 'keyDown', keyCode: arg })
+        showWindow?.webContents.sendInputEvent({ type: 'char', keyCode: arg })
+        showWindow?.webContents.sendInputEvent({ type: 'keyUp', keyCode: arg })
+      } else if (cmd === 'queue' && arg) applyQueueOp({ op: 'add', name: arg })
+      else if (cmd === 'drag' && arg && remoteWindow) {
+        // "8:drag:x1,y1,x2,y2": im Fernbedienungs-Fenster gedrückt halten und ziehen
+        const [x1, y1, x2, y2] = arg.split(',').map(Number)
+        const wc = remoteWindow.webContents
+        wc.sendInputEvent({ type: 'mouseDown', x: x1, y: y1, button: 'left', clickCount: 1 })
+        setTimeout(() => {
+          for (let i = 1; i <= 10; i++) {
+            const x = Math.round(x1 + ((x2 - x1) * i) / 10)
+            const y = Math.round(y1 + ((y2 - y1) * i) / 10)
+            setTimeout(() => wc.sendInputEvent({ type: 'mouseMove', x, y, button: 'left' }), i * 40)
+          }
+          setTimeout(
+            () => wc.sendInputEvent({ type: 'mouseUp', x: x2, y: y2, button: 'left', clickCount: 1 }),
+            600
+          )
+        }, 600)
+      }
+      else showCommand(cmd as ShowCommand, arg)
+    }, Number(sec) * 1000)
   }
 }
 
@@ -181,13 +257,67 @@ function captureForTests(win: BrowserWindow, prefix: string): void {
   let n = 0
   const timer = setInterval(async () => {
     if (win.isDestroyed()) return clearInterval(timer)
-    const image = await win.webContents.capturePage()
-    await mkdir(dir, { recursive: true })
-    await writeFile(
-      join(dir, `${prefix}${String(++n).padStart(2, '0')}.jpg`),
-      image.resize({ width: 960 }).toJPEG(80)
-    )
+    try {
+      const image = await win.webContents.capturePage()
+      await mkdir(dir, { recursive: true })
+      await writeFile(
+        join(dir, `${prefix}${String(++n).padStart(2, '0')}.jpg`),
+        image.resize({ width: 960 }).toJPEG(80)
+      )
+    } catch {
+      // Fenster gerade verdeckt oder im Aufbau: diese Aufnahme auslassen.
+    }
   }, 2000)
+}
+
+/** Sitzung des Fernbedienungs-Fensters: Anfragen gehen direkt an den Server-Code, ohne Netzwerk. */
+const REMOTE_HOST = 'http://fernbedienung.local'
+let remoteSession: Electron.Session | null = null
+function remoteWindowSession(): Electron.Session {
+  if (!remoteSession) {
+    remoteSession = session.fromPartition('fernbedienung')
+    remoteSession.protocol.handle('http', (request) => remote.fetch(request))
+  }
+  return remoteSession
+}
+
+/**
+ * Fernbedienung als eigenes Fenster auf diesem Rechner (Taste R in der Show): am liebsten auf
+ * einem anderen Bildschirm als die Show, sonst rechts oben darüber. Erneut R schließt es.
+ * Braucht weder Netzwerk noch freien Port (läuft auch bei ausgeschalteter Handy-Fernbedienung).
+ */
+function toggleRemoteWindow(hash = ''): { ok: boolean; error?: string } {
+  if (remoteWindow && !remoteWindow.isDestroyed()) {
+    remoteWindow.close()
+    return { ok: true }
+  }
+  const showDisplay = showWindow
+    ? screen.getDisplayMatching(showWindow.getBounds())
+    : screen.getPrimaryDisplay()
+  const other = screen.getAllDisplays().find((d) => d.id !== showDisplay.id)
+  const area = (other ?? showDisplay).workArea
+  const width = 440
+  const height = Math.min(960, area.height - 40)
+  remoteWindow = new BrowserWindow({
+    x: Math.round(other ? area.x + (area.width - width) / 2 : area.x + area.width - width - 24),
+    y: area.y + 20,
+    width,
+    height,
+    title: 'PhotoPresenter – Fernbedienung',
+    backgroundColor: '#0b0d12',
+    autoHideMenuBar: true,
+    // Auf demselben Bildschirm über der Vollbild-Show bleiben.
+    alwaysOnTop: !other && !!showWindow,
+    webPreferences: { sandbox: true, contextIsolation: true, session: remoteWindowSession() }
+  })
+  remoteWindow.on('closed', () => (remoteWindow = null))
+  if (!app.isPackaged) {
+    remoteWindow.webContents.on('console-message', ({ level, message }) => {
+      if (level === 'warning' || level === 'error') console.log(`[remote:${level}] ${message}`)
+    })
+  }
+  void remoteWindow.loadURL(`${REMOTE_HOST}/${hash}`)
+  return { ok: true }
 }
 
 /** Unsichtbares Fenster, das die Fotos im Hintergrund nach Gesichtern durchsucht. */
@@ -246,6 +376,14 @@ app.whenReady().then(() => {
   })
   ipcMain.handle(IPC.remoteInfo, () => remote.info(loadSettings().remoteEnabled))
   ipcMain.handle(IPC.sendShowCommand, (_e, cmd: ShowCommand, arg?: string) => showCommand(cmd, arg))
+  ipcMain.on(IPC.showNotice, (_e, notice: ShowNotice) => notify(notice))
+  ipcMain.handle(IPC.openRemote, () => toggleRemoteWindow())
+  ipcMain.handle(IPC.photoInfo, (_e, name: string) => photoInfo(name))
+  ipcMain.handle(IPC.getQueue, () => queue.get())
+  ipcMain.on(IPC.queuePlaying, (_e, id: string | null) => queue.setPlaying(id))
+  ipcMain.handle(IPC.thumbResult, (_e, requestId: number, data: Uint8Array | null) =>
+    thumbs.handleResult(requestId, data)
+  )
   if (loadSettings().remoteEnabled) void remote.start(loadSettings().remotePort)
 
   faceStore = new FaceStore(
@@ -289,16 +427,16 @@ app.whenReady().then(() => {
   // Nur für Tests in der Entwicklung: Handy-Seite der Fernbedienung in iPhone-Größe öffnen.
   if (!app.isPackaged && process.env['PP_REMOTE_PREVIEW']) {
     setTimeout(() => {
-      const phone = new BrowserWindow({ width: 390, height: 844, title: 'Fernbedienung (Test)' })
-      phone.webContents.on('console-message', ({ level, message }) => {
-        if (level === 'warning' || level === 'error') console.log(`[remote:${level}] ${message}`)
-      })
-      void phone.loadURL(`http://127.0.0.1:${loadSettings().remotePort}/`)
+      // PP_REMOTE_PREVIEW=fotos öffnet die Galerie
+      toggleRemoteWindow(process.env['PP_REMOTE_PREVIEW'] === 'fotos' ? '#fotos' : '')
+      const phone = remoteWindow
+      if (!phone) return
+      phone.setAlwaysOnTop(false)
       // PP_REMOTE_PREVIEW=zoom zeigt die ganze Seite verkleinert (für Aufnahmen)
       if (process.env['PP_REMOTE_PREVIEW'] === 'zoom') {
         phone.setSize(390, 1900)
         phone.webContents.once('did-finish-load', () => phone.webContents.setZoomFactor(0.5))
-      }
+      } else phone.setSize(390, 844)
       captureForTests(phone, 'remote')
     }, 1500)
   }

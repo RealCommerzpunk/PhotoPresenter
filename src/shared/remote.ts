@@ -13,10 +13,13 @@ export type ShowCommand =
   | 'world'
   | 'text'
   | 'say'
+  | 'emoji'
+  | 'freeze'
 
 /**
  * Befehl mit optionalem Zusatz: bei 'effect' die Effekt-ID, bei 'world' die Formation,
- * bei 'text' die Text-ID, bei 'say' ein freier Text zum sofortigen Einblenden.
+ * bei 'text' die Text-ID, bei 'say' ein freier Text zum sofortigen Einblenden,
+ * bei 'emoji' das Emoji, bei 'freeze' 'on' oder 'off' (ohne Zusatz: umschalten).
  */
 export interface ShowCommandMessage {
   cmd: ShowCommand
@@ -29,7 +32,37 @@ export interface ShowStatus {
   paused: boolean
   /** Aktuelles Foto bzw. Text (wie bei Taste I). */
   label: string
+  /** Aktuelles Foto ist eingefroren (Bewegung läuft in einer Schleife). */
+  frozen?: boolean
+  /** Name des aktuellen Fotos (relativ zum Fotoordner), falls ein Foto zu sehen ist. */
+  photo?: string
 }
+
+/** Rückmeldung der Show auf einen Befehl (erscheint auf der Fernbedienung als Hinweis). */
+export interface ShowNotice {
+  text: string
+  kind: 'ok' | 'warn'
+}
+
+/** Eintrag der manuellen Reihenfolge aus der Foto-Galerie der Fernbedienung. */
+export interface QueueItem {
+  id: string
+  /** Foto relativ zum Fotoordner. */
+  name: string
+}
+
+/** Manuelle Reihenfolge: anstehende Fotos; `playing` ist der Eintrag, der gerade zu sehen ist. */
+export interface PhotoQueue {
+  items: QueueItem[]
+  playing?: string
+}
+
+/** Änderung der manuellen Reihenfolge von der Fernbedienung. */
+export type QueueOp =
+  | { op: 'add'; name: string }
+  | { op: 'remove'; id: string }
+  | { op: 'move'; id: string; to: number }
+  | { op: 'clear' }
 
 /** Einstellungen, die die Fernbedienung lesen und ändern darf. */
 export const REMOTE_KEYS = [
@@ -56,7 +89,8 @@ export const REMOTE_KEYS = [
   'worldEnabled',
   'worldEvery',
   'worldDuration',
-  'worldFormations'
+  'worldFormations',
+  'emojis'
 ] as const satisfies readonly (keyof Settings)[]
 
 export type RemoteSettings = Pick<Settings, (typeof REMOTE_KEYS)[number]>
@@ -65,6 +99,7 @@ export type RemoteSettings = Pick<Settings, (typeof REMOTE_KEYS)[number]>
 export interface RemoteState {
   version: string
   show: ShowStatus
+  queue: PhotoQueue
   settings: RemoteSettings
   persons: { id: string; name: string }[]
   labels: {

@@ -210,6 +210,9 @@ const defaultFocusModes: WeightedOption<FocusMode>[] = [
   { id: 'journey', enabled: true, weight: 2 }
 ]
 
+/** Vorgabe für die Emoji-Knöpfe der Fernbedienung. */
+export const DEFAULT_EMOJIS = ['❤️', '😂', '🎉', '👏', '😍', '🥳', '🔥', '⭐', '🥂', '😮', '🙈', '👍']
+
 export const PAN_OTHERS = {
   off: 'nie',
   before: 'vorher über die anderen Gesichter',
@@ -320,6 +323,8 @@ export const settingsSchema = z.object({
   worldCameraSpeed: field(rangeSchema, { min: 1, max: 1, mode: 'fixed' } satisfies Range),
   worldFormations: field(weightedSchema(WORLD_FORMATIONS), defaultWorldFormations),
   /** Fernbedienung per Handy (Webserver im lokalen Netz, ohne Passwort). */
+  /** Emojis, die die Fernbedienung über dem aktuellen Foto einblenden kann. */
+  emojis: field(z.array(z.string().min(1).max(16)).max(48), DEFAULT_EMOJIS),
   remoteEnabled: field(z.boolean(), true),
   remotePort: field(z.number().int().min(1024).max(65535), 8765),
   /** Texte, eigene Stile und Personen werden einzeln geprüft (siehe parseSettings). */

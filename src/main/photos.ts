@@ -35,6 +35,16 @@ export async function listPhotos(): Promise<PhotoList> {
   }
 }
 
+/** Absoluter Pfad eines Fotos (relativ zum Fotoordner); null, wenn es außerhalb läge. */
+export function resolvePhoto(rel: string): string | null {
+  const folder = resolvedPhotoFolder()
+  if (!folder || !rel) return null
+  const abs = resolve(folder, rel)
+  const inside = relative(folder, abs)
+  if (!inside || inside.startsWith('..') || isAbsolute(inside)) return null
+  return abs
+}
+
 /** Muss vor `app.whenReady()` aufgerufen werden. */
 export function registerPhotoScheme(): void {
   protocol.registerSchemesAsPrivileged([

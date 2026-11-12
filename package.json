@@ -1,7 +1,7 @@
 {
   "name": "photopresenter",
   "productName": "PhotoPresenter",
-  "version": "0.10.0",
+  "version": "0.11.0",
   "description": "Zufällige Vollbild-Foto-Diashow mit Kamerafahrten, Übergängen, Gesichtsfokus und animierten Texten",
   "main": "./out/main/index.js",
   "author": "RealCommerzpunk",
@@ -29,6 +29,7 @@
     "@fontsource/montserrat": "^5.3.0",
     "@fontsource/pacifico": "^5.3.0",
     "@fontsource/playfair-display": "^5.3.0",
+    "exifr": "^7.1.3",
     "gsap": "^3.15.1",
     "onnxruntime-web": "^1.31.1",
     "pixi.js": "^8.23.0",

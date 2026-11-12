@@ -130,6 +130,7 @@ Jeder Meilenstein ergibt eine lauffähige Version und einen eigenen Commit/PR.
 - ✅ Zoomgrenze nach Original- und Bildschirmauflösung
 - ✅ Relativer Fotopfad, portable Windows-Version
 - ✅ 0.10.0: Wackelpudding-Würfel, eine Formation je Zwischenspiel, kleine Fotos begrenzen, gezielte Auslöser und Sofort-Texte auf der Fernbedienung
+- ✅ 0.11.0: Rückmeldung auf der Fernbedienung, Emojis, Foto einfrieren (Bewegung in Schleife), Galerie mit eigener Reihenfolge, Info-Tafel (Taste I, EXIF), Fernbedienung als Fenster (Taste R); per Hand Ausgelöstes endet beim nächsten Übergang; ruhiger Start nach der 3D-Welt
 - ✅ 3D-Fotowelt (0.9.0): Zwischenspiel mit Three.js, 9 Formationen (Klassiker aus dem Periodic-Table-Beispiel plus Rahmen, Würfel, Karussell, Tunnel, Welle), Eintauchen in ein Foto
 - ✅ Effekte (0.8.0): 8 Partikel-Effekte mit PixiJS und 5 animierte Textfolien-Hintergründe als Shader (statt Vanta.js: kein zweiter WebGL-Kontext, läuft durch die Übergänge), einstellbar nach Häufigkeit, Dauer und Intensität
 

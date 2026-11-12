@@ -48,11 +48,56 @@
         line-height: 1.5;
         color: rgba(255, 255, 255, 0.8);
       }
+      #emojis {
+        position: fixed;
+        inset: 0;
+        pointer-events: none;
+        overflow: hidden;
+      }
+      .emoji {
+        position: absolute;
+        line-height: 1;
+        font-family: 'Segoe UI Emoji', 'Apple Color Emoji', 'Noto Color Emoji', sans-serif;
+        filter: drop-shadow(0 0.6vmin 1.2vmin rgba(0, 0, 0, 0.45));
+        will-change: transform, opacity;
+      }
       #info {
         left: 24px;
         bottom: 20px;
-        font-size: 16px;
-        max-width: 70vw;
+        max-width: min(560px, 80vw);
+        font-size: 14px;
+        line-height: 1.45;
+        padding: 14px 18px;
+        border-radius: 14px;
+        /* kein backdrop-filter: der liest jeden Frame das WebGL-Bild zurück */
+        background: rgba(8, 10, 16, 0.86);
+        z-index: 4;
+      }
+      #info .info-title {
+        font-size: 17px;
+        font-weight: 600;
+        margin-bottom: 8px;
+        word-break: break-all;
+      }
+      #info table {
+        border-collapse: collapse;
+      }
+      #info th {
+        text-align: left;
+        font-weight: 400;
+        color: rgba(255, 255, 255, 0.6);
+        padding: 1px 14px 1px 0;
+        white-space: nowrap;
+        vertical-align: top;
+      }
+      #info td {
+        padding: 1px 0;
+        font-variant-numeric: tabular-nums;
+      }
+      #info .info-hint {
+        margin-top: 8px;
+        font-size: 12px;
+        color: rgba(255, 255, 255, 0.4);
       }
       #qr {
         right: 32px;
@@ -96,6 +141,7 @@
   <body>
     <div id="stage"></div>
     <div id="texts"></div>
+    <div id="emojis"></div>
     <div id="message" class="overlay" style="opacity: 1">Lade Fotos …</div>
     <div id="info" class="overlay"></div>
     <div id="status" class="overlay"></div>
