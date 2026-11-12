@@ -66,7 +66,13 @@ app.whenReady().then(async () => {
       'PhotoPresenter · Schnellstart · Seite <span class="pageNumber"></span> von <span class="totalPages"></span></div>',
     margins: { marginType: 'custom', top: 0.6, bottom: 0.7, left: 0.65, right: 0.65 }
   })
-  await writeFile(join(root, 'Quickstart.pdf'), pdf)
-  console.log(`Quickstart.pdf geschrieben (${Math.round(pdf.length / 1024)} KB)`)
-  app.quit()
+  try {
+    await writeFile(join(root, 'Quickstart.pdf'), pdf)
+    console.log(`Quickstart.pdf geschrieben (${Math.round(pdf.length / 1024)} KB)`)
+    app.quit()
+  } catch (err) {
+    console.error(`Quickstart.pdf nicht geschrieben: ${err.message}`)
+    console.error('Ist die PDF gerade in einem Programm geöffnet? Schließen und erneut versuchen.')
+    app.exit(1)
+  }
 })

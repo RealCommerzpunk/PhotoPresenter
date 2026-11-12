@@ -91,7 +91,7 @@ Alles wird sofort gespeichert und wirkt auch in einer laufenden Show. Viele Wert
 | **Allgemein** | Fotoordner, Bildschirm füllen, Bildschirm und Bereich, Fernbedienung, **Mitnehmen** |
 | **Bewegung** | Anzeigedauer; Zoom, Schwenk, Kamerafahrt; wie stark; wie kleine Fotos behandelt werden |
 | **Übergänge** | über 10 Effekte (Überblenden, Wischen, Strudel …) und deren Dauer |
-| **Personen** | Personen anlernen, ★ Fokus-Person und ♥ Fokus-Partner wählen |
+| **Personen** | Personen anlernen, ★ Fokus-Person und 🫂 Fokus-Partner wählen (eine zweite wichtige Person: Partnerin, bester Freund, Vater …) |
 | **Texte** | eigene Texte: zwischen den Fotos, vor, über oder nach bestimmten Fotos, oder nur auf Abruf per Handy |
 | **Stile** | Aussehen und Animation der Texte (12 Vorlagen und eigene) |
 | **Effekte** | Konfetti, Herzen, Funkeln …, Hintergründe der Textfolien, 3D-Fotowelt |
