@@ -39,6 +39,7 @@ Plan und Meilensteine: `docs/PLAN.md` · Änderungen je Version: `CHANGELOG.md` 
   - `motion.ts`: reine Bewegungsmathematik (`fitImage`, `planShot`, `planFocusShot`, `evaluateShot`); Pfade mit Stationen (`path`) für Schwenks über Gesichter; Versatz wird immer an den Bildrand begrenzt
   - `slide.ts`: ein Foto mit Bewegung über Einblenden + Stehen + Ausblenden
   - `transitions/`: `engine.ts` rendert altes und neues Foto je Frame in RenderTextures und mischt per Mesh-Shader; `shaders.ts` enthält die Effekte (`vec4 transition(vec2 uv)` mit `fromColor`/`toColor`). Neuer Effekt = Eintrag in `TRANSITIONS` (`settings.ts`) + GLSL-Body
+  - `effects/particles.ts`: `EffectLayer`/`ParticleEffect` (PixiJS `ParticleContainer`, eine gemeinsame Formen-Textur, Effekte als `SPECS`); Ebene liegt über `transitions.view`. `effects/backgrounds.ts`: `AnimatedBackground` (Mesh-Shader) für Textfolien, Farben per `colorsFrom` aus dem Foto
   - `playlist.ts`: Zufall ohne Wiederholung, Verlauf für ←
   - `sequencer.ts`: Reihenfolge aus Fotos, Fülltexten und gebundenen Texten (vor/über/nach)
   - `scene.ts`: gemeinsame Schnittstelle `Scene` für `Slide` (Foto) und `TextSlide`; `OverlayTrack` steuert Texte zeitlich
@@ -60,6 +61,8 @@ Plan und Meilensteine: `docs/PLAN.md` · Änderungen je Version: `CHANGELOG.md` 
 - Texte und eigene Stile werden in `parseSettings` Eintrag für Eintrag geprüft (`parseList`), damit ein kaputter Eintrag nicht alle Texte löscht. In zod 4 müssen solche losen Felder `z.unknown().optional()` sein.
 - Frame-Messung: `PP_PERF=1` lädt die Show mit `#perf`; langsame Frames (> 25 ms) erscheinen mit den Ereignissen davor im Terminal (`perf.ts`).
 - Fernbedienung testen: per `curl http://127.0.0.1:8765/api/…`; die Handy-Seite selbst mit `PP_REMOTE_PREVIEW=1` (Fenster in iPhone-Größe, mit `PP_CAPTURE_DIR` als Aufnahme). Beim ersten Öffnen des Ports fragt die Windows-Firewall.
+- Kein zweites Canvas/WebGL-Kontext in der Show (z. B. Vanta/Three.js): Es läuft nicht durch die Übergänge und kostet Bildrate. Neue Effekte als Pixi-Partikel oder Mesh-Shader.
+- Windows kann zusammengeschaltete Monitore als einen Bildschirm melden (z. B. 5760×1134): Die Show füllt dann alle. Für Tests `PP_SHOW_WINDOWED=1` (Show als Fenster-Vorschau).
 - Zoom immer mit `limitShot(…, zoomLimit(…))` begrenzen (Einstellung `maxUpscale`).
 - Shell-Fallen: Backslashes, Regex und Template-Strings in `node -e`/Heredocs gehen leicht kaputt – bei so etwas Edit/Write oder ein Skript im Scratchpad benutzen.
 - Visuelle Tests der Einstellungen: `PP_SETTINGS_PAGE=Texte` (Seitenname) zusammen mit `PP_CAPTURE_DIR`.

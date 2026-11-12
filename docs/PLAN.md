@@ -128,7 +128,7 @@ Jeder Meilenstein ergibt eine lauffähige Version und einen eigenen Commit/PR.
 - ✅ Fokus-Partner mit „Gemeinsam fokussieren“ (beantwortet die offene Frage zur Fokus-Karte: Überschrift zeigt jetzt, für wen sie gilt)
 - ✅ Zoomgrenze nach Original- und Bildschirmauflösung
 - ✅ Relativer Fotopfad, portable Windows-Version
-- geplant: Effekte (Partikel wie Konfetti/Schnee/Funkeln mit PixiJS; Vanta.js-Hintergründe für Textfolien), einstellbar nach Häufigkeit, Dauer und Intensität
+- ✅ Effekte (0.8.0): 8 Partikel-Effekte mit PixiJS und 5 animierte Textfolien-Hintergründe als Shader (statt Vanta.js: kein zweiter WebGL-Kontext, läuft durch die Übergänge), einstellbar nach Häufigkeit, Dauer und Intensität
 
 ## Abweichungen vom ursprünglichen Plan
 
@@ -139,4 +139,4 @@ Jeder Meilenstein ergibt eine lauffähige Version und einen eigenen Commit/PR.
 
 ## Offene Punkte für später (nicht im ersten Wurf)
 
-HEIC/RAW-Support, Videos in der Show, Hintergrundmusik, mehrere Fokus-Personen, Erkennung kleiner Gesichter in großen Gruppenfotos (Kacheln statt eines 640er-Durchgangs), Texte über Fotos neben statt unter Gesichter setzen.
+Bildschirm- bzw. Bereichsauswahl für zusammengeschaltete Monitore, HEIC/RAW-Support, Videos in der Show, Hintergrundmusik, mehrere Fokus-Personen, Erkennung kleiner Gesichter in großen Gruppenfotos (Kacheln statt eines 640er-Durchgangs), Texte über Fotos neben statt unter Gesichter setzen.

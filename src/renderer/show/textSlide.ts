@@ -1,8 +1,9 @@
 import { Container, FillGradient, Graphics, ImageSource, Sprite, Texture } from 'pixi.js'
 import { pick } from '@shared/random'
-import type { Settings } from '@shared/settings'
+import type { Settings, TextBackgroundId } from '@shared/settings'
 import type { TextItem, TextStyle } from '@shared/text'
 import { TextOverlay } from '../text/overlay'
+import { AnimatedBackground, colorsFrom } from './effects/backgrounds'
 import type { Size } from './motion'
 import { OverlayTrack, TimedScene, type Scene } from './scene'
 
@@ -17,6 +18,7 @@ export class TextSlide extends TimedScene implements Scene {
   private readonly shade = new Graphics()
   private readonly track = new OverlayTrack()
   private readonly texture: Texture | null = null
+  private readonly animated: AnimatedBackground | null = null
   private readonly zoomFrom = 1.08 + Math.random() * 0.05
   private readonly zoomTo = 1.18 + Math.random() * 0.08
 
@@ -26,10 +28,17 @@ export class TextSlide extends TimedScene implements Scene {
     private readonly background: ImageBitmap | null,
     settings: Settings,
     fadeIn: number,
-    textHost: HTMLElement
+    textHost: HTMLElement,
+    /** Hintergrund: weichgezeichnetes Foto oder ein animierter Hintergrund. */
+    backgroundKind: TextBackgroundId = 'photo'
   ) {
     super(fadeIn)
-    if (background) {
+    if (backgroundKind !== 'photo') {
+      // Animierter Hintergrund in den Farben des Fotos.
+      const [a, b] = colorsFrom(background)
+      this.animated = new AnimatedBackground(backgroundKind, a, b)
+      this.view.addChild(this.animated.view)
+    } else if (background) {
       this.texture = new Texture({ source: new ImageSource({ resource: background }) })
       this.bg = new Sprite(this.texture)
       this.bg.anchor.set(0.5)
@@ -63,7 +72,9 @@ export class TextSlide extends TimedScene implements Scene {
     this.track.update(this.elapsed)
     const t = Math.min(1, this.elapsed / Math.max(0.001, this.lifetime))
 
-    if (this.bg) {
+    if (this.animated) {
+      this.animated.update(dt, screen)
+    } else if (this.bg) {
       const cover = Math.max(screen.w / this.bg.texture.width, screen.h / this.bg.texture.height)
       this.bg.scale.set(cover * (this.zoomFrom + (this.zoomTo - this.zoomFrom) * t))
       this.bg.position.set(screen.w / 2, screen.h / 2)
@@ -81,7 +92,8 @@ export class TextSlide extends TimedScene implements Scene {
     }
     // leicht abdunkeln, damit der Text gut lesbar ist
     if (this.shade.width !== screen.w) {
-      this.shade.clear().rect(0, 0, screen.w, screen.h).fill({ color: 0x000000, alpha: 0.25 })
+      const dim = this.animated ? 0.12 : 0.25
+      this.shade.clear().rect(0, 0, screen.w, screen.h).fill({ color: 0x000000, alpha: dim })
     }
   }
 
@@ -92,6 +104,7 @@ export class TextSlide extends TimedScene implements Scene {
 
   destroy(): void {
     this.track.destroy()
+    this.animated?.destroy()
     this.view.destroy({ children: true })
     this.texture?.destroy(true)
     this.background?.close()

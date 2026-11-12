@@ -2,6 +2,16 @@
 
 Alle Änderungen je Version. Format: neueste Version oben, Datum im Format JJJJ-MM-TT.
 
+## 0.8.0 – 2026-11-12
+
+Effekte.
+
+- **Partikel-Effekte** über den Fotos: Konfetti, Schnee, Funkeln, Herzen, Seifenblasen, Feuerwerk, Blütenblätter, Goldstaub. Einstellbar: wie oft (alle X–Y Fotos), wie lange, wie intensiv (Menge, Tempo, Deckkraft), Auswahl mit Häufigkeit; laufen über Fotowechsel hinweg aus
+- **Animierte Hintergründe für Textfolien**: Polarlicht, Nebel, Wellen, Lichter (Bokeh), Sternenhimmel – in den Farben des zugehörigen Fotos, laufen durch die Übergangseffekte mit
+- Neue Einstellungsseite „Effekte“ mit „✨ Effekt jetzt zeigen“; Effekte auch auf der Fernbedienung (an/aus, Häufigkeit, Dauer, Intensität, Auswahl, Effekt jetzt)
+- Vorschaufenster auf sehr breiten Bildschirmen höchstens 1280 px breit
+- Umgesetzt mit PixiJS statt tsParticles/Vanta.js: ein gemeinsames WebGL-Canvas bleibt ruckelfrei, und die Hintergründe gehen mit den Übergängen mit
+
 ## 0.7.0 – 2026-11-12
 
 Fernbedienung, Fokus-Partner, Zoomgrenze, relativer Fotopfad.

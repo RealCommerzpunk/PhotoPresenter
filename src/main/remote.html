@@ -271,6 +271,18 @@
     </section>
 
     <section>
+      <h2>Effekte</h2>
+      <div class="switch">Effekte aktiv <input type="checkbox" id="effectsEnabled" /></div>
+      <div style="margin: 8px 0">
+        <button class="small" data-cmd="effect">✨ Effekt jetzt</button>
+      </div>
+      <div id="effectEvery"></div>
+      <div id="effectDuration"></div>
+      <div id="effectIntensity"></div>
+      <div class="chips" id="effects"></div>
+    </section>
+
+    <section>
       <h2>Texte</h2>
       <div id="textFillerEvery"></div>
       <div id="texts"></div>
@@ -377,6 +389,10 @@
         rangeControl('textDuration', 'Textdauer', 's', 1, 30, 0.5)
         rangeControl('motionIntensity', 'Bewegung (Zoom)', '%', 0, 60, 1, 100)
         rangeControl('textFillerEvery', 'Fülltext alle', 'Fotos', 1, 50, 1)
+        rangeControl('effectEvery', 'Effekt alle', 'Fotos', 1, 50, 1)
+        rangeControl('effectDuration', 'Effektdauer', 's', 1, 30, 0.5)
+        rangeControl('effectIntensity', 'Intensität', '%', 5, 100, 5, 100)
+        $('effectsEnabled').onchange = (e) => patch({ effectsEnabled: e.target.checked })
 
         $('maxUpscale').oninput = (e) => {
           $('maxUpscaleValue').textContent = e.target.value + ' %'
@@ -443,7 +459,10 @@
           'transitionDuration',
           'textDuration',
           'motionIntensity',
-          'textFillerEvery'
+          'textFillerEvery',
+          'effectEvery',
+          'effectDuration',
+          'effectIntensity'
         ]) {
           $(key).update(s[key])
         }
@@ -465,6 +484,30 @@
         )
         options($('focusPanOthers'), Object.entries(state.labels.panOthers), s.focusPanOthers)
         if (document.activeElement !== $('focusBoost')) $('focusBoost').value = String(s.focusBoost)
+
+        $('effectsEnabled').checked = s.effectsEnabled
+        $('effects').innerHTML = s.effects
+          .map(
+            (t) =>
+              '<button class="chip' +
+              (t.enabled ? ' on' : '') +
+              '" data-id="' +
+              t.id +
+              '">' +
+              escapeHtml(state.labels.effects[t.id] || t.id) +
+              '</button>'
+          )
+          .join('')
+        $('effects')
+          .querySelectorAll('.chip')
+          .forEach((chip) => {
+            chip.onclick = () =>
+              patch({
+                effects: s.effects.map((t) =>
+                  t.id === chip.dataset.id ? { ...t, enabled: !t.enabled } : t
+                )
+              })
+          })
 
         $('transitions').innerHTML = s.transitions
           .map(

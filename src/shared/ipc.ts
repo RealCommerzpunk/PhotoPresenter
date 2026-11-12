@@ -29,7 +29,8 @@ export const IPC = {
   reindexFaces: 'faces:reindex',
   showCommand: 'show:command',
   showStatus: 'show:status',
-  remoteInfo: 'remote:info'
+  remoteInfo: 'remote:info',
+  sendShowCommand: 'show:sendCommand'
 } as const
 
 /** Schema des Protokolls, über das die Show Fotos aus dem gewählten Ordner lädt. */
@@ -140,4 +141,6 @@ export interface PhotoPresenterApi {
   /** Show-Fenster: eigenen Zustand melden. */
   reportShowStatus(status: ShowStatus): void
   remoteInfo(): Promise<RemoteInfo>
+  /** Einstellungsfenster: Befehl an die laufende Show senden (z. B. Effekt jetzt). */
+  sendShowCommand(cmd: ShowCommand): Promise<void>
 }

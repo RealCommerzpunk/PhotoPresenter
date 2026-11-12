@@ -5,7 +5,7 @@ import type { PhotoFaces } from '@shared/faces'
 import { IPC, type EmbedResult, type FaceModel, type RelBox, type ShowOptions } from '@shared/ipc'
 import type { ShowCommand, ShowStatus, RemoteState } from '@shared/remote'
 import { REMOTE_KEYS } from '@shared/remote'
-import { PAN_OTHERS, TRANSITION_LABELS, type Settings } from '@shared/settings'
+import { EFFECT_LABELS, PAN_OTHERS, TRANSITION_LABELS, type Settings } from '@shared/settings'
 import { FaceStore } from './faces'
 import { handlePhotoProtocol, listPhotos, registerPhotoScheme } from './photos'
 import { RemoteServer } from './remote'
@@ -35,7 +35,7 @@ function remoteState(): RemoteState {
     show: showStatus,
     settings,
     persons: s.persons.map((p) => ({ id: p.id, name: p.name })),
-    labels: { transitions: TRANSITION_LABELS, panOthers: PAN_OTHERS }
+    labels: { transitions: TRANSITION_LABELS, panOthers: PAN_OTHERS, effects: EFFECT_LABELS }
   }
 }
 
@@ -111,8 +111,9 @@ function startShow(options: ShowOptions = {}): void {
   const { width } = display.workAreaSize
   const placement = options.windowed
     ? {
-        width: Math.round(width * 0.55),
-        height: Math.round(width * 0.55 * (9 / 16)),
+        // Auch bei sehr breiten (zusammengeschalteten) Bildschirmen handlich bleiben.
+        width: Math.round(Math.min(1280, width * 0.55)),
+        height: Math.round(Math.min(1280, width * 0.55) * (9 / 16)),
         title: 'PhotoPresenter – Vorschau',
         autoHideMenuBar: true
       }
@@ -219,6 +220,7 @@ app.whenReady().then(() => {
     remote.broadcast()
   })
   ipcMain.handle(IPC.remoteInfo, () => remote.info(loadSettings().remoteEnabled))
+  ipcMain.handle(IPC.sendShowCommand, (_e, cmd: ShowCommand) => showCommand(cmd))
   if (loadSettings().remoteEnabled) void remote.start(loadSettings().remotePort)
 
   faceStore = new FaceStore(
@@ -272,7 +274,9 @@ app.whenReady().then(() => {
   }
 
   // `--show` startet direkt die Diashow (z. B. für Autostart als Bilderrahmen).
-  if (process.argv.includes('--show')) startShow()
+  // Für Tests in der Entwicklung: PP_SHOW_WINDOWED=1 öffnet die Show als Fenster-Vorschau.
+  const windowed = !app.isPackaged && !!process.env['PP_SHOW_WINDOWED']
+  if (process.argv.includes('--show')) startShow({ windowed })
   else createSettingsWindow()
 
   app.on('activate', () => {

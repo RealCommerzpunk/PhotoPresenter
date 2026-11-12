@@ -15,6 +15,7 @@ import { Sequencer, type Entry } from './sequencer'
 import { Slide, type FocusTarget, type OverlayText } from './slide'
 import { TextSlide } from './textSlide'
 import { TransitionEngine } from './transitions/engine'
+import { EffectLayer } from './effects/particles'
 import { frame, mark, measure } from './perf'
 
 const FIRST_FADE = 1.2
@@ -74,7 +75,28 @@ async function main(): Promise<void> {
   /** Hält die aktuelle Folie, solange kein Übergang läuft. */
   const slideLayer = new Container()
   const transitions = new TransitionEngine(app.renderer)
-  app.stage.addChild(slideLayer, transitions.view)
+  // Partikel-Effekte liegen über Fotos und Übergängen und laufen über Fotowechsel hinweg.
+  const effectLayer = new Container()
+  app.stage.addChild(slideLayer, transitions.view, effectLayer)
+  const effects = new EffectLayer(effectLayer)
+  let sinceEffect = 0
+  let effectAt = Math.max(1, Math.round(pick(settings.effectEvery)))
+
+  /** Einen zufälligen Effekt aus den aktiven starten (auch per Fernbedienung). */
+  function startEffect(): void {
+    const kind = pickWeighted(settings.effects)
+    if (!kind) return
+    effects.start(kind, pick(settings.effectIntensity), pick(settings.effectDuration))
+  }
+
+  /** Nach „alle X–Y Fotos“ einen Effekt starten. */
+  function maybeStartEffect(): void {
+    if (!settings.effectsEnabled) return
+    if (++sinceEffect < effectAt) return
+    sinceEffect = 0
+    effectAt = Math.max(1, Math.round(pick(settings.effectEvery)))
+    startEffect()
+  }
   transitions.warmUp()
   mark(`Bühne ${app.screen.width}×${app.screen.height} @ ${app.renderer.resolution}`)
 
@@ -255,7 +277,16 @@ async function main(): Promise<void> {
       lastPhoto = p.photo.name
       return new Slide(p.photo, screen(), settings, fade, p.texts, textHost, p.focus)
     }
-    return new TextSlide(p.entry.item, p.style, p.background, settings, fade, textHost)
+    const backgroundKind = pickWeighted(settings.textBackgrounds) ?? 'photo'
+    return new TextSlide(
+      p.entry.item,
+      p.style,
+      p.background,
+      settings,
+      fade,
+      textHost,
+      backgroundKind
+    )
   }
 
   /** Beginnt den Übergang zum vorbereiteten Eintrag (beim ersten aus Schwarz). */
@@ -263,6 +294,7 @@ async function main(): Promise<void> {
     if (!ready) return
     mark('Übergang startet')
     incoming = createScene(ready, fade)
+    maybeStartEffect()
     ready = null
     slideLayer.removeChildren()
     transitions.begin(current ? (pickWeighted(settings.transitions) ?? 'fade') : 'fade')
@@ -329,6 +361,7 @@ async function main(): Promise<void> {
     else if (cmd === 'pause') setPaused(true)
     else if (cmd === 'resume') setPaused(false)
     else if (cmd === 'qr') void toggleQr()
+    else if (cmd === 'effect') startEffect()
   })
 
   function discardReady(): void {
@@ -363,6 +396,7 @@ async function main(): Promise<void> {
     if (paused) return
     const dt = Math.min(0.1, ticker.deltaMS / 1000)
     const s = screen()
+    effects.update(dt, s)
 
     if (!current && !incoming && ready) {
       showMessage(null)

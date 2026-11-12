@@ -1,7 +1,7 @@
 import type { Settings } from './settings'
 
 /** Befehle an die laufende Show (von Fernbedienung oder Main-Prozess). */
-export type ShowCommand = 'start' | 'stop' | 'next' | 'prev' | 'pause' | 'resume' | 'qr'
+export type ShowCommand = 'start' | 'stop' | 'next' | 'prev' | 'pause' | 'resume' | 'qr' | 'effect'
 
 /** Zustand der Show, den das Show-Fenster an den Main-Prozess meldet. */
 export interface ShowStatus {
@@ -27,7 +27,12 @@ export const REMOTE_KEYS = [
   'focusPanOthers',
   'textFillerEvery',
   'textDuration',
-  'texts'
+  'texts',
+  'effectsEnabled',
+  'effectEvery',
+  'effectDuration',
+  'effectIntensity',
+  'effects'
 ] as const satisfies readonly (keyof Settings)[]
 
 export type RemoteSettings = Pick<Settings, (typeof REMOTE_KEYS)[number]>
@@ -41,6 +46,7 @@ export interface RemoteState {
   labels: {
     transitions: Record<string, string>
     panOthers: Record<string, string>
+    effects: Record<string, string>
   }
 }
 

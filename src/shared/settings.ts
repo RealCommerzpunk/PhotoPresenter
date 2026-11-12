@@ -109,6 +109,55 @@ const defaultTransitions: WeightedOption<TransitionId>[] = TRANSITIONS.map((id) 
   weight: id === 'fade' ? 4 : ['zoomBlur', 'dissolve', 'glow', 'wipe'].includes(id) ? 2 : 1
 }))
 
+// ---------- Effekte ----------
+
+export const EFFECTS = [
+  'confetti',
+  'snow',
+  'sparkles',
+  'hearts',
+  'bubbles',
+  'fireworks',
+  'petals',
+  'goldDust'
+] as const
+export type EffectId = (typeof EFFECTS)[number]
+
+export const EFFECT_LABELS: Record<EffectId, string> = {
+  confetti: 'Konfetti',
+  snow: 'Schnee',
+  sparkles: 'Funkeln',
+  hearts: 'Herzen',
+  bubbles: 'Seifenblasen',
+  fireworks: 'Feuerwerk',
+  petals: 'Blütenblätter',
+  goldDust: 'Goldstaub'
+}
+
+const defaultEffects: WeightedOption<EffectId>[] = EFFECTS.map((id) => ({
+  id,
+  enabled: true,
+  weight: ['sparkles', 'goldDust', 'petals'].includes(id) ? 2 : 1
+}))
+
+export const TEXT_BACKGROUNDS = ['photo', 'aurora', 'nebula', 'waves', 'bokeh', 'stars'] as const
+export type TextBackgroundId = (typeof TEXT_BACKGROUNDS)[number]
+
+export const TEXT_BACKGROUND_LABELS: Record<TextBackgroundId, string> = {
+  photo: 'Foto weichgezeichnet',
+  aurora: 'Polarlicht',
+  nebula: 'Nebel',
+  waves: 'Wellen',
+  bokeh: 'Lichter (Bokeh)',
+  stars: 'Sternenhimmel'
+}
+
+const defaultTextBackgrounds: WeightedOption<TextBackgroundId>[] = TEXT_BACKGROUNDS.map((id) => ({
+  id,
+  enabled: true,
+  weight: id === 'photo' ? 3 : 1
+}))
+
 // ---------- Fokus-Person ----------
 
 export const FOCUS_MODES = ['slowZoom', 'fastZoom', 'journey'] as const
@@ -208,6 +257,17 @@ export const settingsSchema = z.object({
   focusPanOthers: field(z.enum(['off', 'before', 'after', 'random']), 'random'),
   /** Fotos mit der Person häufiger zeigen: 0 = normal, 1–3 = zusätzliche Male je Runde. */
   focusBoost: field(z.number().int().min(0).max(3), 1),
+  /** Partikel-Effekte über den Fotos (Konfetti, Schnee, Funkeln …). */
+  effectsEnabled: field(z.boolean(), true),
+  /** Nach wie vielen Fotos ein Effekt kommt. */
+  effectEvery: field(rangeSchema, { min: 6, max: 12, mode: 'random' } satisfies Range),
+  /** Wie lange ein Effekt neue Partikel erzeugt, in Sekunden. */
+  effectDuration: field(rangeSchema, { min: 5, max: 9, mode: 'random' } satisfies Range),
+  /** Intensität 0–1: Menge, Tempo und Deckkraft. */
+  effectIntensity: field(rangeSchema, { min: 0.4, max: 0.7, mode: 'random' } satisfies Range),
+  effects: field(weightedSchema(EFFECTS), defaultEffects),
+  /** Hintergründe der Textfolien (Foto oder animierte Hintergründe). */
+  textBackgrounds: field(weightedSchema(TEXT_BACKGROUNDS), defaultTextBackgrounds),
   /** Fernbedienung per Handy (Webserver im lokalen Netz, ohne Passwort). */
   remoteEnabled: field(z.boolean(), true),
   remotePort: field(z.number().int().min(1024).max(65535), 8765),
@@ -256,6 +316,8 @@ export function parseSettings(raw: unknown): Settings {
     customStyles,
     persons: parseList(s.persons, personSchema, []),
     focusModes: completeWeighted(s.focusModes, defaultFocusModes),
+    effects: completeWeighted(s.effects, defaultEffects),
+    textBackgrounds: completeWeighted(s.textBackgrounds, defaultTextBackgrounds),
     textStyles: completeWeighted(s.textStyles, styleDefaults),
     transitions: completeWeighted(s.transitions, defaultTransitions),
     motionKinds: completeWeighted(s.motionKinds, defaultMotionKinds),

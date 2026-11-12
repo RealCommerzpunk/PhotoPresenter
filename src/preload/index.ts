@@ -44,7 +44,8 @@ const api: PhotoPresenterApi = {
 
   onShowCommand: (callback) => subscribe<ShowCommand>(IPC.showCommand, callback),
   reportShowStatus: (status) => ipcRenderer.send(IPC.showStatus, status),
-  remoteInfo: () => ipcRenderer.invoke(IPC.remoteInfo)
+  remoteInfo: () => ipcRenderer.invoke(IPC.remoteInfo),
+  sendShowCommand: (cmd) => ipcRenderer.invoke(IPC.sendShowCommand, cmd)
 }
 
 contextBridge.exposeInMainWorld('api', api)
