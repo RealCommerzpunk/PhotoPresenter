@@ -2,6 +2,14 @@
 
 Alle Änderungen je Version. Format: neueste Version oben, Datum im Format JJJJ-MM-TT.
 
+## 0.11.1 – 2026-11-12
+
+Bildschirm wählen.
+
+- **Bildschirm für die Show** (Allgemein → Bildschirm): „wo gerade die Maus ist“ oder ein bestimmter Monitor; „Bildschirme anzeigen“ blendet auf jedem Monitor kurz seine Nummer ein. Ist der gewählte Monitor nicht angeschlossen, läuft die Show auf dem mit der Maus
+- **Bereich**: Meldet Windows zusammengeschaltete Monitore als einen breiten Bildschirm (z. B. 5760 × 1134), füllt die Show auf Wunsch nur das linke, mittlere oder rechte Drittel bzw. eine Hälfte; solche Bildschirme werden in den Einstellungen erkannt und markiert
+- Tastenhilfe in den Einstellungen auf aktuellem Stand (I, R, Q)
+
 ## 0.11.0 – 2026-11-12
 
 Live-Fernbedienung: Rückmeldung, Emojis, Einfrieren, eigene Reihenfolge.

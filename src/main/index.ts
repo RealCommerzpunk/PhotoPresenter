@@ -11,7 +11,15 @@ import {
   shell
 } from 'electron'
 import type { PhotoFaces } from '@shared/faces'
-import { IPC, type EmbedResult, type FaceModel, type RelBox, type ShowOptions } from '@shared/ipc'
+import { areaBounds } from '@shared/display'
+import {
+  IPC,
+  type DisplayInfo,
+  type EmbedResult,
+  type FaceModel,
+  type RelBox,
+  type ShowOptions
+} from '@shared/ipc'
 import type { QueueOp, RemoteState, ShowCommand, ShowNotice, ShowStatus } from '@shared/remote'
 import { REMOTE_KEYS } from '@shared/remote'
 import {
@@ -167,17 +175,38 @@ function startShow(options: ShowOptions = {}): void {
     showWindow.focus()
     return
   }
-  const display = screen.getDisplayNearestPoint(screen.getCursorScreenPoint())
-  const { width } = display.workAreaSize
-  const placement = options.windowed
-    ? {
-        // Auch bei sehr breiten (zusammengeschalteten) Bildschirmen handlich bleiben.
-        width: Math.round(Math.min(1280, width * 0.55)),
-        height: Math.round(Math.min(1280, width * 0.55) * (9 / 16)),
-        title: 'PhotoPresenter – Vorschau',
-        autoHideMenuBar: true
-      }
-    : { ...display.bounds, fullscreen: true, frame: false }
+  const { showArea } = loadSettings()
+  const display = showDisplay()
+  const area = areaBounds(display.bounds, showArea)
+  const work = display.workArea
+  let placement: Electron.BrowserWindowConstructorOptions
+  if (options.windowed) {
+    // Vorschau im Seitenverhältnis des gewählten Bereichs, handlich auch bei sehr breiten Bildschirmen.
+    const width = Math.round(Math.min(1280, work.width * 0.55))
+    const height = Math.round(Math.min(work.height * 0.8, (width * area.height) / area.width))
+    placement = {
+      width: Math.round((height * area.width) / area.height),
+      height,
+      x: Math.round(work.x + (work.width - (height * area.width) / area.height) / 2),
+      y: Math.round(work.y + (work.height - height) / 2),
+      title: 'PhotoPresenter – Vorschau',
+      autoHideMenuBar: true
+    }
+  } else if (showArea === 'full') {
+    placement = { ...display.bounds, fullscreen: true, frame: false }
+  } else {
+    // Nur ein Teil des Bildschirms: randloses Fenster genau über diesem Bereich.
+    placement = {
+      ...area,
+      frame: false,
+      resizable: false,
+      movable: false,
+      minimizable: false,
+      maximizable: false,
+      fullscreenable: false,
+      skipTaskbar: true
+    }
+  }
   showWindow = new BrowserWindow({
     ...placement,
     backgroundColor: '#000000',
@@ -189,7 +218,15 @@ function startShow(options: ShowOptions = {}): void {
       backgroundThrottling: false
     }
   })
-  showWindow.once('ready-to-show', () => showWindow?.show())
+  showWindow.once('ready-to-show', () => {
+    if (!showWindow) return
+    // Teilbereich: über der Taskleiste bleiben und die Lage sicher festnageln.
+    if (!options.windowed && showArea !== 'full') {
+      showWindow.setAlwaysOnTop(true, 'screen-saver')
+      showWindow.setBounds(area)
+    }
+    showWindow.show()
+  })
   showWindow.on('closed', () => {
     showWindow = null
     if (powerBlockId !== null) powerSaveBlocker.stop(powerBlockId)
@@ -206,6 +243,64 @@ function startShow(options: ShowOptions = {}): void {
   loadPage(showWindow, 'show', !app.isPackaged && process.env['PP_PERF'] ? 'perf' : '')
   captureForTests(showWindow, 'show')
   commandsForTests()
+}
+
+/** Bildschirme von links nach rechts (bzw. oben nach unten), so nummeriert wie in den Einstellungen. */
+function sortedDisplays(): Electron.Display[] {
+  return screen
+    .getAllDisplays()
+    .sort((a, b) => a.bounds.x - b.bounds.x || a.bounds.y - b.bounds.y)
+}
+
+/** Bildschirm für die Show: der gewählte, sonst (oder wenn er fehlt) der mit der Maus. */
+function showDisplay(): Electron.Display {
+  const wanted = loadSettings().showDisplay
+  const found = wanted ? screen.getAllDisplays().find((d) => String(d.id) === wanted) : undefined
+  return found ?? screen.getDisplayNearestPoint(screen.getCursorScreenPoint())
+}
+
+function listDisplays(): DisplayInfo[] {
+  const primary = screen.getPrimaryDisplay().id
+  return sortedDisplays().map((d, i) => ({
+    id: String(d.id),
+    number: i + 1,
+    label: d.label || `Bildschirm ${i + 1}`,
+    width: Math.round(d.size.width * d.scaleFactor),
+    height: Math.round(d.size.height * d.scaleFactor),
+    primary: d.id === primary
+  }))
+}
+
+/** Auf jedem Bildschirm 3 Sekunden lang groß seine Nummer zeigen. */
+function identifyDisplays(): void {
+  for (const [i, d] of sortedDisplays().entries()) {
+    const w = 360
+    const h = 260
+    const win = new BrowserWindow({
+      x: Math.round(d.bounds.x + (d.bounds.width - w) / 2),
+      y: Math.round(d.bounds.y + (d.bounds.height - h) / 2),
+      width: w,
+      height: h,
+      frame: false,
+      transparent: true,
+      resizable: false,
+      focusable: false,
+      skipTaskbar: true,
+      alwaysOnTop: true,
+      show: false,
+      webPreferences: { sandbox: true, contextIsolation: true, javascript: false }
+    })
+    const size = `${Math.round(d.size.width * d.scaleFactor)} × ${Math.round(d.size.height * d.scaleFactor)}`
+    const html =
+      `<html><body style="margin:0;height:100vh;display:flex;flex-direction:column;align-items:center;` +
+      `justify-content:center;background:rgba(15,17,25,.9);color:#fff;font-family:system-ui,sans-serif;` +
+      `border-radius:24px;border:3px solid #818cf8;box-sizing:border-box">` +
+      `<div style="font-size:120px;font-weight:700;line-height:1">${i + 1}</div>` +
+      `<div style="font-size:18px;opacity:.75;margin-top:10px">${size}</div></body></html>`
+    void win.loadURL(`data:text/html;charset=utf-8,${encodeURIComponent(html)}`)
+    win.once('ready-to-show', () => win.showInactive())
+    setTimeout(() => !win.isDestroyed() && win.close(), 3000)
+  }
 }
 
 /**
@@ -377,6 +472,8 @@ app.whenReady().then(() => {
   ipcMain.handle(IPC.remoteInfo, () => remote.info(loadSettings().remoteEnabled))
   ipcMain.handle(IPC.sendShowCommand, (_e, cmd: ShowCommand, arg?: string) => showCommand(cmd, arg))
   ipcMain.on(IPC.showNotice, (_e, notice: ShowNotice) => notify(notice))
+  ipcMain.handle(IPC.listDisplays, () => listDisplays())
+  ipcMain.handle(IPC.identifyDisplays, () => identifyDisplays())
   ipcMain.handle(IPC.openRemote, () => toggleRemoteWindow())
   ipcMain.handle(IPC.photoInfo, (_e, name: string) => photoInfo(name))
   ipcMain.handle(IPC.getQueue, () => queue.get())

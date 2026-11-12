@@ -38,8 +38,22 @@ export const IPC = {
   queueChanged: 'queue:changed',
   queuePlaying: 'queue:playing',
   thumbRequest: 'thumbs:request',
-  thumbResult: 'thumbs:result'
+  thumbResult: 'thumbs:result',
+  listDisplays: 'displays:list',
+  identifyDisplays: 'displays:identify'
 } as const
+
+/** Ein Bildschirm, wie das Betriebssystem ihn meldet (für die Auswahl in den Einstellungen). */
+export interface DisplayInfo {
+  id: string
+  /** Nummer in der Anzeige (1, 2, …), von links nach rechts. */
+  number: number
+  label: string
+  /** Größe in echten Pixeln. */
+  width: number
+  height: number
+  primary: boolean
+}
 
 /** Angaben zu einer Fotodatei für die Info-Einblendung (Taste I). */
 export interface PhotoDetails {
@@ -181,6 +195,11 @@ export interface PhotoPresenterApi {
   onQueueChanged(callback: (queue: PhotoQueue) => void): () => void
   /** Show-Fenster: dieser Eintrag ist jetzt zu sehen (null: ein normales Foto). */
   queuePlaying(id: string | null): void
+
+  // Bildschirme
+  listDisplays(): Promise<DisplayInfo[]>
+  /** Auf jedem Bildschirm kurz seine Nummer einblenden. */
+  identifyDisplays(): Promise<void>
 
   // Vorschaubilder (Analyse-Fenster)
   onThumbRequest(callback: (request: ThumbRequest) => void): () => void

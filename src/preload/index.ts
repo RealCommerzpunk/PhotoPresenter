@@ -55,6 +55,9 @@ const api: PhotoPresenterApi = {
   onQueueChanged: (callback) => subscribe<PhotoQueue>(IPC.queueChanged, callback),
   queuePlaying: (id) => ipcRenderer.send(IPC.queuePlaying, id),
 
+  listDisplays: () => ipcRenderer.invoke(IPC.listDisplays),
+  identifyDisplays: () => ipcRenderer.invoke(IPC.identifyDisplays),
+
   onThumbRequest: (callback) => subscribe<ThumbRequest>(IPC.thumbRequest, callback),
   thumbResult: (requestId, data) => ipcRenderer.invoke(IPC.thumbResult, requestId, data)
 }

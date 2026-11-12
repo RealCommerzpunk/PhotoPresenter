@@ -70,7 +70,7 @@ Plan und Meilensteine: `docs/PLAN.md` · Änderungen je Version: `CHANGELOG.md` 
 - Testeinstellungen mit Auswahllisten immer vollständig angeben: `parseSettings` ergänzt fehlende Optionen als aktiv.
 - Ein zusätzlicher WebGL-Kontext (wie Three.js für die 3D-Welt) muss sein Bild als Pixi-Textur abgeben (Canvas → `Texture.from`, je Frame `source.update()`), sonst läuft er nicht durch die Übergänge. Kleinere Effekte lieber als Pixi-Partikel oder Mesh-Shader.
 - `electron-vite preview --skipBuild` startet den zuletzt gebauten Stand – nach Codeänderungen ohne `--skipBuild` testen.
-- Windows kann zusammengeschaltete Monitore als einen Bildschirm melden (z. B. 5760×1134): Die Show füllt dann alle. Für Tests `PP_SHOW_WINDOWED=1` (Show als Fenster-Vorschau).
+- Windows kann zusammengeschaltete Monitore als einen Bildschirm melden (z. B. 5760×1134). Dafür gibt es `showDisplay` (Display-ID, leer = Maus) und `showArea` (Drittel/Hälften, Rechnung in `src/shared/display.ts`); ein Teilbereich ist ein randloses Fenster mit `alwaysOnTop('screen-saver')` statt Vollbild. Für Tests `PP_SHOW_WINDOWED=1` (Fenster-Vorschau im Seitenverhältnis des Bereichs) – nie die echte Vollbild-Show über den Bildschirm des Nutzers legen.
 - Zoom immer mit `limitShot(…, zoomLimit(…))` begrenzen (Einstellung `maxUpscale`).
 - Shell-Fallen: Backslashes, Regex und Template-Strings in `node -e`/Heredocs gehen leicht kaputt – bei so etwas Edit/Write oder ein Skript im Scratchpad benutzen.
 - Visuelle Tests der Einstellungen: `PP_SETTINGS_PAGE=Texte` (Seitenname) zusammen mit `PP_CAPTURE_DIR`.

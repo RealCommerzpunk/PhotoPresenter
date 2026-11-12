@@ -210,6 +210,18 @@ const defaultFocusModes: WeightedOption<FocusMode>[] = [
   { id: 'journey', enabled: true, weight: 2 }
 ]
 
+/** Teil des Bildschirms, den die Show füllt (für zusammengeschaltete Monitore). */
+export const SHOW_AREAS = ['full', 'left', 'center', 'right', 'leftHalf', 'rightHalf'] as const
+export type ShowArea = (typeof SHOW_AREAS)[number]
+export const SHOW_AREA_LABELS: Record<ShowArea, string> = {
+  full: 'ganzer Bildschirm',
+  left: 'linkes Drittel',
+  center: 'mittleres Drittel',
+  right: 'rechtes Drittel',
+  leftHalf: 'linke Hälfte',
+  rightHalf: 'rechte Hälfte'
+}
+
 /** Vorgabe für die Emoji-Knöpfe der Fernbedienung. */
 export const DEFAULT_EMOJIS = ['❤️', '😂', '🎉', '👏', '😍', '🥳', '🔥', '⭐', '🥂', '😮', '🙈', '👍']
 
@@ -323,6 +335,10 @@ export const settingsSchema = z.object({
   worldCameraSpeed: field(rangeSchema, { min: 1, max: 1, mode: 'fixed' } satisfies Range),
   worldFormations: field(weightedSchema(WORLD_FORMATIONS), defaultWorldFormations),
   /** Fernbedienung per Handy (Webserver im lokalen Netz, ohne Passwort). */
+  /** Bildschirm der Show (Electron-Display-ID); leer = wo gerade die Maus ist. */
+  showDisplay: field(z.string(), ''),
+  /** Bereich dieses Bildschirms, den die Show füllt. */
+  showArea: field(z.enum(SHOW_AREAS), 'full'),
   /** Emojis, die die Fernbedienung über dem aktuellen Foto einblenden kann. */
   emojis: field(z.array(z.string().min(1).max(16)).max(48), DEFAULT_EMOJIS),
   remoteEnabled: field(z.boolean(), true),

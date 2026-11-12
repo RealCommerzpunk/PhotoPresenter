@@ -111,7 +111,7 @@ Tastatur/Maus: Esc beendet, Leertaste pausiert, ←/→ springt, I zeigt Info (D
 7. **Feinschliff & Release**: Performance (Vorladen/Decoding im Worker, Texturspeicher freigeben), Installer, erster Release `v0.1.0`.
    - ✅ erledigt (0.6.2): Bildvorbereitung im Worker, Vorladen nach dem Übergang, Texturen in Streifen vorab hochladen, Effekte vorkompilieren, Zucken vor dem Übergang behoben.
    - offen: `npm audit` (mittlere Warnungen, nur Entwicklungswerkzeuge), Test auf 4K und mit großen echten Fotos, Installer auf Linux testen, Fernbedienung mit echtem iPhone über Hotspot testen (Windows-Firewall „öffentliche Netzwerke“), Release `v0.1.0`.
-   - offene Frage an den Nutzer (2026-11-12): Bildschirm-/Bereichsauswahl, weil Windows zeitweise zusammengeschaltete Monitore als einen Bildschirm (5760 × 1134) meldet und die Show dann alle füllt.
+   - ✅ erledigt in 0.11.1: Bildschirm- und Bereichsauswahl in den Einstellungen (Nutzerwunsch), weil Windows zeitweise zusammengeschaltete Monitore als einen Bildschirm (5760 × 1134) meldet.
    - ~~Entscheidung ausstehend~~ erledigt in 0.7.0 durch Fokus-Partner: „Fokus in der Show“ gilt nur für die eine ★-Fokus-Person, was in der Oberfläche missverständlich wirkt. Vorgeschlagen: (1) nur klarer beschriften („gilt für ★ Name“) oder (2) mehrere hervorgehobene Personen mit eigenen Einstellungen (Schwelle, Kamerabewegung, Häufigkeit), Kamera fährt bei Gruppenfotos beide an.
 
 Jeder Meilenstein ergibt eine lauffähige Version und einen eigenen Commit/PR.

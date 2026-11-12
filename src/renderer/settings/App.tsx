@@ -11,6 +11,7 @@ import { Card, Field, RangeInput, Toggle, WeightedList } from './controls'
 import { EffectsPage } from './EffectsPage'
 import { PersonsPage } from './PersonsPage'
 import { RemoteCard } from './RemoteCard'
+import { ScreenCard } from './ScreenCard'
 import { StylesPage } from './StylesPage'
 import { TextsPage } from './TextsPage'
 import { useSettings } from './useSettings'
@@ -133,6 +134,7 @@ function General({ s, update }: { s: Settings; update: Update }): React.JSX.Elem
           />
         </Field>
       </Card>
+      <ScreenCard s={s} update={update} />
       <Card title="Bildschirm füllen">
         <Field
           label="Höchstens beschneiden"
@@ -319,8 +321,8 @@ export function App(): React.JSX.Element {
         </nav>
         <div className="mt-auto text-xs leading-relaxed text-white/40">
           <div>
-            In der Show: Esc beenden · Leertaste Pause · ←/→ blättern · I Dateiname · Q
-            Fernbedienung · D fps
+            In der Show: Esc beenden · Leertaste Pause · ←/→ blättern · I Info zum Foto · R
+            Fernbedienung als Fenster · Q QR-Code · D fps
           </div>
           <div className="mt-2">Version {version}</div>
         </div>
