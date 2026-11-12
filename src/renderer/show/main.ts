@@ -3,11 +3,11 @@ import 'pixi.js/unsafe-eval'
 import { Application, Container, RenderTexture, Sprite, type Texture } from 'pixi.js'
 import { gsap } from 'gsap'
 import { pick, pickWeighted } from '@shared/random'
-import type { Settings } from '@shared/settings'
+import type { Settings, WorldFormation } from '@shared/settings'
 import type { TextStyle } from '@shared/text'
 import { loadFont } from '../text/fonts'
 import { resolveStyle } from '../text/resolve'
-import { loadPhoto, loadSoft, type LoadedPhoto } from './loader'
+import { loadPhoto, loadSoft, loadThumb, type LoadedPhoto } from './loader'
 import { faceZoom, fitImage, zoomLimit, type FaceBox, type Size } from './motion'
 import { Playlist } from './playlist'
 import type { Scene } from './scene'
@@ -17,6 +17,8 @@ import { TextSlide } from './textSlide'
 import { TransitionEngine } from './transitions/engine'
 import { EffectLayer } from './effects/particles'
 import { frame, mark, measure } from './perf'
+import { ThumbPool } from './world/thumbPool'
+import { loadThree, WorldScene } from './world/worldScene'
 
 const FIRST_FADE = 1.2
 const SKIP_FADE = 0.6
@@ -37,11 +39,16 @@ type Prepared =
       style: TextStyle
       background: ImageBitmap | null
     }
+  | { kind: 'world'; scene: WorldScene; final: string }
 
 function dispose(p: Prepared): void {
   if (p.kind === 'photo') p.photo.destroy()
+  else if (p.kind === 'world') p.scene.destroy()
   else p.background?.close()
 }
+
+/** Mindestens so viele Vorschaubilder, bevor ein 3D-Zwischenspiel starten darf. */
+const WORLD_MIN_TILES = 16
 
 function showMessage(text: string | null): void {
   messageEl.textContent = text ?? ''
@@ -218,9 +225,62 @@ async function main(): Promise<void> {
       await Promise.all(texts.map((t) => loadFont(t.style)))
       return { kind: 'photo', photo, texts, focus: focus?.target }
     }
+    if (entry.kind === 'world') return prepareWorld()
     const style = resolveStyle(entry.item, settings)
     const [background] = await Promise.all([softFor(entry.ref), loadFont(style)])
     return { kind: 'text', entry, style, background }
+  }
+
+  /** Zwischenspiel 3D-Fotowelt vorbereiten: Kacheln, Formationen, Zielfoto; vorab einmal zeichnen. */
+  async function prepareWorld(): Promise<Prepared> {
+    const THREE = await loadThree()
+    const count = Math.max(WORLD_MIN_TILES, Math.round(pick(settings.worldTiles)))
+    const tiles = thumbs.sample(count)
+    const wanted = Math.max(1, Math.round(pick(settings.worldFormationCount)))
+    const formations: WorldFormation[] = []
+    for (let i = 0; i < wanted * 4 && formations.length < wanted; i++) {
+      const f = pickWeighted(settings.worldFormations)
+      if (f && !formations.includes(f)) formations.push(f)
+    }
+    if (!formations.length) formations.push('sphere')
+    const finalIndex = Math.floor(Math.random() * tiles.length)
+    const scene = new WorldScene(
+      THREE,
+      {
+        tiles,
+        finalIndex,
+        formations,
+        duration: pick(settings.worldDuration),
+        cameraSpeed: pick(settings.worldCameraSpeed)
+      },
+      app.renderer.resolution,
+      1.6
+    )
+    await scene.warmUp(screen())
+    return { kind: 'world', scene, final: tiles[finalIndex].name }
+  }
+
+  // ---------- 3D-Fotowelt: Zeitplan ----------
+  const thumbs = new ThumbPool(loadThumb)
+  let photosSinceWorld = 0
+  let worldAt = Math.max(1, Math.round(pick(settings.worldEvery)))
+  let worldForced = false
+
+  function worldDue(): boolean {
+    if (thumbs.size < WORLD_MIN_TILES) return false
+    if (worldForced) return true
+    return settings.worldEnabled && photosSinceWorld >= worldAt
+  }
+
+  /** Nächster Eintrag: 3D-Zwischenspiel, wenn fällig, sonst aus dem Ablauf. */
+  function nextEntry(): Entry | undefined {
+    if (worldDue() && !(current instanceof WorldScene)) {
+      worldForced = false
+      photosSinceWorld = 0
+      worldAt = Math.max(1, Math.round(pick(settings.worldEvery)))
+      return { kind: 'world' }
+    }
+    return sequencer.next()
   }
 
   /** Fotos mit der Fokus-Person häufiger zeigen. */
@@ -233,6 +293,7 @@ async function main(): Promise<void> {
   async function reloadPhotos(): Promise<void> {
     const list = await window.api.listPhotos()
     playlist.setItems(list.files)
+    thumbs.setItems(list.files)
     void refreshFocusPhotos()
     const hasFillers = settings.texts.some((t) => t.enabled && t.kind === 'filler')
     if (list.error) showMessage(`Fotoordner nicht lesbar:\n${list.error}`)
@@ -244,7 +305,7 @@ async function main(): Promise<void> {
   }
 
   /** Bereitet den nächsten Eintrag vor (Standard: der nächste aus dem Ablauf). */
-  function prefetch(next: () => Entry | undefined = () => sequencer.next()): void {
+  function prefetch(next: () => Entry | undefined = nextEntry): void {
     if (loading || ready) return
     const entry = next()
     if (!entry) return
@@ -273,8 +334,15 @@ async function main(): Promise<void> {
   }
 
   function createScene(p: Prepared, fade: number): Scene {
+    if (p.kind === 'world') {
+      // Mit dem Foto, in das die Kamera eintaucht, geht die Show weiter.
+      sequencer.insertNext(p.final)
+      p.scene.fadeIn = fade
+      return p.scene
+    }
     if (p.kind === 'photo') {
       lastPhoto = p.photo.name
+      photosSinceWorld++
       return new Slide(p.photo, screen(), settings, fade, p.texts, textHost, p.focus)
     }
     const backgroundKind = pickWeighted(settings.textBackgrounds) ?? 'photo'
@@ -297,7 +365,9 @@ async function main(): Promise<void> {
     maybeStartEffect()
     ready = null
     slideLayer.removeChildren()
-    transitions.begin(current ? (pickWeighted(settings.transitions) ?? 'fade') : 'fade')
+    // Nach dem Eintauchen in ein Foto der 3D-Welt weich überblenden: Es ist dasselbe Foto.
+    const plain = !current || current instanceof WorldScene
+    transitions.begin(plain ? 'fade' : (pickWeighted(settings.transitions) ?? 'fade'))
     // Den ersten Übergangs-Frame sofort zeichnen. Sonst zeigt die Übergangsfläche in diesem
     // Frame noch ihren alten Inhalt vom vorigen Übergang: ein sichtbares Zucken/Blitzen.
     const s = screen()
@@ -362,7 +432,21 @@ async function main(): Promise<void> {
     else if (cmd === 'resume') setPaused(false)
     else if (cmd === 'qr') void toggleQr()
     else if (cmd === 'effect') startEffect()
+    else if (cmd === 'world') startWorldNow()
   })
+
+  /** Zwischenspiel sofort (per Fernbedienung oder Einstellungsfenster). */
+  function startWorldNow(): void {
+    if (thumbs.size < WORLD_MIN_TILES) {
+      flashStatus(`3D-Fotowelt lädt noch Vorschaubilder (${thumbs.size}/${WORLD_MIN_TILES})`)
+      return
+    }
+    if (incoming || current instanceof WorldScene) return
+    worldForced = true
+    discardReady()
+    prefetch()
+    current?.hurry(SKIP_FADE)
+  }
 
   function discardReady(): void {
     generation++
@@ -397,6 +481,10 @@ async function main(): Promise<void> {
     const dt = Math.min(0.1, ticker.deltaMS / 1000)
     const s = screen()
     effects.update(dt, s)
+    // Vorschaubilder für die 3D-Welt nur in ruhigen Phasen nachladen.
+    if (!incoming && (settings.worldEnabled || worldForced)) {
+      thumbs.tick(Math.round(Math.max(settings.worldTiles.min, settings.worldTiles.max)))
+    }
 
     if (!current && !incoming && ready) {
       showMessage(null)

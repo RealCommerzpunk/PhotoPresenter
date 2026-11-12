@@ -65,6 +65,13 @@ function textureFrom(bitmap: ImageBitmap): Texture {
   })
 }
 
+/** Vorschaubild (4:3) für die 3D-Fotowelt. */
+export async function loadThumb(name: string): Promise<ImageBitmap> {
+  const r = await ask({ kind: 'thumb', name })
+  if (r.kind !== 'thumb') throw new Error('unerwartete Antwort')
+  return r.thumb
+}
+
 /** Lädt nur die weichgezeichnete Kleinfassung eines Fotos (für Textfolien). */
 export async function loadSoft(name: string, screen: Size): Promise<ImageBitmap> {
   const r = await ask({ kind: 'soft', name, screen })

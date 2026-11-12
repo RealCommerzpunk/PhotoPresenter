@@ -5,7 +5,13 @@ import type { PhotoFaces } from '@shared/faces'
 import { IPC, type EmbedResult, type FaceModel, type RelBox, type ShowOptions } from '@shared/ipc'
 import type { ShowCommand, ShowStatus, RemoteState } from '@shared/remote'
 import { REMOTE_KEYS } from '@shared/remote'
-import { EFFECT_LABELS, PAN_OTHERS, TRANSITION_LABELS, type Settings } from '@shared/settings'
+import {
+  EFFECT_LABELS,
+  PAN_OTHERS,
+  TRANSITION_LABELS,
+  WORLD_FORMATION_LABELS,
+  type Settings
+} from '@shared/settings'
 import { FaceStore } from './faces'
 import { handlePhotoProtocol, listPhotos, registerPhotoScheme } from './photos'
 import { RemoteServer } from './remote'
@@ -35,7 +41,12 @@ function remoteState(): RemoteState {
     show: showStatus,
     settings,
     persons: s.persons.map((p) => ({ id: p.id, name: p.name })),
-    labels: { transitions: TRANSITION_LABELS, panOthers: PAN_OTHERS, effects: EFFECT_LABELS }
+    labels: {
+      transitions: TRANSITION_LABELS,
+      panOthers: PAN_OTHERS,
+      effects: EFFECT_LABELS,
+      formations: WORLD_FORMATION_LABELS
+    }
   }
 }
 

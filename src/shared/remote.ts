@@ -1,7 +1,8 @@
 import type { Settings } from './settings'
 
 /** Befehle an die laufende Show (von Fernbedienung oder Main-Prozess). */
-export type ShowCommand = 'start' | 'stop' | 'next' | 'prev' | 'pause' | 'resume' | 'qr' | 'effect'
+export type ShowCommand =
+  'start' | 'stop' | 'next' | 'prev' | 'pause' | 'resume' | 'qr' | 'effect' | 'world'
 
 /** Zustand der Show, den das Show-Fenster an den Main-Prozess meldet. */
 export interface ShowStatus {
@@ -32,7 +33,11 @@ export const REMOTE_KEYS = [
   'effectEvery',
   'effectDuration',
   'effectIntensity',
-  'effects'
+  'effects',
+  'worldEnabled',
+  'worldEvery',
+  'worldDuration',
+  'worldFormations'
 ] as const satisfies readonly (keyof Settings)[]
 
 export type RemoteSettings = Pick<Settings, (typeof REMOTE_KEYS)[number]>
@@ -47,6 +52,7 @@ export interface RemoteState {
     transitions: Record<string, string>
     panOthers: Record<string, string>
     effects: Record<string, string>
+    formations: Record<string, string>
   }
 }
 

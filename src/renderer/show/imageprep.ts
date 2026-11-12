@@ -274,3 +274,33 @@ export async function preparePhoto(
   photoBitmap.close()
   return { strips, width, height, originalWidth, originalHeight, backdrop: backdropBitmap, soft }
 }
+
+/** Größe der Kacheln in der 3D-Fotowelt (4:3, passend zu TILE_W × TILE_H). */
+export const THUMB_W = 384
+export const THUMB_H = 288
+
+/**
+ * Vorschaubild für die 3D-Fotowelt: direkt verkleinert dekodiert (schnell) und mittig
+ * auf 4:3 zugeschnitten.
+ */
+export async function prepareThumb(name: string): Promise<ImageBitmap> {
+  const response = await fetch(photoUrl(name))
+  if (!response.ok) throw new Error(`${name}: HTTP ${response.status}`)
+  const decoded = await createImageBitmap(await response.blob(), {
+    imageOrientation: 'from-image',
+    resizeWidth: THUMB_W * 2,
+    resizeQuality: 'medium'
+  })
+  try {
+    const canvas = new OffscreenCanvas(THUMB_W, THUMB_H)
+    const ctx = canvas.getContext('2d', { willReadFrequently: true })!
+    const s = Math.max(THUMB_W / decoded.width, THUMB_H / decoded.height)
+    const dw = decoded.width * s
+    const dh = decoded.height * s
+    ctx.imageSmoothingQuality = 'high'
+    ctx.drawImage(decoded, (THUMB_W - dw) / 2, (THUMB_H - dh) / 2, dw, dh)
+    return canvas.transferToImageBitmap()
+  } finally {
+    decoded.close()
+  }
+}

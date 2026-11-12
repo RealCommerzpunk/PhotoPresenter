@@ -16,7 +16,13 @@ const text = (id: string, patch: Partial<TextItem> = {}): TextItem => ({
 })
 
 const label = (e: Entry | undefined): string =>
-  !e ? '-' : e.kind === 'photo' ? `P:${e.name}${e.overlays.length ? '+' : ''}` : `T:${e.item.id}`
+  !e
+    ? '-'
+    : e.kind === 'photo'
+      ? `P:${e.name}${e.overlays.length ? '+' : ''}`
+      : e.kind === 'text'
+        ? `T:${e.item.id}`
+        : 'W'
 
 function run(seq: Sequencer, n: number): string[] {
   return Array.from({ length: n }, () => label(seq.next()))
@@ -72,6 +78,18 @@ describe('Sequencer', () => {
       mode: 'fixed'
     })
     expect(run(seq, 4).every((x) => x.startsWith('P'))).toBe(true)
+  })
+
+  it('zeigt ein eingeschobenes Foto als Nächstes', () => {
+    const seq = new Sequencer(new Playlist(['a', 'b', 'c'], seededRng(5)), {
+      min: 99,
+      max: 99,
+      mode: 'fixed'
+    })
+    seq.setTexts([], { min: 99, max: 99, mode: 'fixed' })
+    seq.next()
+    seq.insertNext('z')
+    expect(label(seq.next())).toBe('P:z')
   })
 
   it('springt zurück zum vorigen Foto und überspringt dabei Texte', () => {

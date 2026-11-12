@@ -6,6 +6,8 @@ export type Entry =
   | { kind: 'photo'; name: string; overlays: TextItem[] }
   /** Textfolie; `ref` ist das Foto, dessen Unschärfe den Hintergrund bildet. */
   | { kind: 'text'; item: TextItem; ref?: string }
+  /** Zwischenspiel 3D-Fotowelt (wird von der Show eingeschoben, nicht vom Sequencer). */
+  | { kind: 'world' }
 
 /**
  * Legt die Reihenfolge der Show fest: Fotos aus der Playlist, dazwischen Fülltexte
@@ -108,6 +110,12 @@ export class Sequencer {
     const [first, ...rest] = this.photoEntries(name, true)
     this.pending = rest
     return first
+  }
+
+  /** Ein bestimmtes Foto als Nächstes zeigen (z. B. das Zielfoto der 3D-Fotowelt). */
+  insertNext(name: string): void {
+    this.lastPhoto = name
+    this.pending.unshift(this.photoEntries(name, false)[0])
   }
 
   /** Zurück zum Foto vor `current`; Texte davor und danach werden dabei übersprungen. */

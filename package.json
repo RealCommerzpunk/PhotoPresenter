@@ -1,7 +1,7 @@
 {
   "name": "photopresenter",
   "productName": "PhotoPresenter",
-  "version": "0.8.0",
+  "version": "0.9.0",
   "description": "Zufällige Vollbild-Foto-Diashow mit Kamerafahrten, Übergängen, Gesichtsfokus und animierten Texten",
   "main": "./out/main/index.js",
   "author": "RealCommerzpunk",
@@ -35,6 +35,7 @@
     "qrcode": "^1.5.4",
     "react": "^19.3.1",
     "react-dom": "^19.3.1",
+    "three": "^0.187.0",
     "zod": "^4.6.7"
   },
   "devDependencies": {
@@ -44,6 +45,7 @@
     "@types/qrcode": "^1.5.6",
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.3.0",
+    "@types/three": "^0.187.0",
     "@vitejs/plugin-react": "^6.3.0",
     "electron": "^45.3.0",
     "electron-builder": "^26.18.0",

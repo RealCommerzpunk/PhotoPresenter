@@ -40,6 +40,7 @@ Plan und Meilensteine: `docs/PLAN.md` · Änderungen je Version: `CHANGELOG.md` 
   - `slide.ts`: ein Foto mit Bewegung über Einblenden + Stehen + Ausblenden
   - `transitions/`: `engine.ts` rendert altes und neues Foto je Frame in RenderTextures und mischt per Mesh-Shader; `shaders.ts` enthält die Effekte (`vec4 transition(vec2 uv)` mit `fromColor`/`toColor`). Neuer Effekt = Eintrag in `TRANSITIONS` (`settings.ts`) + GLSL-Body
   - `effects/particles.ts`: `EffectLayer`/`ParticleEffect` (PixiJS `ParticleContainer`, eine gemeinsame Formen-Textur, Effekte als `SPECS`); Ebene liegt über `transitions.view`. `effects/backgrounds.ts`: `AnimatedBackground` (Mesh-Shader) für Textfolien, Farben per `colorsFrom` aus dem Foto
+  - `world/`: 3D-Zwischenspiel. `formations.ts` (reine Rechnung, getestet: Position + Blickpunkt je Kachel, Kamerastil je Formation), `worldScene.ts` (`WorldScene` als `Scene`; Three.js zeichnet in ein eigenes Canvas, das jeden Frame als Pixi-Textur übernommen wird → läuft durch die Übergänge; Three wird per dynamischem Import nachgeladen; ein gemeinsamer Renderer für alle Zwischenspiele), `thumbPool.ts` (Vorschaubilder 4:3 aus dem Worker, nur in ruhigen Phasen). In der Show: `nextEntry()` schiebt `{ kind: 'world' }` ein, `sequencer.insertNext(final)` setzt danach mit dem Zielfoto fort
   - `playlist.ts`: Zufall ohne Wiederholung, Verlauf für ←
   - `sequencer.ts`: Reihenfolge aus Fotos, Fülltexten und gebundenen Texten (vor/über/nach)
   - `scene.ts`: gemeinsame Schnittstelle `Scene` für `Slide` (Foto) und `TextSlide`; `OverlayTrack` steuert Texte zeitlich
@@ -61,7 +62,8 @@ Plan und Meilensteine: `docs/PLAN.md` · Änderungen je Version: `CHANGELOG.md` 
 - Texte und eigene Stile werden in `parseSettings` Eintrag für Eintrag geprüft (`parseList`), damit ein kaputter Eintrag nicht alle Texte löscht. In zod 4 müssen solche losen Felder `z.unknown().optional()` sein.
 - Frame-Messung: `PP_PERF=1` lädt die Show mit `#perf`; langsame Frames (> 25 ms) erscheinen mit den Ereignissen davor im Terminal (`perf.ts`).
 - Fernbedienung testen: per `curl http://127.0.0.1:8765/api/…`; die Handy-Seite selbst mit `PP_REMOTE_PREVIEW=1` (Fenster in iPhone-Größe, mit `PP_CAPTURE_DIR` als Aufnahme). Beim ersten Öffnen des Ports fragt die Windows-Firewall.
-- Kein zweites Canvas/WebGL-Kontext in der Show (z. B. Vanta/Three.js): Es läuft nicht durch die Übergänge und kostet Bildrate. Neue Effekte als Pixi-Partikel oder Mesh-Shader.
+- Ein zusätzlicher WebGL-Kontext (wie Three.js für die 3D-Welt) muss sein Bild als Pixi-Textur abgeben (Canvas → `Texture.from`, je Frame `source.update()`), sonst läuft er nicht durch die Übergänge. Kleinere Effekte lieber als Pixi-Partikel oder Mesh-Shader.
+- `electron-vite preview --skipBuild` startet den zuletzt gebauten Stand – nach Codeänderungen ohne `--skipBuild` testen.
 - Windows kann zusammengeschaltete Monitore als einen Bildschirm melden (z. B. 5760×1134): Die Show füllt dann alle. Für Tests `PP_SHOW_WINDOWED=1` (Show als Fenster-Vorschau).
 - Zoom immer mit `limitShot(…, zoomLimit(…))` begrenzen (Einstellung `maxUpscale`).
 - Shell-Fallen: Backslashes, Regex und Template-Strings in `node -e`/Heredocs gehen leicht kaputt – bei so etwas Edit/Write oder ein Skript im Scratchpad benutzen.

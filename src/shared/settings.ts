@@ -158,6 +158,39 @@ const defaultTextBackgrounds: WeightedOption<TextBackgroundId>[] = TEXT_BACKGROU
   weight: id === 'photo' ? 3 : 1
 }))
 
+// ---------- 3D-Fotowelt ----------
+
+export const WORLD_FORMATIONS = [
+  'sphere',
+  'helix',
+  'grid',
+  'table',
+  'frames',
+  'cube',
+  'carousel',
+  'tunnel',
+  'wave'
+] as const
+export type WorldFormation = (typeof WORLD_FORMATIONS)[number]
+
+export const WORLD_FORMATION_LABELS: Record<WorldFormation, string> = {
+  sphere: 'Kugel',
+  helix: 'Spirale',
+  grid: '3D-Raster',
+  table: 'Wand',
+  frames: 'Schwebende Rahmen',
+  cube: 'Würfel',
+  carousel: 'Karussell',
+  tunnel: 'Tunnel',
+  wave: 'Welle'
+}
+
+const defaultWorldFormations: WeightedOption<WorldFormation>[] = WORLD_FORMATIONS.map((id) => ({
+  id,
+  enabled: true,
+  weight: ['sphere', 'helix', 'grid', 'table'].includes(id) ? 2 : 1
+}))
+
 // ---------- Fokus-Person ----------
 
 export const FOCUS_MODES = ['slowZoom', 'fastZoom', 'journey'] as const
@@ -268,6 +301,19 @@ export const settingsSchema = z.object({
   effects: field(weightedSchema(EFFECTS), defaultEffects),
   /** Hintergründe der Textfolien (Foto oder animierte Hintergründe). */
   textBackgrounds: field(weightedSchema(TEXT_BACKGROUNDS), defaultTextBackgrounds),
+  /** 3D-Fotowelt als Zwischenspiel: Fotos als Kacheln im Raum, die Formationen bilden. */
+  worldEnabled: field(z.boolean(), true),
+  /** Nach wie vielen Fotos ein Zwischenspiel kommt. */
+  worldEvery: field(rangeSchema, { min: 15, max: 25, mode: 'random' } satisfies Range),
+  /** Dauer eines Zwischenspiels in Sekunden. */
+  worldDuration: field(rangeSchema, { min: 18, max: 26, mode: 'random' } satisfies Range),
+  /** Wie viele Fotos als Kacheln mitspielen. */
+  worldTiles: field(rangeSchema, { min: 40, max: 60, mode: 'random' } satisfies Range),
+  /** Wie viele Formationen nacheinander gezeigt werden. */
+  worldFormationCount: field(rangeSchema, { min: 2, max: 4, mode: 'random' } satisfies Range),
+  /** Tempo der Kamera (1 = normal). */
+  worldCameraSpeed: field(rangeSchema, { min: 1, max: 1, mode: 'fixed' } satisfies Range),
+  worldFormations: field(weightedSchema(WORLD_FORMATIONS), defaultWorldFormations),
   /** Fernbedienung per Handy (Webserver im lokalen Netz, ohne Passwort). */
   remoteEnabled: field(z.boolean(), true),
   remotePort: field(z.number().int().min(1024).max(65535), 8765),
@@ -317,6 +363,7 @@ export function parseSettings(raw: unknown): Settings {
     persons: parseList(s.persons, personSchema, []),
     focusModes: completeWeighted(s.focusModes, defaultFocusModes),
     effects: completeWeighted(s.effects, defaultEffects),
+    worldFormations: completeWeighted(s.worldFormations, defaultWorldFormations),
     textBackgrounds: completeWeighted(s.textBackgrounds, defaultTextBackgrounds),
     textStyles: completeWeighted(s.textStyles, styleDefaults),
     transitions: completeWeighted(s.transitions, defaultTransitions),

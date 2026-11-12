@@ -61,7 +61,8 @@ export abstract class TimedScene {
   elapsed = 0
   display = 0
   fadeOut = 0
-  constructor(readonly fadeIn: number) {}
+  // Nicht readonly: Die 3D-Szene wird vorab gebaut und erfährt ihre Einblenddauer erst beim Start.
+  constructor(public fadeIn: number) {}
 
   get lifetime(): number {
     return this.fadeIn + this.display + this.fadeOut

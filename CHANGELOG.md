@@ -2,6 +2,15 @@
 
 Alle Änderungen je Version. Format: neueste Version oben, Datum im Format JJJJ-MM-TT.
 
+## 0.9.0 – 2026-11-12
+
+3D-Fotowelt.
+
+- **Zwischenspiel 3D-Fotowelt** (Three.js): Viele Fotos fliegen als Kacheln mit hellem Rahmen in den Raum und ordnen sich nacheinander zu Formationen – Kugel, Spirale, 3D-Raster, Wand, schwebende Rahmen, Würfel, Karussell, Tunnel, Welle. Die Kacheln morphen versetzt wie im „CSS3D Periodic Table“-Beispiel, die Kamera kreist, fährt heran, fliegt hindurch oder darüber und taucht am Ende in ein Foto ein, mit dem die Show nahtlos weiterläuft
+- Einstellbar (Seite Effekte → 3D-Fotowelt): wie oft (alle X–Y Fotos), wie lange, wie viele Fotos, wie viele Formationen, Kameratempo, Auswahl der Formationen mit Häufigkeit; „3D jetzt zeigen“
+- Auf der Fernbedienung: an/aus, Häufigkeit, Dauer, Formationen, „3D jetzt“
+- Vorschaubilder werden im Hintergrund in ruhigen Phasen geladen; Kachel-Texturen werden über mehrere Frames hochgeladen. Gemessen: keine langsamen Frames während der Zwischenspiele (einmaliger Ruckler beim allerersten Laden von Three.js)
+
 ## 0.8.0 – 2026-11-12
 
 Effekte.

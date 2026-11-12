@@ -271,6 +271,15 @@
     </section>
 
     <section>
+      <h2>3D-Fotowelt</h2>
+      <div class="switch">Zwischenspiel aktiv <input type="checkbox" id="worldEnabled" /></div>
+      <div style="margin: 8px 0"><button class="small" data-cmd="world">🧊 3D jetzt</button></div>
+      <div id="worldEvery"></div>
+      <div id="worldDuration"></div>
+      <div class="chips" id="formations"></div>
+    </section>
+
+    <section>
       <h2>Effekte</h2>
       <div class="switch">Effekte aktiv <input type="checkbox" id="effectsEnabled" /></div>
       <div style="margin: 8px 0">
@@ -392,6 +401,9 @@
         rangeControl('effectEvery', 'Effekt alle', 'Fotos', 1, 50, 1)
         rangeControl('effectDuration', 'Effektdauer', 's', 1, 30, 0.5)
         rangeControl('effectIntensity', 'Intensität', '%', 5, 100, 5, 100)
+        rangeControl('worldEvery', '3D alle', 'Fotos', 2, 100, 1)
+        rangeControl('worldDuration', '3D-Dauer', 's', 8, 90, 1)
+        $('worldEnabled').onchange = (e) => patch({ worldEnabled: e.target.checked })
         $('effectsEnabled').onchange = (e) => patch({ effectsEnabled: e.target.checked })
 
         $('maxUpscale').oninput = (e) => {
@@ -462,7 +474,9 @@
           'textFillerEvery',
           'effectEvery',
           'effectDuration',
-          'effectIntensity'
+          'effectIntensity',
+          'worldEvery',
+          'worldDuration'
         ]) {
           $(key).update(s[key])
         }
@@ -484,6 +498,30 @@
         )
         options($('focusPanOthers'), Object.entries(state.labels.panOthers), s.focusPanOthers)
         if (document.activeElement !== $('focusBoost')) $('focusBoost').value = String(s.focusBoost)
+
+        $('worldEnabled').checked = s.worldEnabled
+        $('formations').innerHTML = s.worldFormations
+          .map(
+            (t) =>
+              '<button class="chip' +
+              (t.enabled ? ' on' : '') +
+              '" data-id="' +
+              t.id +
+              '">' +
+              escapeHtml(state.labels.formations[t.id] || t.id) +
+              '</button>'
+          )
+          .join('')
+        $('formations')
+          .querySelectorAll('.chip')
+          .forEach((chip) => {
+            chip.onclick = () =>
+              patch({
+                worldFormations: s.worldFormations.map((t) =>
+                  t.id === chip.dataset.id ? { ...t, enabled: !t.enabled } : t
+                )
+              })
+          })
 
         $('effectsEnabled').checked = s.effectsEnabled
         $('effects').innerHTML = s.effects

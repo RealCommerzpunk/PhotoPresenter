@@ -1,4 +1,9 @@
-import { EFFECT_LABELS, TEXT_BACKGROUND_LABELS, type Settings } from '@shared/settings'
+import {
+  EFFECT_LABELS,
+  TEXT_BACKGROUND_LABELS,
+  WORLD_FORMATION_LABELS,
+  type Settings
+} from '@shared/settings'
 import { Card, Field, RangeInput, Toggle, WeightedList } from './controls'
 
 type Update = (patch: Partial<Settings>) => void
@@ -65,6 +70,89 @@ export function EffectsPage({ s, update }: { s: Settings; update: Update }): Rea
             value={s.effects}
             labels={EFFECT_LABELS}
             onChange={(v) => update({ effects: v })}
+            columns={2}
+          />
+        </Field>
+      </Card>
+      <Card title="3D-Fotowelt">
+        <Field
+          label="Zwischenspiel"
+          hint="Viele Fotos fliegen als Kacheln in den Raum und ordnen sich nacheinander zu Formationen; die Kamera fliegt hindurch und taucht am Ende in ein Foto ein, mit dem die Show weiterläuft."
+        >
+          <div className="flex flex-wrap items-center gap-4">
+            <Toggle
+              checked={s.worldEnabled}
+              onChange={(v) => update({ worldEnabled: v })}
+              label="3D-Fotowelt aktiv"
+            />
+            <button
+              onClick={() => void window.api.sendShowCommand('world')}
+              className="rounded-md border border-white/15 bg-white/5 px-3 py-1 text-xs hover:bg-white/10"
+              title="Startet sofort ein Zwischenspiel in der laufenden Show oder Vorschau"
+            >
+              🧊 3D jetzt zeigen
+            </button>
+          </div>
+        </Field>
+        <Field label="Wie oft" hint="Nach wie vielen Fotos ein Zwischenspiel kommt.">
+          <RangeInput
+            value={s.worldEvery}
+            onChange={(v) => update({ worldEvery: v })}
+            min={2}
+            max={200}
+            step={1}
+            unit="Fotos"
+          />
+        </Field>
+        <Field label="Wie lange">
+          <RangeInput
+            value={s.worldDuration}
+            onChange={(v) => update({ worldDuration: v })}
+            min={8}
+            max={90}
+            step={1}
+            unit="s"
+          />
+        </Field>
+        <Field label="Fotos im Raum" hint="Wie viele Fotos als Kacheln mitspielen.">
+          <RangeInput
+            value={s.worldTiles}
+            onChange={(v) => update({ worldTiles: v })}
+            min={16}
+            max={120}
+            step={1}
+            unit="Fotos"
+          />
+        </Field>
+        <Field label="Formationen je Zwischenspiel">
+          <RangeInput
+            value={s.worldFormationCount}
+            onChange={(v) => update({ worldFormationCount: v })}
+            min={1}
+            max={6}
+            step={1}
+            unit=""
+          />
+        </Field>
+        <Field label="Kameratempo" hint="100 % = normal.">
+          <RangeInput
+            value={s.worldCameraSpeed}
+            onChange={(v) => update({ worldCameraSpeed: v })}
+            min={30}
+            max={250}
+            step={10}
+            unit="%"
+            factor={100}
+          />
+        </Field>
+        <Field
+          label="Formationen"
+          hint="Aus den aktiven wird gewählt; der Regler bestimmt, wie oft."
+        >
+          <WeightedList
+            value={s.worldFormations}
+            labels={WORLD_FORMATION_LABELS}
+            onChange={(v) => update({ worldFormations: v })}
             columns={2}
           />
         </Field>
