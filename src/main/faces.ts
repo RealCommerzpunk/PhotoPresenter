@@ -15,7 +15,7 @@ import {
 import type { EmbedRequest, EmbedResult, FaceListItem, FaceModel, RelBox } from '@shared/ipc'
 import type { FaceSample, Person, Settings } from '@shared/settings'
 import { listPhotos } from './photos'
-import { loadSettings } from './settings'
+import { loadSettings, photoFolder } from './settings'
 
 /** Ein Eintrag im Index; Schlüssel ist der absolute Pfad. */
 interface Entry extends PhotoFaces {
@@ -204,7 +204,7 @@ export class FaceStore {
 
   /** Aktueller Fotoordner, direkt aus den Einstellungen (auch bevor das Einlesen fertig ist). */
   private get folder(): string {
-    return loadSettings().photoFolder
+    return photoFolder()
   }
 
   private entriesInFolder(): [string, Entry][] {

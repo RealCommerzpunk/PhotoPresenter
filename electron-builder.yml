@@ -11,7 +11,7 @@ extraResources:
     to: resources
     filter: ['**/*']
 win:
-  target: [nsis]
+  target: [nsis, portable]
 nsis:
   oneClick: false
   allowToChangeInstallationDirectory: true

@@ -6,7 +6,7 @@ import { IPC, type EmbedResult, type FaceModel, type RelBox, type ShowOptions } 
 import type { Settings } from '@shared/settings'
 import { FaceStore } from './faces'
 import { handlePhotoProtocol, listPhotos, registerPhotoScheme } from './photos'
-import { loadSettings, updateSettings } from './settings'
+import { loadSettings, photoFolder, updateSettings } from './settings'
 
 registerPhotoScheme()
 
@@ -149,7 +149,7 @@ async function pickFolder(): Promise<string | null> {
   const parent = settingsWindow ?? BrowserWindow.getFocusedWindow()
   const options: Electron.OpenDialogOptions = {
     title: 'Fotoordner wählen',
-    defaultPath: loadSettings().photoFolder || app.getPath('pictures'),
+    defaultPath: photoFolder() || app.getPath('pictures'),
     properties: ['openDirectory']
   }
   const result = parent

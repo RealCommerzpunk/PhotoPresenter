@@ -18,6 +18,72 @@ type Section = (typeof sections)[number]
 
 type Update = (patch: Partial<Settings>) => void
 
+/** Fotoordner: Eingabe (absolut oder relativ), Auswahl-Dialog, aufgelöster Pfad. */
+function FolderInput({
+  s,
+  update,
+  photos,
+  onPick
+}: {
+  s: Settings
+  update: Update
+  photos: PhotoList | null
+  onPick: () => void
+}): React.JSX.Element {
+  // Wird über key neu aufgebaut, wenn sich die Einstellung von außen ändert.
+  const [draft, setDraft] = useState(s.photoFolder)
+  const commit = (): void => {
+    if (draft.trim() !== s.photoFolder) update({ photoFolder: draft.trim() })
+  }
+  const base = photos?.base ?? ''
+  const folder = photos?.folder ?? ''
+  // Liegt der Ordner im Programmordner, kann er relativ gespeichert werden.
+  const relative = photos?.relative ?? null
+  const isRelative = photos?.settingIsRelative ?? false
+
+  return (
+    <div className="flex flex-col gap-2">
+      <div className="flex min-w-0 items-center gap-3">
+        <input
+          value={draft}
+          onChange={(e) => setDraft(e.target.value)}
+          onBlur={commit}
+          onKeyDown={(e) => e.key === 'Enter' && commit()}
+          placeholder="z. B. Fotos oder C:\Bilder\Urlaub"
+          className="min-w-0 flex-1 rounded-md border border-white/15 bg-black/40 px-2 py-1.5 text-sm outline-none focus:border-indigo-400"
+        />
+        <button
+          onClick={onPick}
+          className="shrink-0 whitespace-nowrap rounded-md border border-white/15 bg-white/5 px-3 py-1.5 text-sm hover:bg-white/10"
+        >
+          Ordner wählen …
+        </button>
+      </div>
+      {photos && s.photoFolder && (
+        <div className="flex flex-col gap-1 text-xs">
+          {isRelative && (
+            <span className="truncate text-white/50" title={folder}>
+              → {folder}
+            </span>
+          )}
+          <span className={photos.error ? 'text-red-400' : 'text-white/40'}>
+            {photos.error ?? `${photos.files.length} Fotos gefunden`}
+          </span>
+          {relative && !isRelative && (
+            <button
+              onClick={() => update({ photoFolder: relative })}
+              className="self-start text-indigo-300 hover:text-indigo-200"
+            >
+              Relativ zum Programmordner speichern („{relative}“)
+            </button>
+          )}
+        </div>
+      )}
+      {base && <span className="truncate text-[11px] text-white/30">Programmordner: {base}</span>}
+    </div>
+  )
+}
+
 function General({ s, update }: { s: Settings; update: Update }): React.JSX.Element {
   const [photos, setPhotos] = useState<PhotoList | null>(null)
 
@@ -37,23 +103,17 @@ function General({ s, update }: { s: Settings; update: Update }): React.JSX.Elem
   return (
     <>
       <Card title="Fotos">
-        <Field label="Fotoordner">
-          <div className="flex min-w-0 items-center gap-3">
-            <button
-              onClick={() => void pick()}
-              className="shrink-0 whitespace-nowrap rounded-md border border-white/15 bg-white/5 px-3 py-1.5 text-sm hover:bg-white/10"
-            >
-              Ordner wählen …
-            </button>
-            <span className="min-w-0 truncate text-sm text-white/70" title={s.photoFolder}>
-              {s.photoFolder || <em className="text-white/40">nicht gewählt</em>}
-            </span>
-          </div>
-          {photos && s.photoFolder && (
-            <div className={`mt-2 text-xs ${photos.error ? 'text-red-400' : 'text-white/40'}`}>
-              {photos.error ?? `${photos.files.length} Fotos gefunden`}
-            </div>
-          )}
+        <Field
+          label="Fotoordner"
+          hint="Auch relativ zum Programmordner möglich, z. B. „Fotos“: dann wird der Ordner Fotos neben dem Programm verwendet (praktisch für einen USB-Stick)."
+        >
+          <FolderInput
+            key={s.photoFolder}
+            s={s}
+            update={update}
+            photos={photos}
+            onPick={() => void pick()}
+          />
         </Field>
         <Field label="Unterordner">
           <Toggle

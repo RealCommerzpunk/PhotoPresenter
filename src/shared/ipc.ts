@@ -37,7 +37,14 @@ export function photoUrl(relativePath: string): string {
 }
 
 export interface PhotoList {
+  /** Fotoordner als absoluter Pfad (relative Angaben bereits aufgelöst). */
   folder: string
+  /** Programmordner, gegen den relative Angaben aufgelöst werden. */
+  base: string
+  /** Relativer Pfad, falls der Ordner im Programmordner liegt. */
+  relative?: string
+  /** Die Einstellung ist bereits relativ angegeben. */
+  settingIsRelative?: boolean
   /** Pfade relativ zum Fotoordner. */
   files: string[]
   error?: string

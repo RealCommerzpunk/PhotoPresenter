@@ -3,6 +3,7 @@ import { mkdir, rename, writeFile } from 'node:fs/promises'
 import { dirname, join } from 'node:path'
 import { app } from 'electron'
 import { defaultSettings, parseSettings, type Settings } from '@shared/settings'
+import { resolvePhotoFolder } from './paths'
 
 let current: Settings | null = null
 
@@ -35,4 +36,23 @@ export function updateSettings(patch: Partial<Settings>): Settings {
     })
     .catch((err) => console.error('Einstellungen konnten nicht gespeichert werden:', err))
   return current
+}
+
+/**
+ * Programmordner, gegen den relative Fotopfade aufgelöst werden: in der Entwicklung der
+ * Projektordner, sonst der Ordner der .exe bzw. bei portabler Windows-Version und AppImage
+ * der Ordner, in dem die Datei liegt (beide entpacken sich beim Start in einen Temp-Ordner).
+ */
+export function programDir(): string {
+  if (!app.isPackaged) return app.getAppPath()
+  const portable = process.env['PORTABLE_EXECUTABLE_DIR']
+  if (portable) return portable
+  const appImage = process.env['APPIMAGE']
+  if (appImage) return dirname(appImage)
+  return dirname(process.execPath)
+}
+
+/** Der eingestellte Fotoordner als absoluter Pfad (leer, wenn keiner gewählt ist). */
+export function photoFolder(): string {
+  return resolvePhotoFolder(loadSettings().photoFolder, programDir())
 }
