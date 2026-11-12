@@ -1,7 +1,15 @@
 import { describe, expect, it } from 'vitest'
 import { seededRng } from '@shared/random'
 import { MOTION_KINDS } from '@shared/settings'
-import { evaluateShot, fitImage, maxOffset, planFocusShot, planShot } from './motion'
+import {
+  evaluateShot,
+  fitImage,
+  limitShot,
+  maxOffset,
+  planFocusShot,
+  planShot,
+  zoomLimit
+} from './motion'
 
 const screen = { w: 1920, h: 1080 }
 
@@ -110,6 +118,44 @@ describe('planFocusShot', () => {
       const lim = maxOffset(img, screen, scale, k.zoom)
       expect(Math.abs(k.x)).toBeLessThanOrEqual(lim.w + 1e-6)
       expect(Math.abs(k.y)).toBeLessThanOrEqual(lim.h + 1e-6)
+    }
+  })
+})
+
+describe('Zoomgrenze', () => {
+  it('erlaubt bei großen Fotos mehr Zoom als bei kleinen', () => {
+    // 4000 px breit auf 1920 px eingepasst: Skalierung 0,48
+    expect(zoomLimit(0.48, 1, 1.25)).toBeCloseTo(2.604, 2)
+    // Foto genau so groß wie der Bildschirm
+    expect(zoomLimit(1, 1, 1.25)).toBeCloseTo(1.25)
+    // Foto kleiner als der Bildschirm: kein Zoom
+    expect(zoomLimit(1.9, 1, 1.25)).toBe(1)
+    // Hohe Pixeldichte (z. B. 4K mit Skalierung 2) halbiert den Spielraum
+    expect(zoomLimit(0.48, 2, 1.25)).toBeCloseTo(1.302, 2)
+  })
+
+  it('kappt Kamerapfade und behält das Ziel bei', () => {
+    const img = { w: 4000, h: 3000 }
+    const { scale } = fitImage(img, screen, 0.12)
+    const face: [number, number, number, number] = [0.52, 0.42, 0.05, 0.07]
+    const shot = limitShot(
+      planFocusShot(img, screen, scale, face, [], {
+        mode: 'slowZoom',
+        faceSize: 0.4,
+        others: 'off'
+      }),
+      1.5
+    )
+    const end = evaluateShot(shot, 1, img, screen, scale)
+    expect(end.zoom).toBeCloseTo(1.5)
+    // Gesichtsmitte weiterhin (so weit möglich) mittig
+    const cx = (face[0] + face[2] / 2 - 0.5) * img.w * scale * end.zoom + end.x
+    expect(Math.abs(cx)).toBeLessThan(screen.w * 0.05)
+    for (const kind of MOTION_KINDS) {
+      const s = limitShot(planShot(img, screen, scale, kind, 0.6, seededRng(3)), 1.2)
+      for (let t = 0; t <= 1; t += 0.1) {
+        expect(evaluateShot(s, t, img, screen, scale).zoom).toBeLessThanOrEqual(1.2 + 1e-9)
+      }
     }
   })
 })

@@ -194,6 +194,23 @@ function Motion({ s, update }: { s: Settings; update: Update }): React.JSX.Eleme
           factor={100}
         />
       </Field>
+      <Field
+        label="Höchste Vergrößerung"
+        hint="Wie weit über die Originalauflösung des Fotos gezoomt werden darf. 100 % = nie vergrößern (gestochen scharf), 125 % = kaum sichtbar, ab 150 % wird es weich. Gilt für alle Bewegungen und den Fokus; kleine Fotos zoomen entsprechend weniger."
+      >
+        <div className="flex items-center gap-3 text-sm text-white/70">
+          <input
+            type="range"
+            min={100}
+            max={250}
+            step={5}
+            value={Math.round(s.maxUpscale * 100)}
+            onChange={(e) => update({ maxUpscale: Number(e.target.value) / 100 })}
+            className="w-56 accent-indigo-500"
+          />
+          <span>{Math.round(s.maxUpscale * 100)} %</span>
+        </div>
+      </Field>
       <Field label="Bewegungsarten" hint="Aus den aktiven Arten wird pro Foto zufällig gewählt.">
         <WeightedList
           value={s.motionKinds}

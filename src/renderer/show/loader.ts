@@ -25,6 +25,9 @@ export interface LoadedPhoto {
   soft: ImageBitmap
   /** Größe des Fotos in Pixeln (alle Streifen zusammen). */
   size: Size
+  /** Größe des Originalfotos; zusammen mit pixelRatio Grundlage der Zoomgrenze. */
+  original: Size
+  pixelRatio: number
   fit: Fit
   destroy(): void
 }
@@ -97,6 +100,8 @@ export async function loadPhoto(
     fill,
     soft: images.soft,
     size,
+    original: { w: images.originalWidth, h: images.originalHeight },
+    pixelRatio,
     fit: fitImage(size, screen, maxCrop),
     destroy() {
       for (const p of parts) p.texture.destroy(true)

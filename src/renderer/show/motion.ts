@@ -306,3 +306,34 @@ export function planFocusShot(
       return { from: wide, to: target }
   }
 }
+
+/**
+ * Größter Zoom, bei dem das Foto höchstens um `maxUpscale` über seine Originalauflösung
+ * vergrößert wird (sonst wird es pixelig und matschig).
+ * @param fitScaleOriginal Skalierung Originalpixel → logische Bildschirmpixel bei Zoom 1
+ * @param pixelRatio Gerätepixel pro logischem Pixel
+ */
+export function zoomLimit(
+  fitScaleOriginal: number,
+  pixelRatio: number,
+  maxUpscale: number
+): number {
+  return Math.max(1, maxUpscale / Math.max(1e-6, fitScaleOriginal * pixelRatio))
+}
+
+/**
+ * Begrenzt alle Stationen eines Kamerapfads auf `maxZoom`. Der Versatz wird mitskaliert,
+ * damit die Kamera weiter auf dieselbe Bildstelle zielt (z. B. ein Gesicht bleibt mittig).
+ */
+export function limitShot(shot: Shot, maxZoom: number): Shot {
+  const lim = <K extends Keyframe>(k: K): K =>
+    k.zoom <= maxZoom
+      ? k
+      : { ...k, zoom: maxZoom, x: (k.x * maxZoom) / k.zoom, y: (k.y * maxZoom) / k.zoom }
+  return {
+    from: lim(shot.from),
+    to: lim(shot.to),
+    via: shot.via && lim(shot.via),
+    path: shot.path?.map(lim)
+  }
+}

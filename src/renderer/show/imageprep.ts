@@ -212,6 +212,9 @@ export interface PreparedImages {
   strips: PhotoStrip[]
   width: number
   height: number
+  /** Größe des Originalfotos (nach EXIF-Drehung). */
+  originalWidth: number
+  originalHeight: number
   backdrop: ImageBitmap
   soft: ImageBitmap
 }
@@ -227,6 +230,8 @@ export async function preparePhoto(
 ): Promise<PreparedImages> {
   const original = await fetchBitmap(name)
 
+  const originalWidth = original.width
+  const originalHeight = original.height
   const fit = fitImage({ w: original.width, h: original.height }, screen, maxCrop)
   // Ränder links/rechts, wenn das Bild schmaler ist als der Bildschirm, sonst oben/unten.
   const horizontalGaps = original.width / original.height < screen.w / screen.h
@@ -267,5 +272,5 @@ export async function preparePhoto(
     strips.push({ bitmap: await createImageBitmap(photoBitmap, 0, y, width, h), y })
   }
   photoBitmap.close()
-  return { strips, width, height, backdrop: backdropBitmap, soft }
+  return { strips, width, height, originalWidth, originalHeight, backdrop: backdropBitmap, soft }
 }

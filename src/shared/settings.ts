@@ -177,6 +177,11 @@ export const settingsSchema = z.object({
   motionIntensity: field(rangeSchema, { min: 0.08, max: 0.2, mode: 'random' } satisfies Range),
   motionKinds: field(weightedSchema(MOTION_KINDS), defaultMotionKinds),
   /**
+   * Höchste Vergrößerung über die Originalauflösung des Fotos (1.25 = 125 %). Begrenzt jeden
+   * Zoom, damit nichts pixelig oder matschig wird.
+   */
+  maxUpscale: field(z.number().min(1).max(4), 1.25),
+  /**
    * Bis zu diesem Anteil darf ein Foto beschnitten werden, um den Bildschirm ganz zu füllen.
    * Darüber wird eingepasst und der Rand aufgefüllt. 0.12 = 12 %.
    */

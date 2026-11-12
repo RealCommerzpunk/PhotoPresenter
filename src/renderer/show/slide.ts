@@ -6,8 +6,10 @@ import { TextOverlay } from '../text/overlay'
 import type { LoadedPhoto } from './loader'
 import {
   evaluateShot,
+  limitShot,
   planFocusShot,
   planShot,
+  zoomLimit,
   type FaceBox,
   type FocusPlan,
   type Shot,
@@ -62,26 +64,23 @@ export class Slide extends TimedScene implements Scene {
 
     this.view.addChild(this.backdrop, this.photo)
 
+    // Zoomgrenze: nie stärker als maxUpscale über die Originalauflösung vergrößern.
+    const fitOriginal = (loaded.fit.scale * loaded.size.w) / loaded.original.w
+    const maxZoom = zoomLimit(fitOriginal, loaded.pixelRatio, settings.maxUpscale)
+
     if (focus) {
-      this.shot = planFocusShot(
-        loaded.size,
-        screen,
-        loaded.fit.scale,
-        focus.face,
-        focus.others,
-        focus.plan
+      this.shot = limitShot(
+        planFocusShot(loaded.size, screen, loaded.fit.scale, focus.face, focus.others, focus.plan),
+        maxZoom
       )
       // Genug Zeit, damit die Kamera an jedem Gesicht kurz verweilen kann.
       const stations = this.shot.path?.length ?? 2
       this.display = Math.max(this.display, 5, stations * 2)
     } else {
       const kind = pickWeighted(settings.motionKinds) ?? 'zoomIn'
-      this.shot = planShot(
-        loaded.size,
-        screen,
-        loaded.fit.scale,
-        kind,
-        pick(settings.motionIntensity)
+      this.shot = limitShot(
+        planShot(loaded.size, screen, loaded.fit.scale, kind, pick(settings.motionIntensity)),
+        maxZoom
       )
     }
 

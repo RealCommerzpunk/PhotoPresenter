@@ -8,7 +8,7 @@ import type { TextStyle } from '@shared/text'
 import { loadFont } from '../text/fonts'
 import { resolveStyle } from '../text/resolve'
 import { loadPhoto, loadSoft, type LoadedPhoto } from './loader'
-import { faceZoom, fitImage, type FaceBox, type Size } from './motion'
+import { faceZoom, fitImage, zoomLimit, type FaceBox, type Size } from './motion'
 import { Playlist } from './playlist'
 import type { Scene } from './scene'
 import { Sequencer, type Entry } from './sequencer'
@@ -135,7 +135,11 @@ async function main(): Promise<void> {
     const { scale } = fitImage(img, screen(), settings.maxCrop)
     return {
       target: { face: focusFace.box, others, plan },
-      zoom: faceZoom(focusFace.box, img, screen(), scale, plan.faceSize)
+      // Nur so viel Auflösung laden, wie die Zoomgrenze überhaupt erlaubt.
+      zoom: Math.min(
+        faceZoom(focusFace.box, img, screen(), scale, plan.faceSize),
+        zoomLimit(scale, app.renderer.resolution, settings.maxUpscale)
+      )
     }
   }
 
