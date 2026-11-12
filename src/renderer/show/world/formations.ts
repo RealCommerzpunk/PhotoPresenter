@@ -148,6 +148,58 @@ export function placement(kind: WorldFormation, i: number, n: number, t: number)
       const pos: Vec3 = [Math.cos(phi) * r, Math.sin(phi) * r, z]
       return { pos, target: [0, 0, z] }
     }
+    case 'jelly': {
+      // Fotos lückenlos um einen Würfel, der sich dreht, umherschwebt, staucht und streckt
+      // und dessen Oberfläche wabbelt (die Fotos selbst biegt zusätzlich der Shader).
+      const perFace = Math.ceil(n / 6)
+      const g = Math.max(2, Math.ceil(Math.sqrt(perFace)))
+      const face = Math.min(5, Math.floor(i / perFace))
+      const k = i - face * perFace
+      const cu = (k % g) - (g - 1) / 2
+      const cv = (g - 1) / 2 - Math.floor(k / g)
+      const hx = (g * TILE_W) / 2
+      const hy = (g * TILE_H) / 2
+      const u = cu * TILE_W
+      const v = cv * TILE_H
+      const local: [Vec3, Vec3][] = [
+        [
+          [u, v, hx],
+          [0, 0, 1]
+        ],
+        [
+          [-u, v, -hx],
+          [0, 0, -1]
+        ],
+        [
+          [hx, v, -u],
+          [1, 0, 0]
+        ],
+        [
+          [-hx, v, u],
+          [-1, 0, 0]
+        ],
+        [
+          [u, hy, -cv * TILE_W],
+          [0, 1, 0]
+        ],
+        [
+          [u, -hy, cv * TILE_W],
+          [0, -1, 0]
+        ]
+      ]
+      const [p, nrm] = local[face]
+      // Wabbeln entlang der Flächennormale, je Kachel versetzt
+      const wobble = 0.22 * Math.sin(t * 3.1 + cu * 0.9 + cv * 1.3 + face * 1.7)
+      const q: Vec3 = [p[0] + nrm[0] * wobble, p[1] + nrm[1] * wobble, p[2] + nrm[2] * wobble]
+      // Stauchen und Strecken bei gleichem Volumen
+      const s = 1 + 0.13 * Math.sin(t * 2.4)
+      const side = 1 / Math.sqrt(s)
+      const sq: Vec3 = [q[0] * side, q[1] * s, q[2] * side]
+      const rot = jellyRotation(t)
+      const pos = add(rot(sq), jellyCenter(t))
+      const dir = rot([nrm[0] * side, nrm[1] * s, nrm[2] * side])
+      return { pos, target: add(pos, dir) }
+    }
     case 'wave': {
       // Wogende Fläche, Kacheln schauen schräg nach oben zur Kamera
       const cols = Math.ceil(Math.sqrt(n * 1.6))
@@ -198,6 +250,13 @@ export function formationInfo(kind: WorldFormation, n: number): FormationInfo {
       return { camera: 'flythrough', distance: 8, height: 0, travel: Math.ceil(n / 10) * 2.4 }
     case 'wave':
       return { camera: 'sweep', distance: 12, height: 6, travel: 10 }
+    case 'jelly':
+      return {
+        camera: 'orbit',
+        distance: Math.max(2, Math.ceil(Math.sqrt(Math.ceil(n / 6)))) * TILE_W * 1.9 + 3,
+        height: 2,
+        travel: 0
+      }
   }
 }
 
@@ -215,4 +274,25 @@ export function scattered(i: number): Placement {
 export function easeInOut(t: number): number {
   const c = Math.min(1, Math.max(0, t))
   return c < 0.5 ? 4 * c * c * c : 1 - Math.pow(-2 * c + 2, 3) / 2
+}
+
+/** Mittelpunkt des Wackelpudding-Würfels: schwebt gemächlich umher. */
+export function jellyCenter(t: number): Vec3 {
+  return [Math.sin(t * 0.37) * 2.2, Math.sin(t * 0.53) * 1.1, Math.cos(t * 0.29) * 1.8]
+}
+
+/** Drehung des Wackelpudding-Würfels (um die Hochachse, dazu leichtes Kippen). */
+export function jellyRotation(t: number): (v: Vec3) => Vec3 {
+  const a = t * 0.45
+  const b = Math.sin(t * 0.5) * 0.35
+  const ca = Math.cos(a)
+  const sa = Math.sin(a)
+  const cb = Math.cos(b)
+  const sb = Math.sin(b)
+  return (v) => {
+    // erst um X kippen, dann um Y drehen
+    const y = v[1] * cb - v[2] * sb
+    const z = v[1] * sb + v[2] * cb
+    return [v[0] * ca + z * sa, y, -v[0] * sa + z * ca]
+  }
 }

@@ -169,7 +169,8 @@ export const WORLD_FORMATIONS = [
   'cube',
   'carousel',
   'tunnel',
-  'wave'
+  'wave',
+  'jelly'
 ] as const
 export type WorldFormation = (typeof WORLD_FORMATIONS)[number]
 
@@ -182,7 +183,8 @@ export const WORLD_FORMATION_LABELS: Record<WorldFormation, string> = {
   cube: 'Würfel',
   carousel: 'Karussell',
   tunnel: 'Tunnel',
-  wave: 'Welle'
+  wave: 'Welle',
+  jelly: 'Wackelpudding-Würfel'
 }
 
 const defaultWorldFormations: WeightedOption<WorldFormation>[] = WORLD_FORMATIONS.map((id) => ({
@@ -309,8 +311,6 @@ export const settingsSchema = z.object({
   worldDuration: field(rangeSchema, { min: 18, max: 26, mode: 'random' } satisfies Range),
   /** Wie viele Fotos als Kacheln mitspielen. */
   worldTiles: field(rangeSchema, { min: 40, max: 60, mode: 'random' } satisfies Range),
-  /** Wie viele Formationen nacheinander gezeigt werden. */
-  worldFormationCount: field(rangeSchema, { min: 2, max: 4, mode: 'random' } satisfies Range),
   /** Tempo der Kamera (1 = normal). */
   worldCameraSpeed: field(rangeSchema, { min: 1, max: 1, mode: 'fixed' } satisfies Range),
   worldFormations: field(weightedSchema(WORLD_FORMATIONS), defaultWorldFormations),

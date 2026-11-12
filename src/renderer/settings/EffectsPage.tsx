@@ -77,7 +77,7 @@ export function EffectsPage({ s, update }: { s: Settings; update: Update }): Rea
       <Card title="3D-Fotowelt">
         <Field
           label="Zwischenspiel"
-          hint="Viele Fotos fliegen als Kacheln in den Raum und ordnen sich nacheinander zu Formationen; die Kamera fliegt hindurch und taucht am Ende in ein Foto ein, mit dem die Show weiterläuft."
+          hint="Viele Fotos fliegen als Kacheln in den Raum und ordnen sich zu einer Formation; die Kamera fliegt hindurch und taucht am Ende in ein Foto ein, mit dem die Show weiterläuft."
         >
           <div className="flex flex-wrap items-center gap-4">
             <Toggle
@@ -122,16 +122,6 @@ export function EffectsPage({ s, update }: { s: Settings; update: Update }): Rea
             max={120}
             step={1}
             unit="Fotos"
-          />
-        </Field>
-        <Field label="Formationen je Zwischenspiel">
-          <RangeInput
-            value={s.worldFormationCount}
-            onChange={(v) => update({ worldFormationCount: v })}
-            min={1}
-            max={6}
-            step={1}
-            unit=""
           />
         </Field>
         <Field label="Kameratempo" hint="100 % = normal.">

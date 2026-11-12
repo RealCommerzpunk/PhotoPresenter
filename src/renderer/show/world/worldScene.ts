@@ -7,6 +7,7 @@ import {
   easeInOut,
   formationInfo,
   hash01,
+  jellyCenter,
   placement,
   scattered,
   TILE_H,
@@ -44,12 +45,13 @@ function sharedRenderer(THREE: Three): ThreeNS.WebGLRenderer {
 
 function geometries(THREE: Three): { tile: ThreeNS.PlaneGeometry; frame: ThreeNS.PlaneGeometry } {
   if (!tileGeometry) {
-    tileGeometry = new THREE.PlaneGeometry(TILE_W, TILE_H)
+    // fein unterteilt, damit sich die Fotos beim Wackelpudding biegen können
+    tileGeometry = new THREE.PlaneGeometry(TILE_W, TILE_H, 10, 8)
     // ImageBitmaps werden nicht gespiegelt hochgeladen: v-Koordinate umdrehen.
     const uv = tileGeometry.attributes.uv
     for (let i = 0; i < uv.count; i++) uv.setY(i, 1 - uv.getY(i))
     uv.needsUpdate = true
-    frameGeometry = new THREE.PlaneGeometry(TILE_W + 0.12, TILE_H + 0.12)
+    frameGeometry = new THREE.PlaneGeometry(TILE_W + 0.12, TILE_H + 0.12, 10, 8)
   }
   return { tile: tileGeometry, frame: frameGeometry! }
 }
@@ -61,8 +63,6 @@ export interface WorldTile {
 
 export interface WorldPlan {
   tiles: WorldTile[]
-  /** Index der Kachel, in die die Kamera am Ende eintaucht. */
-  finalIndex: number
   formations: WorldFormation[]
   duration: number
   cameraSpeed: number
@@ -82,6 +82,22 @@ const DIVE = 3.4
 const FOV = 50
 
 /**
+ * Ersetzt three.js 'project_vertex': Punkte werden in Weltkoordinaten vom Mittelpunkt des
+ * Würfels weg und zu ihm hin bewegt, mit Wellen, die über die Oberfläche laufen.
+ */
+const JELLY_VERTEX = /* glsl */ `
+  vec4 jellyWorld = modelMatrix * vec4(transformed, 1.0);
+  vec3 jellyDir = jellyWorld.xyz - uCenter;
+  float jellyLen = length(jellyDir) + 1e-4;
+  float jellyWave = sin(jellyWorld.x * 1.1 + uTime * 4.1) * 0.5
+                  + sin(jellyWorld.y * 1.3 - uTime * 3.3) * 0.35
+                  + sin(jellyWorld.z * 0.9 + uTime * 5.2) * 0.3;
+  jellyWorld.xyz += (jellyDir / jellyLen) * uJelly * jellyWave;
+  vec4 mvPosition = viewMatrix * jellyWorld;
+  gl_Position = projectionMatrix * mvPosition;
+`
+
+/**
  * Zwischenspiel „3D-Fotowelt“: Fotos als Kacheln im Raum, die sich nacheinander zu
  * Formationen ordnen; die Kamera fliegt hindurch und taucht am Ende in ein Foto ein.
  * Three.js zeichnet in ein eigenes Canvas, das jeden Frame als Textur in PixiJS landet,
@@ -99,10 +115,17 @@ export class WorldScene extends TimedScene implements Scene {
   private readonly tileTextures: ThreeNS.Texture[] = []
   private readonly materials: ThreeNS.Material[] = []
   private readonly phases: Phase[] = []
+  /** Kachel, in die die Kamera eintaucht; wird erst zu Beginn des Eintauchens gewählt. */
+  private finalIndex = -1
   private readonly helper: ThreeNS.Object3D
   private readonly qa: ThreeNS.Quaternion
   private readonly qb: ThreeNS.Quaternion
   private size: Size = { w: 0, h: 0 }
+  private readonly jelly: {
+    uTime: { value: number }
+    uJelly: { value: number }
+    uCenter: { value: ThreeNS.Vector3 }
+  }
 
   constructor(
     private readonly THREE: Three,
@@ -129,7 +152,13 @@ export class WorldScene extends TimedScene implements Scene {
     this.qb = new THREE.Quaternion()
 
     const { tile, frame } = geometries(THREE)
+    this.jelly = {
+      uTime: { value: 0 },
+      uJelly: { value: 0 },
+      uCenter: { value: new THREE.Vector3() }
+    }
     const frameMaterial = new THREE.MeshBasicMaterial({ color: 0xf4f1ea, side: THREE.DoubleSide })
+    this.jellify(frameMaterial)
     this.materials.push(frameMaterial)
     for (const t of plan.tiles) {
       const tex = new THREE.Texture(t.bitmap)
@@ -138,6 +167,7 @@ export class WorldScene extends TimedScene implements Scene {
       tex.needsUpdate = true
       this.tileTextures.push(tex)
       const mat = new THREE.MeshBasicMaterial({ map: tex, side: THREE.DoubleSide })
+      this.jellify(mat)
       this.materials.push(mat)
       const mesh = new THREE.Mesh(tile, mat)
       // heller Rahmen knapp hinter dem Foto
@@ -148,6 +178,20 @@ export class WorldScene extends TimedScene implements Scene {
       this.meshes.push(mesh)
     }
     this.planPhases()
+  }
+
+  /**
+   * Wackelpudding: verformt die (fein unterteilten) Kacheln im Vertex-Shader, sodass sich
+   * die Fotos selbst wabbelnd mitbiegen. Ohne Wackelpudding ist die Stärke 0.
+   */
+  private jellify(material: ThreeNS.MeshBasicMaterial): void {
+    material.onBeforeCompile = (shader) => {
+      Object.assign(shader.uniforms, this.jelly)
+      shader.vertexShader =
+        'uniform float uTime;\nuniform float uJelly;\nuniform vec3 uCenter;\n' +
+        shader.vertexShader.replace('#include <project_vertex>', JELLY_VERTEX)
+    }
+    material.customProgramCacheKey = () => 'photopresenter-jelly-1'
   }
 
   /** Zeitplan: Einflug, je Formation Halten, dazwischen Morphen, am Ende Eintauchen. */
@@ -273,6 +317,18 @@ export class WorldScene extends TimedScene implements Scene {
       mesh.quaternion.copy(q)
     }
 
+    // Wackelpudding-Stärke: wächst beim Einflug, beruhigt sich beim Eintauchen,
+    // damit das Zielfoto am Ende glatt ist.
+    let wobble = 0
+    if (phase.to === 'jelly') {
+      const k = Math.min(1, Math.max(0, (t - phase.start) / phase.duration))
+      wobble = phase.kind === 'morph' ? easeInOut(k) : phase.kind === 'dive' ? 1 - easeInOut(k) : 1
+    }
+    this.jelly.uJelly.value = 0.28 * wobble
+    this.jelly.uTime.value = t
+    const c = jellyCenter(t)
+    this.jelly.uCenter.value.set(c[0], c[1], c[2])
+
     // Kamera
     let cam: { pos: Vec3; look: Vec3 }
     if (phase.kind === 'morph' && phase.from !== 'scatter') {
@@ -284,6 +340,7 @@ export class WorldScene extends TimedScene implements Scene {
     } else if (phase.kind === 'dive') {
       const k = easeInOut((t - phase.start) / phase.duration)
       const from = this.cameraPose(phase.to, phase.start - this.formationStart(phase.to))
+      if (this.finalIndex < 0) this.chooseFinal(phase.to, phase.start, from.pos)
       const target = this.diveTarget(t)
       cam = { pos: mix(from.pos, target.pos, k), look: mix(from.look, target.look, k) }
     } else {
@@ -295,10 +352,44 @@ export class WorldScene extends TimedScene implements Scene {
     this.render(screen)
   }
 
+  /** Ist das Eintauchen in die Zielkachel schon im Gang? */
+  get diving(): boolean {
+    return this.finalIndex >= 0
+  }
+
+  /** Foto, in das die Kamera eintaucht (erst gültig, wenn `diving` true ist). */
+  get finalName(): string {
+    return this.plan.tiles[Math.max(0, this.finalIndex)].name
+  }
+
+  /**
+   * Zielkachel wählen: die der Kamera am meisten zugewandte, nahe Kachel. So fliegt die
+   * Kamera nie durch die Formation hindurch (z. B. auf die Rückseite eines Würfels).
+   */
+  private chooseFinal(kind: WorldFormation, t: number, cam: Vec3): void {
+    let best = 0
+    let bestScore = -Infinity
+    for (let i = 0; i < this.meshes.length; i++) {
+      const p = this.place(kind, i, t)
+      const n: Vec3 = [p.target[0] - p.pos[0], p.target[1] - p.pos[1], p.target[2] - p.pos[2]]
+      const toCam: Vec3 = [cam[0] - p.pos[0], cam[1] - p.pos[1], cam[2] - p.pos[2]]
+      const nl = Math.hypot(...n) || 1
+      const cl = Math.hypot(...toCam) || 1
+      const facing = (n[0] * toCam[0] + n[1] * toCam[1] + n[2] * toCam[2]) / (nl * cl)
+      // zugewandt zählt am meisten, Nähe ein wenig
+      const score = facing - cl * 0.01
+      if (score > bestScore) {
+        bestScore = score
+        best = i
+      }
+    }
+    this.finalIndex = best
+  }
+
   /** Kamera vor der Zielkachel, so nah, dass die Kachel das Bild ausfüllt. */
   private diveTarget(t: number): { pos: Vec3; look: Vec3 } {
     const last = this.phases[this.phases.length - 1].to
-    const p = this.place(last, this.plan.finalIndex, t)
+    const p = this.place(last, this.finalIndex, t)
     const dir: Vec3 = [p.target[0] - p.pos[0], p.target[1] - p.pos[1], p.target[2] - p.pos[2]]
     const len = Math.hypot(...dir) || 1
     const aspect = this.size.w / Math.max(1, this.size.h)
@@ -337,8 +428,12 @@ export class WorldScene extends TimedScene implements Scene {
     this.sprite.height = screen.h
   }
 
+  /** Weiterschalten: sofort ins Eintauchen wechseln (statt bis zum Ende zu warten). */
   hurry(fade: number): void {
-    this.shorten(fade)
+    const dive = this.phases[this.phases.length - 1]
+    if (this.elapsed < dive.start) dive.start = this.elapsed
+    this.display = Math.max(0, dive.start + DIVE - this.fadeIn)
+    this.fadeOut = fade
   }
 
   destroy(): void {

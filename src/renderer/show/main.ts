@@ -39,7 +39,7 @@ type Prepared =
       style: TextStyle
       background: ImageBitmap | null
     }
-  | { kind: 'world'; scene: WorldScene; final: string }
+  | { kind: 'world'; scene: WorldScene }
 
 function dispose(p: Prepared): void {
   if (p.kind === 'photo') p.photo.destroy()
@@ -234,21 +234,24 @@ async function main(): Promise<void> {
   /** Zwischenspiel 3D-Fotowelt vorbereiten: Kacheln, Formationen, Zielfoto; vorab einmal zeichnen. */
   async function prepareWorld(): Promise<Prepared> {
     const THREE = await loadThree()
-    const count = Math.max(WORLD_MIN_TILES, Math.round(pick(settings.worldTiles)))
-    const tiles = thumbs.sample(count)
-    const wanted = Math.max(1, Math.round(pick(settings.worldFormationCount)))
-    const formations: WorldFormation[] = []
-    for (let i = 0; i < wanted * 4 && formations.length < wanted; i++) {
-      const f = pickWeighted(settings.worldFormations)
-      if (f && !formations.includes(f)) formations.push(f)
+    let count = Math.max(WORLD_MIN_TILES, Math.round(pick(settings.worldTiles)))
+    // Je Zwischenspiel genau eine Formation (per Fernbedienung auch eine bestimmte).
+    const formation: WorldFormation =
+      worldFormationWanted ?? pickWeighted(settings.worldFormations) ?? 'sphere'
+    worldFormationWanted = null
+    const formations: WorldFormation[] = [formation]
+    // Der Wackelpudding-Würfel ist nur geschlossen mit 6 × g² Kacheln (z. B. 54 = 6 × 3 × 3).
+    if (formation === 'jelly') {
+      const g = Math.max(2, Math.round(Math.sqrt(count / 6)))
+      count = 6 * g * g
     }
-    if (!formations.length) formations.push('sphere')
-    const finalIndex = Math.floor(Math.random() * tiles.length)
+    const sampled = thumbs.sample(count)
+    // Zu wenige Vorschaubilder: Fotos wiederholen, damit die Form vollständig ist.
+    const tiles = Array.from({ length: count }, (_, i) => sampled[i % sampled.length])
     const scene = new WorldScene(
       THREE,
       {
         tiles,
-        finalIndex,
         formations,
         duration: pick(settings.worldDuration),
         cameraSpeed: pick(settings.worldCameraSpeed)
@@ -257,7 +260,7 @@ async function main(): Promise<void> {
       1.6
     )
     await scene.warmUp(screen())
-    return { kind: 'world', scene, final: tiles[finalIndex].name }
+    return { kind: 'world', scene }
   }
 
   // ---------- 3D-Fotowelt: Zeitplan ----------
@@ -265,6 +268,9 @@ async function main(): Promise<void> {
   let photosSinceWorld = 0
   let worldAt = Math.max(1, Math.round(pick(settings.worldEvery)))
   let worldForced = false
+  let worldFormationWanted: WorldFormation | null = null
+  /** Zielfoto der laufenden 3D-Welt ist schon eingereiht. */
+  let worldFinalQueued = false
 
   function worldDue(): boolean {
     if (thumbs.size < WORLD_MIN_TILES) return false
@@ -274,7 +280,17 @@ async function main(): Promise<void> {
 
   /** Nächster Eintrag: 3D-Zwischenspiel, wenn fällig, sonst aus dem Ablauf. */
   function nextEntry(): Entry | undefined {
-    if (worldDue() && !(current instanceof WorldScene)) {
+    // Während der 3D-Welt erst vorladen, wenn das Zielfoto feststeht (Beginn des Eintauchens);
+    // mit genau diesem Foto geht die Show dann weiter.
+    if (current instanceof WorldScene) {
+      if (!current.diving) return undefined
+      if (!worldFinalQueued) {
+        worldFinalQueued = true
+        sequencer.insertNext(current.finalName)
+      }
+      return sequencer.next()
+    }
+    if (worldDue()) {
       worldForced = false
       photosSinceWorld = 0
       worldAt = Math.max(1, Math.round(pick(settings.worldEvery)))
@@ -335,8 +351,7 @@ async function main(): Promise<void> {
 
   function createScene(p: Prepared, fade: number): Scene {
     if (p.kind === 'world') {
-      // Mit dem Foto, in das die Kamera eintaucht, geht die Show weiter.
-      sequencer.insertNext(p.final)
+      worldFinalQueued = false
       p.scene.fadeIn = fade
       return p.scene
     }
@@ -481,6 +496,8 @@ async function main(): Promise<void> {
     const dt = Math.min(0.1, ticker.deltaMS / 1000)
     const s = screen()
     effects.update(dt, s)
+    // In der 3D-Welt wird erst beim Eintauchen vorgeladen (siehe nextEntry).
+    if (current instanceof WorldScene && !incoming && !ready && !loading) prefetch()
     // Vorschaubilder für die 3D-Welt nur in ruhigen Phasen nachladen.
     if (!incoming && (settings.worldEnabled || worldForced)) {
       thumbs.tick(Math.round(Math.max(settings.worldTiles.min, settings.worldTiles.max)))
