@@ -5,9 +5,12 @@ import type { ExportProgress, ExportResult } from '@shared/ipc'
 import type { Settings } from '@shared/settings'
 import { listPhotos } from './photos'
 import { DATA_DIR_NAME } from './portable'
+import { resourcePath } from './resources'
 
 /** Ordnername der Fotos im Paket (relativ zum Programm). Technische Namen sind englisch. */
 const PHOTOS_DIR = 'Photos'
+
+const QUICKSTART = 'Quickstart.pdf'
 
 const README = `PhotoPresenter – zum Mitnehmen
 ==============================
@@ -24,6 +27,11 @@ Ordner:
 
 Den ganzen Ordner kann man beliebig kopieren (USB-Stick, anderer Rechner) –
 alles reist mit.
+
+Ausführliche Anleitung zum Loslegen und Ausprobieren: Quickstart.pdf
+
+Programm-Icon: Three Musketeers – Flaticon
+https://www.flaticon.com/authors/three-musketeers
 `
 
 /** Freier Zielordner: „PhotoPresenter“, sonst „PhotoPresenter (2)“ usw. */
@@ -100,6 +108,11 @@ export async function exportPackage(
     await writeFile(join(dest, DATA_DIR_NAME, 'settings.json'), JSON.stringify(data, null, 2))
     await writeFaceIndex(join(dest, DATA_DIR_NAME, 'faces.json'))
     await writeFile(join(dest, 'README.txt'), README.replace(/\n/g, '\r\n'))
+    // Anleitung als PDF (gepackt unter resources/, in der Entwicklung im Projektordner)
+    const guide = app.isPackaged ? resourcePath(QUICKSTART) : join(app.getAppPath(), QUICKSTART)
+    await copyFile(guide, join(dest, QUICKSTART)).catch(() => {
+      notes.push('Anleitung (Quickstart.pdf) nicht gefunden.')
+    })
     return { ok: true, path: dest, notes }
   } catch (err) {
     return { ok: false, path: dest, notes, error: (err as Error).message }

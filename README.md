@@ -1,6 +1,10 @@
+<p align="center"><img src="resources/icon.png" width="128" alt="PhotoPresenter"></p>
+
 # PhotoPresenter
 
 Zufällige Vollbild-Foto-Diashow für Windows und Linux.
+
+**Loslegen mit einem Weitergabe-Ordner:** [Quickstart.md](Quickstart.md) (auch als [PDF](Quickstart.pdf))
 
 - Fotos aus einem Ordner in zufälliger Reihenfolge, möglichst bildschirmfüllend.
   Freie Ränder werden unauffällig aus dem Foto selbst aufgefüllt.
@@ -54,6 +58,8 @@ Esc beenden · Leertaste Pause · ←/→ blättern · I Info zum Foto (Auflösu
 
 Die portable Version (`PhotoPresenter <version>.exe` aus `npm run dist:win`, unter Linux das AppImage) speichert alles im Ordner `Data` neben der Programmdatei. Mit einem Ordner `Photos` daneben und dem Fotoordner „Photos“ in den Einstellungen lässt sich der ganze Ordner kopieren und weitergeben. Einfacher: **Einstellungen → Allgemein → Mitnehmen → Paket für die Weitergabe erstellen**.
 
+Die Anleitung `Quickstart.md` ist die Quelle für `Quickstart.pdf` (liegt jedem Weitergabe-Paket bei); nach Änderungen `npm run quickstart` ausführen.
+
 ## Aufbau
 
 ```
@@ -76,3 +82,7 @@ resources/      Modelle und Fonts, die mit ausgeliefert werden
 7. Feinschliff und erstes Release (Ruckelfreiheit erledigt in 0.6.2)
 
 Dazugekommen (0.7–0.12): Mitnehmen (portabel, Weitergabe-Paket), Bildschirmauswahl, Fernbedienung per Handy mit QR-Code (mit Emojis, Einfrieren, Galerie und eigener Reihenfolge), Fokus-Partner, Zoomgrenze und Begrenzung kleiner Fotos, relativer Fotopfad und portable Windows-Version, Partikel-Effekte, animierte Textfolien-Hintergründe, 3D-Fotowelt (inkl. Wackelpudding-Würfel).
+
+## Danksagung
+
+Programm-Icon von [Three Musketeers – Flaticon](https://www.flaticon.com/authors/three-musketeers).

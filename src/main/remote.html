@@ -4,6 +4,8 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
     <meta name="theme-color" content="#0b0d12" />
+    <link rel="icon" type="image/png" href="/icon.png" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
     <meta
       http-equiv="Content-Security-Policy"
       content="default-src 'self'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; connect-src 'self'; img-src 'self'"
@@ -47,6 +49,14 @@
         padding-left: 12px;
         padding-right: 12px;
         border-bottom: 1px solid var(--line);
+      }
+      .logo {
+        width: 22px;
+        height: 22px;
+        border-radius: 5px;
+        background: rgba(255, 255, 255, 0.9);
+        padding: 1px;
+        align-self: center;
       }
       .top {
         display: flex;
@@ -427,6 +437,7 @@
   <body>
     <header>
       <div class="top">
+        <img class="logo" src="/icon.png" alt="" />
         <b>PhotoPresenter</b>
         <span class="status" id="status">Verbinde …</span>
       </div>

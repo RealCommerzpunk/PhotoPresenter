@@ -2,6 +2,11 @@
 
 Alle Änderungen je Version. Format: neueste Version oben, Datum im Format JJJJ-MM-TT.
 
+## 0.12.2 – 2026-11-12
+
+- **Eigenes Programm-Icon** für die .exe, die Fenster, die Fernbedienung (auch als Lesezeichen und auf dem Startbildschirm des Handys) und GitHub. Icon von Three Musketeers (Flaticon), Nennung in README, Einstellungen und Paket
+- **Schnellstart-Anleitung** `Quickstart.md` mit gestalteter PDF (`npm run quickstart`); die PDF liegt jedem Weitergabe-Paket bei
+
 ## 0.12.1 – 2026-11-12
 
 - **Texte und Emojis verdecken keine Gesichter mehr**: Texte über Fotos wählen den Platz (Stil-Position, sonst unten, oben, Ecken, Mitte), an dem sie in ihrer Einblendzeit keine erkannten Gesichter überdecken – die Kamerabewegung wird mitgerechnet. Emojis von der Fernbedienung suchen sich ebenfalls freie Stellen neben den Gesichtern. Mittig gesetzte Stile dürfen jetzt in der Mitte bleiben, wenn dort kein Gesicht ist (bei noch nicht analysierten Fotos weiter vorsichtshalber unten)

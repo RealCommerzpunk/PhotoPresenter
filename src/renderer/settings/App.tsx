@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import appIcon from '../../../resources/icon.png'
 import {
   defaultSettings,
   FILL_LABELS,
@@ -307,7 +308,10 @@ export function App(): React.JSX.Element {
   return (
     <div className="flex h-full">
       <aside className="flex w-56 flex-col border-r border-white/10 bg-black/30 p-4">
-        <h1 className="mb-6 text-lg font-semibold tracking-wide">PhotoPresenter</h1>
+        <h1 className="mb-6 flex items-center gap-2.5 text-lg font-semibold tracking-wide">
+          <img src={appIcon} alt="" className="h-8 w-8 rounded-md bg-white/90 p-0.5" />
+          PhotoPresenter
+        </h1>
         <nav className="flex flex-col gap-1">
           {sections.map((s) => (
             <button
@@ -327,6 +331,17 @@ export function App(): React.JSX.Element {
             Fernbedienung als Fenster · Q QR-Code · D fps
           </div>
           <div className="mt-2">Version {version}</div>
+          <div className="mt-1">
+            Icon:{' '}
+            <a
+              href="https://www.flaticon.com/authors/three-musketeers"
+              target="_blank"
+              rel="noreferrer"
+              className="underline hover:text-white/70"
+            >
+              Three Musketeers – Flaticon
+            </a>
+          </div>
         </div>
       </aside>
 

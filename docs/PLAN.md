@@ -131,6 +131,7 @@ Jeder Meilenstein ergibt eine lauffähige Version und einen eigenen Commit/PR.
 - ✅ Relativer Fotopfad, portable Windows-Version
 - ✅ 0.10.0: Wackelpudding-Würfel, eine Formation je Zwischenspiel, kleine Fotos begrenzen, gezielte Auslöser und Sofort-Texte auf der Fernbedienung
 - ✅ 0.11.1: Bildschirm- und Bereichsauswahl
+- ✅ 0.12.2: Programm-Icon, Schnellstart-Anleitung (Markdown + PDF im Paket)
 - ✅ 0.12.1: Texte und Emojis weichen Gesichtern aus
 - ✅ 0.12.0: Mitnehmen (portabler Datenordner `Data`, Gesichtsindex mit relativen Pfaden, Weitergabe-Paket), Texte „nur auf Abruf“, kompakte Fernbedienung mit Reitern, Eintauchen der 3D-Welt endet in der echten Größe des Fotos
 - ✅ 0.11.0: Rückmeldung auf der Fernbedienung, Emojis, Foto einfrieren (Bewegung in Schleife), Galerie mit eigener Reihenfolge, Info-Tafel (Taste I, EXIF), Fernbedienung als Fenster (Taste R); per Hand Ausgelöstes endet beim nächsten Übergang; ruhiger Start nach der 3D-Welt

@@ -8,6 +8,8 @@ Plan und Meilensteine: `docs/PLAN.md` · Änderungen je Version: `CHANGELOG.md` 
 - `npm run dev`: App mit Hot Reload; `npm run dev -- --show` startet direkt die Show
 - `npm run typecheck`, `npm run lint`, `npm test` (Vitest): vor jedem Commit alle drei
 - `npm run models`: Modelle für die Gesichtserkennung nach `resources/models/` (nicht im Git, Prüfsummen im Skript); `dist` ruft das selbst auf
+- `npm run quickstart`: `Quickstart.pdf` aus `Quickstart.md` neu erzeugen (nach jeder Änderung der Anleitung; die PDF kommt per `extraResources` ins Programm und ins Weitergabe-Paket)
+- Icon: `build/icon.png`/`icon.ico` (electron-builder), `resources/icon.png` (Fenster per `iconPath()`, Fernbedienung `/icon.png`); Nennung „Three Musketeers – Flaticon“ muss erhalten bleiben
 - `npm run dist:win`: Installer lokal in `dist/` (Linux-Installer nur auf Linux/WSL)
 - Session abschließen: `/session-ende`
 

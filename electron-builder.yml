@@ -10,6 +10,8 @@ extraResources:
   - from: resources
     to: resources
     filter: ['**/*']
+  - from: Quickstart.pdf
+    to: resources/Quickstart.pdf
 win:
   target: [nsis, portable]
 nsis:

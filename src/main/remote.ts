@@ -33,8 +33,9 @@ export interface RemoteHandlers {
   /** Vorschaubild als JPEG. */
   thumb(name: string): Promise<Buffer | null>
   queue(op: QueueOp): void
+  /** Programm-Icon (PNG) für Lesezeichen und Startbildschirm des Handys. */
+  icon?(): Promise<Buffer | null>
 }
-
 
 /** Verbundenes Handy (Server-Sent Events). */
 interface Client {
@@ -127,6 +128,16 @@ export class RemoteServer {
     try {
       if (method === 'GET' && url.pathname === '/') {
         return text(200, pageHtml, 'text/html; charset=utf-8')
+      }
+      if (
+        method === 'GET' &&
+        (url.pathname === '/icon.png' || url.pathname === '/apple-touch-icon.png')
+      ) {
+        const image = await this.handlers.icon?.()
+        if (!image) return text(404, 'Kein Icon')
+        return new Response(new Uint8Array(image), {
+          headers: { 'Content-Type': 'image/png', 'Cache-Control': 'max-age=86400' }
+        })
       }
       if (method === 'GET' && url.pathname === '/api/state') return json(this.handlers.state())
       if (method === 'GET' && url.pathname === '/api/events') return this.events()

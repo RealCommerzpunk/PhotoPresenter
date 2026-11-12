@@ -37,6 +37,7 @@ import { QueueStore } from './queue'
 import { exportPackage } from './exportPackage'
 import { dataLocation, setupDataLocation } from './portable'
 import { RemoteServer } from './remote'
+import { iconPath, iconPng } from './resources'
 import { loadSettings, photoFolder, updateSettings } from './settings'
 import { ThumbCache } from './thumbs'
 
@@ -117,7 +118,8 @@ const remote = new RemoteServer({
   command: showCommand,
   photos: async () => (await listPhotos()).files,
   thumb: (name) => thumbs.get(name),
-  queue: applyQueueOp
+  queue: applyQueueOp,
+  icon: iconPng
 })
 
 /** Sendet an alle sichtbaren Fenster (nicht an das Analyse-Fenster). */
@@ -148,6 +150,7 @@ function loadPage(win: BrowserWindow, page: 'settings' | 'show' | 'indexer', has
 
 function createSettingsWindow(): void {
   settingsWindow = new BrowserWindow({
+    icon: iconPath(),
     width: 1100,
     height: 760,
     minWidth: 800,
@@ -209,6 +212,7 @@ function startShow(options: ShowOptions = {}): void {
     }
   }
   showWindow = new BrowserWindow({
+    icon: iconPath(),
     ...placement,
     backgroundColor: '#000000',
     show: false,
@@ -273,9 +277,7 @@ function runExport(parent: string): Promise<ExportResult> {
 
 /** Bildschirme von links nach rechts (bzw. oben nach unten), so nummeriert wie in den Einstellungen. */
 function sortedDisplays(): Electron.Display[] {
-  return screen
-    .getAllDisplays()
-    .sort((a, b) => a.bounds.x - b.bounds.x || a.bounds.y - b.bounds.y)
+  return screen.getAllDisplays().sort((a, b) => a.bounds.x - b.bounds.x || a.bounds.y - b.bounds.y)
 }
 
 /** Bildschirm für die Show: der gewählte, sonst (oder wenn er fehlt) der mit der Maus. */
@@ -340,31 +342,37 @@ function commandsForTests(): void {
   for (const entry of list.split(';')) {
     const [sec, cmd, ...rest] = entry.split(':')
     const arg = rest.join(':') || undefined
-    setTimeout(() => {
-      if (cmd === 'key' && arg) {
-        showWindow?.webContents.sendInputEvent({ type: 'keyDown', keyCode: arg })
-        showWindow?.webContents.sendInputEvent({ type: 'char', keyCode: arg })
-        showWindow?.webContents.sendInputEvent({ type: 'keyUp', keyCode: arg })
-      } else if (cmd === 'queue' && arg) applyQueueOp({ op: 'add', name: arg })
-      else if (cmd === 'drag' && arg && remoteWindow) {
-        // "8:drag:x1,y1,x2,y2": im Fernbedienungs-Fenster gedrückt halten und ziehen
-        const [x1, y1, x2, y2] = arg.split(',').map(Number)
-        const wc = remoteWindow.webContents
-        wc.sendInputEvent({ type: 'mouseDown', x: x1, y: y1, button: 'left', clickCount: 1 })
-        setTimeout(() => {
-          for (let i = 1; i <= 10; i++) {
-            const x = Math.round(x1 + ((x2 - x1) * i) / 10)
-            const y = Math.round(y1 + ((y2 - y1) * i) / 10)
-            setTimeout(() => wc.sendInputEvent({ type: 'mouseMove', x, y, button: 'left' }), i * 40)
-          }
-          setTimeout(
-            () => wc.sendInputEvent({ type: 'mouseUp', x: x2, y: y2, button: 'left', clickCount: 1 }),
-            600
-          )
-        }, 600)
-      }
-      else showCommand(cmd as ShowCommand, arg)
-    }, Number(sec) * 1000)
+    setTimeout(
+      () => {
+        if (cmd === 'key' && arg) {
+          showWindow?.webContents.sendInputEvent({ type: 'keyDown', keyCode: arg })
+          showWindow?.webContents.sendInputEvent({ type: 'char', keyCode: arg })
+          showWindow?.webContents.sendInputEvent({ type: 'keyUp', keyCode: arg })
+        } else if (cmd === 'queue' && arg) applyQueueOp({ op: 'add', name: arg })
+        else if (cmd === 'drag' && arg && remoteWindow) {
+          // "8:drag:x1,y1,x2,y2": im Fernbedienungs-Fenster gedrückt halten und ziehen
+          const [x1, y1, x2, y2] = arg.split(',').map(Number)
+          const wc = remoteWindow.webContents
+          wc.sendInputEvent({ type: 'mouseDown', x: x1, y: y1, button: 'left', clickCount: 1 })
+          setTimeout(() => {
+            for (let i = 1; i <= 10; i++) {
+              const x = Math.round(x1 + ((x2 - x1) * i) / 10)
+              const y = Math.round(y1 + ((y2 - y1) * i) / 10)
+              setTimeout(
+                () => wc.sendInputEvent({ type: 'mouseMove', x, y, button: 'left' }),
+                i * 40
+              )
+            }
+            setTimeout(
+              () =>
+                wc.sendInputEvent({ type: 'mouseUp', x: x2, y: y2, button: 'left', clickCount: 1 }),
+              600
+            )
+          }, 600)
+        } else showCommand(cmd as ShowCommand, arg)
+      },
+      Number(sec) * 1000
+    )
   }
 }
 
@@ -376,19 +384,22 @@ function captureForTests(win: BrowserWindow, prefix: string): void {
   const dir = process.env['PP_CAPTURE_DIR']
   if (app.isPackaged || !dir) return
   let n = 0
-  const timer = setInterval(async () => {
-    if (win.isDestroyed()) return clearInterval(timer)
-    try {
-      const image = await win.webContents.capturePage()
-      await mkdir(dir, { recursive: true })
-      await writeFile(
-        join(dir, `${prefix}${String(++n).padStart(2, '0')}.jpg`),
-        image.resize({ width: 960 }).toJPEG(80)
-      )
-    } catch {
-      // Fenster gerade verdeckt oder im Aufbau: diese Aufnahme auslassen.
-    }
-  }, Number(process.env['PP_CAPTURE_MS']) || 2000)
+  const timer = setInterval(
+    async () => {
+      if (win.isDestroyed()) return clearInterval(timer)
+      try {
+        const image = await win.webContents.capturePage()
+        await mkdir(dir, { recursive: true })
+        await writeFile(
+          join(dir, `${prefix}${String(++n).padStart(2, '0')}.jpg`),
+          image.resize({ width: 960 }).toJPEG(80)
+        )
+      } catch {
+        // Fenster gerade verdeckt oder im Aufbau: diese Aufnahme auslassen.
+      }
+    },
+    Number(process.env['PP_CAPTURE_MS']) || 2000
+  )
 }
 
 /** Sitzung des Fernbedienungs-Fensters: Anfragen gehen direkt an den Server-Code, ohne Netzwerk. */
@@ -420,6 +431,7 @@ function toggleRemoteWindow(hash = ''): { ok: boolean; error?: string } {
   const width = 440
   const height = Math.min(960, area.height - 40)
   remoteWindow = new BrowserWindow({
+    icon: iconPath(),
     x: Math.round(other ? area.x + (area.width - width) / 2 : area.x + area.width - width - 24),
     y: area.y + 20,
     width,
