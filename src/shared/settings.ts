@@ -208,6 +208,9 @@ export const settingsSchema = z.object({
   focusPanOthers: field(z.enum(['off', 'before', 'after', 'random']), 'random'),
   /** Fotos mit der Person häufiger zeigen: 0 = normal, 1–3 = zusätzliche Male je Runde. */
   focusBoost: field(z.number().int().min(0).max(3), 1),
+  /** Fernbedienung per Handy (Webserver im lokalen Netz, ohne Passwort). */
+  remoteEnabled: field(z.boolean(), true),
+  remotePort: field(z.number().int().min(1024).max(65535), 8765),
   /** Texte, eigene Stile und Personen werden einzeln geprüft (siehe parseSettings). */
   texts: z.unknown().optional(),
   customStyles: z.unknown().optional(),

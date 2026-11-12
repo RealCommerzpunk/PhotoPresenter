@@ -1,6 +1,7 @@
 import { contextBridge, ipcRenderer, type IpcRendererEvent } from 'electron'
 import type { FaceIndexStatus } from '@shared/faces'
 import { IPC, type EmbedRequest, type PhotoPresenterApi } from '@shared/ipc'
+import type { ShowCommand } from '@shared/remote'
 import type { Settings } from '@shared/settings'
 
 /** Abonniert ein Ereignis aus dem Main-Prozess; liefert eine Abmeldefunktion. */
@@ -39,7 +40,11 @@ const api: PhotoPresenterApi = {
   markFace: (personId, photo, box, negative) =>
     ipcRenderer.invoke(IPC.markFace, personId, photo, box, negative),
   focusPhotos: () => ipcRenderer.invoke(IPC.focusPhotos),
-  reindexFaces: () => ipcRenderer.invoke(IPC.reindexFaces)
+  reindexFaces: () => ipcRenderer.invoke(IPC.reindexFaces),
+
+  onShowCommand: (callback) => subscribe<ShowCommand>(IPC.showCommand, callback),
+  reportShowStatus: (status) => ipcRenderer.send(IPC.showStatus, status),
+  remoteInfo: () => ipcRenderer.invoke(IPC.remoteInfo)
 }
 
 contextBridge.exposeInMainWorld('api', api)

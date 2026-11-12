@@ -54,6 +54,35 @@
         font-size: 16px;
         max-width: 70vw;
       }
+      #qr {
+        right: 32px;
+        bottom: 32px;
+        width: 260px;
+        padding: 18px;
+        border-radius: 18px;
+        background: rgba(10, 12, 18, 0.82);
+        backdrop-filter: blur(10px);
+        text-align: center;
+        z-index: 5;
+      }
+      #qr .qr-code svg {
+        width: 100%;
+        height: auto;
+        background: #fff;
+        border-radius: 10px;
+        display: block;
+      }
+      #qr .qr-title {
+        margin-top: 12px;
+        font-size: 18px;
+        font-weight: 600;
+      }
+      #qr .qr-text {
+        margin-top: 4px;
+        font-size: 15px;
+        color: rgba(255, 255, 255, 0.75);
+        word-break: break-all;
+      }
       #status {
         right: 24px;
         top: 20px;
@@ -70,6 +99,11 @@
     <div id="message" class="overlay" style="opacity: 1">Lade Fotos …</div>
     <div id="info" class="overlay"></div>
     <div id="status" class="overlay"></div>
+    <div id="qr" class="overlay">
+      <div class="qr-code"></div>
+      <div class="qr-title">Fernbedienung</div>
+      <div class="qr-text"></div>
+    </div>
     <script type="module" src="./main.ts"></script>
   </body>
 </html>

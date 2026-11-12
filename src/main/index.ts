@@ -3,9 +3,12 @@ import { join } from 'node:path'
 import { app, BrowserWindow, dialog, ipcMain, powerSaveBlocker, screen, shell } from 'electron'
 import type { PhotoFaces } from '@shared/faces'
 import { IPC, type EmbedResult, type FaceModel, type RelBox, type ShowOptions } from '@shared/ipc'
-import type { Settings } from '@shared/settings'
+import type { ShowCommand, ShowStatus, RemoteState } from '@shared/remote'
+import { REMOTE_KEYS } from '@shared/remote'
+import { PAN_OTHERS, TRANSITION_LABELS, type Settings } from '@shared/settings'
 import { FaceStore } from './faces'
 import { handlePhotoProtocol, listPhotos, registerPhotoScheme } from './photos'
+import { RemoteServer } from './remote'
 import { loadSettings, photoFolder, updateSettings } from './settings'
 
 registerPhotoScheme()
@@ -21,6 +24,32 @@ let showWindow: BrowserWindow | null = null
 let indexerWindow: BrowserWindow | null = null
 let powerBlockId: number | null = null
 let faceStore: FaceStore
+let showStatus: ShowStatus = { running: false, paused: false, label: '' }
+
+/** Fernbedienung: Zustand für die Handy-Seite. */
+function remoteState(): RemoteState {
+  const s = loadSettings()
+  const settings = Object.fromEntries(REMOTE_KEYS.map((k) => [k, s[k]])) as RemoteState['settings']
+  return {
+    version: app.getVersion(),
+    show: showStatus,
+    settings,
+    persons: s.persons.map((p) => ({ id: p.id, name: p.name })),
+    labels: { transitions: TRANSITION_LABELS, panOthers: PAN_OTHERS }
+  }
+}
+
+function showCommand(cmd: ShowCommand): void {
+  if (cmd === 'start') startShow()
+  else if (cmd === 'stop') stopShow()
+  else showWindow?.webContents.send(IPC.showCommand, cmd)
+}
+
+const remote = new RemoteServer({
+  state: remoteState,
+  applySettings: (patch) => setSettings(patch),
+  command: showCommand
+})
 
 /** Sendet an alle sichtbaren Fenster (nicht an das Analyse-Fenster). */
 function broadcast(channel: string, value: unknown): void {
@@ -104,8 +133,12 @@ function startShow(options: ShowOptions = {}): void {
     showWindow = null
     if (powerBlockId !== null) powerSaveBlocker.stop(powerBlockId)
     powerBlockId = null
+    showStatus = { running: false, paused: false, label: '' }
+    remote.broadcast()
     if (!settingsWindow) app.quit()
   })
+  showStatus = { running: true, paused: false, label: '' }
+  remote.broadcast()
   powerBlockId = powerSaveBlocker.start('prevent-display-sleep')
   // Für Tests in der Entwicklung: Frame-Messung mit PP_PERF=1.
   loadPage(showWindow, 'show', !app.isPackaged && process.env['PP_PERF'] ? 'perf' : '')
@@ -165,6 +198,10 @@ function setSettings(patch: Partial<Settings>): Settings {
   if (next.photoFolder !== prev.photoFolder || next.includeSubfolders !== prev.includeSubfolders) {
     void faceStore.rescan()
   }
+  if (next.remoteEnabled !== prev.remoteEnabled || next.remotePort !== prev.remotePort) {
+    void (next.remoteEnabled ? remote.start(next.remotePort) : remote.stop())
+  }
+  remote.broadcast()
   return next
 }
 
@@ -177,6 +214,12 @@ app.whenReady().then(() => {
   ipcMain.handle(IPC.setSettings, (_e, patch: Partial<Settings>) => setSettings(patch))
   ipcMain.handle(IPC.pickFolder, () => pickFolder())
   ipcMain.handle(IPC.listPhotos, () => listPhotos())
+  ipcMain.on(IPC.showStatus, (_e, status: ShowStatus) => {
+    showStatus = { ...status, running: showWindow !== null }
+    remote.broadcast()
+  })
+  ipcMain.handle(IPC.remoteInfo, () => remote.info(loadSettings().remoteEnabled))
+  if (loadSettings().remoteEnabled) void remote.start(loadSettings().remotePort)
 
   faceStore = new FaceStore(
     (status) => broadcast(IPC.faceStatusChanged, status),
@@ -216,6 +259,18 @@ app.whenReady().then(() => {
   createIndexerWindow()
   void faceStore.rescan()
 
+  // Nur für Tests in der Entwicklung: Handy-Seite der Fernbedienung in iPhone-Größe öffnen.
+  if (!app.isPackaged && process.env['PP_REMOTE_PREVIEW']) {
+    setTimeout(() => {
+      const phone = new BrowserWindow({ width: 390, height: 844, title: 'Fernbedienung (Test)' })
+      phone.webContents.on('console-message', ({ level, message }) => {
+        if (level === 'warning' || level === 'error') console.log(`[remote:${level}] ${message}`)
+      })
+      void phone.loadURL(`http://127.0.0.1:${loadSettings().remotePort}/`)
+      captureForTests(phone, 'remote')
+    }, 1500)
+  }
+
   // `--show` startet direkt die Diashow (z. B. für Autostart als Bilderrahmen).
   if (process.argv.includes('--show')) startShow()
   else createSettingsWindow()
@@ -225,7 +280,10 @@ app.whenReady().then(() => {
   })
 })
 
-app.on('before-quit', () => faceStore?.flush())
+app.on('before-quit', () => {
+  faceStore?.flush()
+  void remote.stop()
+})
 
 app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') app.quit()

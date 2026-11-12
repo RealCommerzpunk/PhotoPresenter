@@ -1,0 +1,530 @@
+<!doctype html>
+<html lang="de">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="theme-color" content="#0b0d12" />
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'self'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; connect-src 'self'"
+    />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <title>PhotoPresenter – Fernbedienung</title>
+    <style>
+      :root {
+        --bg: #0b0d12;
+        --card: #151821;
+        --line: rgba(255, 255, 255, 0.1);
+        --text: #e6e8ee;
+        --dim: rgba(255, 255, 255, 0.55);
+        --accent: #6366f1;
+        --accent2: #818cf8;
+      }
+      * {
+        box-sizing: border-box;
+        -webkit-tap-highlight-color: transparent;
+      }
+      body {
+        margin: 0;
+        background: var(--bg);
+        color: var(--text);
+        font:
+          16px/1.4 -apple-system,
+          system-ui,
+          'Segoe UI',
+          Roboto,
+          sans-serif;
+        padding: env(safe-area-inset-top) 12px calc(env(safe-area-inset-bottom) + 24px);
+      }
+      header {
+        position: sticky;
+        top: 0;
+        z-index: 2;
+        background: var(--bg);
+        padding: 12px 0 8px;
+      }
+      h1 {
+        font-size: 18px;
+        margin: 0 0 4px;
+      }
+      .status {
+        font-size: 13px;
+        color: var(--dim);
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+      .status b {
+        color: var(--text);
+      }
+      .off {
+        color: #f87171;
+      }
+      .controls {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 8px;
+        margin-top: 10px;
+      }
+      button {
+        font: inherit;
+        color: var(--text);
+        background: #1f2330;
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        padding: 12px 8px;
+      }
+      button:active {
+        background: #2a3042;
+      }
+      button.primary {
+        background: var(--accent);
+        border-color: var(--accent);
+      }
+      button.small {
+        padding: 6px 10px;
+        font-size: 14px;
+      }
+      .big {
+        font-size: 22px;
+      }
+      section {
+        background: var(--card);
+        border: 1px solid var(--line);
+        border-radius: 16px;
+        padding: 14px;
+        margin-top: 12px;
+      }
+      h2 {
+        font-size: 13px;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        color: var(--dim);
+        margin: 0 0 10px;
+      }
+      .row {
+        margin: 12px 0;
+      }
+      .row > label,
+      .label {
+        display: flex;
+        justify-content: space-between;
+        font-size: 15px;
+        margin-bottom: 6px;
+      }
+      .value {
+        color: var(--accent2);
+        font-variant-numeric: tabular-nums;
+      }
+      input[type='range'] {
+        width: 100%;
+        accent-color: var(--accent);
+        height: 28px;
+      }
+      .sub {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 13px;
+        color: var(--dim);
+      }
+      .sub input[type='range'] {
+        flex: 1;
+      }
+      .switch {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 6px 0;
+        font-size: 15px;
+      }
+      input[type='checkbox'] {
+        width: 22px;
+        height: 22px;
+        accent-color: var(--accent);
+      }
+      select,
+      textarea {
+        width: 100%;
+        font: inherit;
+        color: var(--text);
+        background: #0f1117;
+        border: 1px solid var(--line);
+        border-radius: 10px;
+        padding: 10px;
+      }
+      .chips {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+      }
+      .chip {
+        padding: 8px 12px;
+        border-radius: 999px;
+        font-size: 14px;
+        border: 1px solid var(--line);
+        background: #0f1117;
+        color: var(--dim);
+      }
+      .chip.on {
+        background: rgba(99, 102, 241, 0.25);
+        border-color: var(--accent2);
+        color: var(--text);
+      }
+      .text-item {
+        display: flex;
+        gap: 10px;
+        align-items: center;
+        padding: 8px 0;
+        border-top: 1px solid var(--line);
+        font-size: 15px;
+      }
+      .text-item span {
+        flex: 1;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+      .text-item small {
+        color: var(--dim);
+      }
+      .hint {
+        font-size: 12px;
+        color: var(--dim);
+      }
+      #offline {
+        display: none;
+        background: #7f1d1d;
+        color: #fff;
+        padding: 8px 12px;
+        border-radius: 10px;
+        margin-top: 8px;
+        font-size: 14px;
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <h1>PhotoPresenter</h1>
+      <div class="status" id="status">Verbinde …</div>
+      <div id="offline">Keine Verbindung zum Presenter – versuche es erneut …</div>
+      <div class="controls">
+        <button class="big" data-cmd="prev" aria-label="Zurück">◀</button>
+        <button class="big" id="pause" aria-label="Pause">⏯</button>
+        <button class="big" data-cmd="next" aria-label="Weiter">▶</button>
+        <button id="startstop" class="primary">Show starten</button>
+        <button data-cmd="qr">QR zeigen</button>
+        <button id="reload">Neu laden</button>
+      </div>
+    </header>
+
+    <section>
+      <h2>Zeiten</h2>
+      <div id="displayDuration"></div>
+      <div id="transitionDuration"></div>
+      <div id="textDuration"></div>
+    </section>
+
+    <section>
+      <h2>Bewegung</h2>
+      <div id="motionIntensity"></div>
+      <div class="row">
+        <label>Höchste Vergrößerung <span class="value" id="maxUpscaleValue"></span></label>
+        <input type="range" id="maxUpscale" min="100" max="250" step="5" />
+      </div>
+    </section>
+
+    <section>
+      <h2>Übergänge</h2>
+      <div class="chips" id="transitions"></div>
+    </section>
+
+    <section>
+      <h2>Fokus</h2>
+      <div class="switch">Fokus aktiv <input type="checkbox" id="focusEnabled" /></div>
+      <div class="row">
+        <div class="label">★ Fokus-Person</div>
+        <select id="focusPersonId"></select>
+      </div>
+      <div class="row">
+        <div class="label">♥ Fokus-Partner</div>
+        <select id="focusPartnerId"></select>
+      </div>
+      <div class="switch">Gemeinsam fokussieren <input type="checkbox" id="focusTogether" /></div>
+      <div class="row">
+        <div class="label">Andere Gesichter</div>
+        <select id="focusPanOthers"></select>
+      </div>
+      <div class="row">
+        <div class="label">Häufiger zeigen</div>
+        <select id="focusBoost">
+          <option value="0">normal</option>
+          <option value="1">etwas häufiger (×2)</option>
+          <option value="2">häufiger (×3)</option>
+          <option value="3">viel häufiger (×4)</option>
+        </select>
+      </div>
+      <div class="row">
+        <label>Erkennungsschwelle <span class="value" id="focusThresholdValue"></span></label>
+        <input type="range" id="focusThreshold" min="20" max="70" step="1" />
+      </div>
+    </section>
+
+    <section>
+      <h2>Texte</h2>
+      <div id="textFillerEvery"></div>
+      <div id="texts"></div>
+      <div class="row">
+        <div class="label">Neuer Fülltext</div>
+        <textarea id="newText" rows="2" placeholder="Text eingeben …"></textarea>
+        <div style="margin-top: 8px"><button class="small" id="addText">Hinzufügen</button></div>
+        <div class="hint">Stil wird zufällig gewählt; Feinheiten in den Einstellungen am PC.</div>
+      </div>
+    </section>
+
+    <script>
+      'use strict'
+      let state = null
+      let built = false
+      const $ = (id) => document.getElementById(id)
+
+      async function post(path, body) {
+        try {
+          const res = await fetch(path, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(body)
+          })
+          if (res.ok) render(await res.json())
+        } catch {
+          showOffline(true)
+        }
+      }
+      const patch = (p) => post('/api/settings', p)
+      const command = (cmd) => post('/api/show', { cmd })
+
+      // Änderungen an Reglern kurz sammeln, damit nicht jeder Pixel gesendet wird.
+      const timers = {}
+      function debounced(key, fn, ms = 250) {
+        clearTimeout(timers[key])
+        timers[key] = setTimeout(fn, ms)
+      }
+
+      /** Bereichsregler „von … bis“ mit Zufall. factor: Anzeige-Umrechnung (z. B. 100 für %). */
+      function rangeControl(key, title, unit, min, max, step, factor = 1) {
+        const box = $(key)
+        box.className = 'row'
+        box.innerHTML =
+          '<label>' +
+          title +
+          ' <span class="value"></span></label>' +
+          '<div class="sub">von <input type="range" data-part="min"></div>' +
+          '<div class="sub">bis <input type="range" data-part="max"></div>' +
+          '<div class="switch" style="font-size:14px">Zufällig im Bereich <input type="checkbox" data-part="mode"></div>'
+        const [lo, hi] = box.querySelectorAll('input[type=range]')
+        for (const el of [lo, hi]) Object.assign(el, { min, max, step })
+        const mode = box.querySelector('[data-part=mode]')
+        const value = box.querySelector('.value')
+        const read = () => {
+          const a = Number(lo.value) / factor
+          const b = Number(hi.value) / factor
+          return {
+            min: Math.min(a, b),
+            max: Math.max(a, b),
+            mode: mode.checked ? 'random' : 'fixed'
+          }
+        }
+        const show = (r) => {
+          const f = (v) => (Math.round(v * factor * 10) / 10).toLocaleString('de-DE')
+          value.textContent =
+            r.mode === 'random' ? f(r.min) + '–' + f(r.max) + ' ' + unit : f(r.min) + ' ' + unit
+          hi.parentElement.style.display = r.mode === 'random' ? 'flex' : 'none'
+        }
+        const onInput = () => {
+          const r = read()
+          show(r)
+          debounced(key, () => patch({ [key]: r }))
+        }
+        lo.oninput = hi.oninput = onInput
+        mode.onchange = onInput
+        box.update = (r) => {
+          if (document.activeElement !== lo) lo.value = r.min * factor
+          if (document.activeElement !== hi) hi.value = r.max * factor
+          mode.checked = r.mode === 'random'
+          show(r)
+        }
+      }
+
+      function options(select, items, current) {
+        const html = items.map(([v, l]) => '<option value="' + v + '">' + l + '</option>').join('')
+        if (select.dataset.html !== html) {
+          select.innerHTML = html
+          select.dataset.html = html
+        }
+        if (document.activeElement !== select) select.value = current
+      }
+
+      function escapeHtml(s) {
+        return s.replace(
+          /[&<>"]/g,
+          (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]
+        )
+      }
+
+      function build() {
+        rangeControl('displayDuration', 'Anzeigedauer', 's', 1, 60, 0.5)
+        rangeControl('transitionDuration', 'Überblenddauer', 's', 0, 8, 0.1)
+        rangeControl('textDuration', 'Textdauer', 's', 1, 30, 0.5)
+        rangeControl('motionIntensity', 'Bewegung (Zoom)', '%', 0, 60, 1, 100)
+        rangeControl('textFillerEvery', 'Fülltext alle', 'Fotos', 1, 50, 1)
+
+        $('maxUpscale').oninput = (e) => {
+          $('maxUpscaleValue').textContent = e.target.value + ' %'
+          debounced('maxUpscale', () => patch({ maxUpscale: Number(e.target.value) / 100 }))
+        }
+        $('focusThreshold').oninput = (e) => {
+          $('focusThresholdValue').textContent = e.target.value + ' %'
+          debounced('focusThreshold', () => patch({ focusThreshold: Number(e.target.value) / 100 }))
+        }
+        for (const id of ['focusEnabled', 'focusTogether']) {
+          $(id).onchange = (e) => patch({ [id]: e.target.checked })
+        }
+        $('focusPersonId').onchange = (e) => {
+          const id = e.target.value
+          patch({
+            focusPersonId: id,
+            focusPartnerId:
+              state.settings.focusPartnerId === id ? '' : state.settings.focusPartnerId
+          })
+        }
+        $('focusPartnerId').onchange = (e) => patch({ focusPartnerId: e.target.value })
+        $('focusPanOthers').onchange = (e) => patch({ focusPanOthers: e.target.value })
+        $('focusBoost').onchange = (e) => patch({ focusBoost: Number(e.target.value) })
+
+        document
+          .querySelectorAll('[data-cmd]')
+          .forEach((b) => (b.onclick = () => command(b.dataset.cmd)))
+        $('pause').onclick = () => command(state.show.paused ? 'resume' : 'pause')
+        $('startstop').onclick = () => command(state.show.running ? 'stop' : 'start')
+        $('reload').onclick = () => location.reload()
+        $('addText').onclick = () => {
+          const text = $('newText').value.trim()
+          if (!text) return
+          const item = {
+            id: 't' + Date.now().toString(36),
+            enabled: true,
+            text,
+            kind: 'filler',
+            photos: [],
+            placement: 'over',
+            style: 'random'
+          }
+          $('newText').value = ''
+          patch({ texts: [item, ...state.settings.texts] })
+        }
+        built = true
+      }
+
+      function render(next) {
+        state = next
+        showOffline(false)
+        if (!built) build()
+        const s = state.settings
+        const show = state.show
+        $('status').innerHTML = show.running
+          ? (show.paused ? '<b>Pausiert</b>' : '<b>Läuft</b>') +
+            (show.label ? ' · ' + escapeHtml(show.label) : '')
+          : '<span class="off">Show läuft nicht</span>'
+        $('startstop').textContent = show.running ? 'Show beenden' : 'Show starten'
+        $('pause').textContent = show.paused ? '▶︎ Weiter' : '⏸'
+
+        for (const key of [
+          'displayDuration',
+          'transitionDuration',
+          'textDuration',
+          'motionIntensity',
+          'textFillerEvery'
+        ]) {
+          $(key).update(s[key])
+        }
+        if (document.activeElement !== $('maxUpscale'))
+          $('maxUpscale').value = Math.round(s.maxUpscale * 100)
+        $('maxUpscaleValue').textContent = Math.round(s.maxUpscale * 100) + ' %'
+        if (document.activeElement !== $('focusThreshold'))
+          $('focusThreshold').value = Math.round(s.focusThreshold * 100)
+        $('focusThresholdValue').textContent = Math.round(s.focusThreshold * 100) + ' %'
+        $('focusEnabled').checked = s.focusEnabled
+        $('focusTogether').checked = s.focusTogether
+
+        const people = state.persons.map((p) => [p.id, escapeHtml(p.name || 'Ohne Namen')])
+        options($('focusPersonId'), [['', '– keine –'], ...people], s.focusPersonId)
+        options(
+          $('focusPartnerId'),
+          [['', '– kein Partner –'], ...people.filter(([id]) => id !== s.focusPersonId)],
+          s.focusPartnerId
+        )
+        options($('focusPanOthers'), Object.entries(state.labels.panOthers), s.focusPanOthers)
+        if (document.activeElement !== $('focusBoost')) $('focusBoost').value = String(s.focusBoost)
+
+        $('transitions').innerHTML = s.transitions
+          .map(
+            (t) =>
+              '<button class="chip' +
+              (t.enabled ? ' on' : '') +
+              '" data-id="' +
+              t.id +
+              '">' +
+              escapeHtml(state.labels.transitions[t.id] || t.id) +
+              '</button>'
+          )
+          .join('')
+        $('transitions')
+          .querySelectorAll('.chip')
+          .forEach((chip) => {
+            chip.onclick = () =>
+              patch({
+                transitions: s.transitions.map((t) =>
+                  t.id === chip.dataset.id ? { ...t, enabled: !t.enabled } : t
+                )
+              })
+          })
+
+        $('texts').innerHTML = s.texts
+          .map(
+            (t, i) =>
+              '<div class="text-item"><input type="checkbox" data-i="' +
+              i +
+              '"' +
+              (t.enabled ? ' checked' : '') +
+              '><span>' +
+              escapeHtml(t.text.split('\n')[0] || 'Leerer Text') +
+              '</span><small>' +
+              (t.kind === 'filler' ? 'Fülltext' : 'an Foto') +
+              '</small></div>'
+          )
+          .join('')
+        $('texts')
+          .querySelectorAll('input')
+          .forEach((box) => {
+            box.onchange = () =>
+              patch({
+                texts: s.texts.map((t, i) =>
+                  i === Number(box.dataset.i) ? { ...t, enabled: box.checked } : t
+                )
+              })
+          })
+      }
+
+      function showOffline(on) {
+        $('offline').style.display = on ? 'block' : 'none'
+      }
+
+      function connect() {
+        const events = new EventSource('/api/events')
+        events.onmessage = (e) => render(JSON.parse(e.data))
+        events.onerror = () => showOffline(true)
+      }
+      connect()
+    </script>
+  </body>
+</html>

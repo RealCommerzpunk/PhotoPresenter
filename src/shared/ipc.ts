@@ -1,4 +1,5 @@
 import type { FaceIndexStatus, FaceInfo, PhotoFaces, StoredFace } from './faces'
+import type { RemoteInfo, ShowCommand, ShowStatus } from './remote'
 import type { Settings } from './settings'
 
 /** Kanalnamen für die Kommunikation zwischen Main-Prozess und Fenstern. */
@@ -25,7 +26,10 @@ export const IPC = {
   embedRequest: 'faces:embedRequest',
   embedResult: 'faces:embedResult',
   focusPhotos: 'faces:focusPhotos',
-  reindexFaces: 'faces:reindex'
+  reindexFaces: 'faces:reindex',
+  showCommand: 'show:command',
+  showStatus: 'show:status',
+  remoteInfo: 'remote:info'
 } as const
 
 /** Schema des Protokolls, über das die Show Fotos aus dem gewählten Ordner lädt. */
@@ -129,4 +133,11 @@ export interface PhotoPresenterApi {
   ): Promise<{ ok: boolean; error?: string }>
   focusPhotos(): Promise<string[]>
   reindexFaces(): Promise<void>
+
+  // Fernbedienung
+  /** Show-Fenster: Befehle empfangen (Weiter, Pause, QR …). */
+  onShowCommand(callback: (cmd: ShowCommand) => void): () => void
+  /** Show-Fenster: eigenen Zustand melden. */
+  reportShowStatus(status: ShowStatus): void
+  remoteInfo(): Promise<RemoteInfo>
 }

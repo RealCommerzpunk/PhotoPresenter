@@ -25,6 +25,7 @@ const messageEl = document.getElementById('message')!
 const infoEl = document.getElementById('info')!
 const statusEl = document.getElementById('status')!
 const textHost = document.getElementById('texts')!
+const qrEl = document.getElementById('qr')!
 
 /** Vorbereiteter nächster Eintrag: alles geladen, kann sofort gezeigt werden. */
 type Prepared =
@@ -279,7 +280,56 @@ async function main(): Promise<void> {
     const scene = incoming ?? current
     infoEl.textContent = scene?.label ?? ''
     infoEl.style.opacity = showInfo && scene ? '1' : '0'
+    reportStatus()
   }
+
+  /** Zustand an den Main-Prozess melden (für die Fernbedienung). */
+  function reportStatus(): void {
+    const scene = incoming ?? current
+    window.api.reportShowStatus({ running: true, paused, label: scene?.label ?? '' })
+  }
+
+  function setPaused(value: boolean): void {
+    paused = value
+    // Textanimationen laufen über GSAP und werden mit angehalten.
+    if (paused) gsap.globalTimeline.pause()
+    else gsap.globalTimeline.resume()
+    flashStatus(paused ? 'Pause' : 'Weiter')
+    reportStatus()
+  }
+
+  // QR-Code der Fernbedienung (Taste q): 30 Sekunden fest eingeblendet.
+  let qrTimer: number | undefined
+  async function toggleQr(): Promise<void> {
+    if (qrEl.style.opacity === '1') {
+      window.clearTimeout(qrTimer)
+      qrEl.style.opacity = '0'
+      return
+    }
+    const info = await window.api.remoteInfo()
+    const svg = qrEl.querySelector('.qr-code')!
+    const text = qrEl.querySelector('.qr-text')!
+    if (info.qrSvg && info.urls[0]) {
+      svg.innerHTML = info.qrSvg
+      text.textContent = info.urls[0].replace(/\/$/, '')
+    } else {
+      svg.innerHTML = ''
+      text.textContent = info.enabled
+        ? 'Fernbedienung nicht erreichbar: kein Netzwerk (z. B. Handy-Hotspot verbinden)'
+        : 'Fernbedienung ist in den Einstellungen ausgeschaltet'
+    }
+    qrEl.style.opacity = '1'
+    window.clearTimeout(qrTimer)
+    qrTimer = window.setTimeout(() => (qrEl.style.opacity = '0'), 30_000)
+  }
+
+  window.api.onShowCommand((cmd) => {
+    if (cmd === 'next') skip(1)
+    else if (cmd === 'prev') skip(-1)
+    else if (cmd === 'pause') setPaused(true)
+    else if (cmd === 'resume') setPaused(false)
+    else if (cmd === 'qr') void toggleQr()
+  })
 
   function discardReady(): void {
     generation++
@@ -345,11 +395,11 @@ async function main(): Promise<void> {
         void window.api.stopShow()
         break
       case ' ':
-        paused = !paused
-        // Textanimationen laufen über GSAP und werden mit angehalten.
-        if (paused) gsap.globalTimeline.pause()
-        else gsap.globalTimeline.resume()
-        flashStatus(paused ? 'Pause' : 'Weiter')
+        setPaused(!paused)
+        break
+      case 'q':
+      case 'Q':
+        void toggleQr()
         break
       case 'ArrowRight':
         skip(1)

@@ -23,6 +23,8 @@ Plan und Meilensteine: `docs/PLAN.md` · Änderungen je Version: `CHANGELOG.md` 
 
 ## Architektur
 
+- `src/main/remote.ts`: Webserver der Fernbedienung (`/` Handy-Seite aus `remote.html` per `?raw`, `/api/state`, `/api/settings` nur für `REMOTE_KEYS` aus `src/shared/remote.ts`, `/api/show`, `/api/events` als SSE). Show meldet Zustand per `reportShowStatus`, Befehle gehen per `IPC.showCommand` ans Show-Fenster.
+- `src/main/paths.ts` + `programDir()`/`photoFolder()` in `settings.ts`: Fotoordner immer über `photoFolder()` auflösen, nie `settings.photoFolder` direkt benutzen (kann relativ sein).
 - `src/main/faces.ts`: `FaceStore` – Gesichtsindex `faces.json` (Schlüssel: absoluter Pfad), Warteschlange fürs Analyse-Fenster, Abgleich mit der Fokus-Person, Beispielgesichter
 - `src/renderer/indexer/`: unsichtbares Analyse-Fenster mit onnxruntime-web (WASM, ein Thread): YuNet 640×640 BGR → `decodeYunet`, Ausrichtung per `similarityTransform` auf die ArcFace-Vorlage, SFace 112×112 RGB → 128er-Vektor
 - `src/shared/faces.ts`: reine Gesichts-Mathematik und Typen (getestet)
@@ -57,5 +59,8 @@ Plan und Meilensteine: `docs/PLAN.md` · Änderungen je Version: `CHANGELOG.md` 
 - Textgrößen sind in `cqh` angegeben: Der Host-Container eines `TextOverlay` braucht `container-type: size`.
 - Texte und eigene Stile werden in `parseSettings` Eintrag für Eintrag geprüft (`parseList`), damit ein kaputter Eintrag nicht alle Texte löscht. In zod 4 müssen solche losen Felder `z.unknown().optional()` sein.
 - Frame-Messung: `PP_PERF=1` lädt die Show mit `#perf`; langsame Frames (> 25 ms) erscheinen mit den Ereignissen davor im Terminal (`perf.ts`).
+- Fernbedienung testen: per `curl http://127.0.0.1:8765/api/…`; die Handy-Seite selbst mit `PP_REMOTE_PREVIEW=1` (Fenster in iPhone-Größe, mit `PP_CAPTURE_DIR` als Aufnahme). Beim ersten Öffnen des Ports fragt die Windows-Firewall.
+- Zoom immer mit `limitShot(…, zoomLimit(…))` begrenzen (Einstellung `maxUpscale`).
+- Shell-Fallen: Backslashes, Regex und Template-Strings in `node -e`/Heredocs gehen leicht kaputt – bei so etwas Edit/Write oder ein Skript im Scratchpad benutzen.
 - Visuelle Tests der Einstellungen: `PP_SETTINGS_PAGE=Texte` (Seitenname) zusammen mit `PP_CAPTURE_DIR`.
 - npm 11 blockiert Install-Skripte; Freigaben stehen in `allowScripts` in `package.json`. Electron lädt seine Binärdatei beim ersten Start selbst.

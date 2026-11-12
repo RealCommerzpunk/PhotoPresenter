@@ -111,7 +111,7 @@ Tastatur/Maus: Esc beendet, Leertaste pausiert, ←/→ springt, I zeigt Info (D
 7. **Feinschliff & Release**: Performance (Vorladen/Decoding im Worker, Texturspeicher freigeben), Installer, erster Release `v0.1.0`.
    - ✅ erledigt (0.6.2): Bildvorbereitung im Worker, Vorladen nach dem Übergang, Texturen in Streifen vorab hochladen, Effekte vorkompilieren, Zucken vor dem Übergang behoben.
    - offen: `npm audit` (15 mittlere Warnungen, nur typescript-eslint, also Entwicklungswerkzeug), Test auf 4K und mit großen echten Fotos, Installer auf Linux testen, Release `v0.1.0`.
-   - **Entscheidung ausstehend (Nutzer, 2026-11-11):** „Fokus in der Show“ gilt nur für die eine ★-Fokus-Person, was in der Oberfläche missverständlich wirkt. Vorgeschlagen: (1) nur klarer beschriften („gilt für ★ Name“) oder (2) mehrere hervorgehobene Personen mit eigenen Einstellungen (Schwelle, Kamerabewegung, Häufigkeit), Kamera fährt bei Gruppenfotos beide an.
+   - ~~Entscheidung ausstehend~~ erledigt in 0.7.0 durch Fokus-Partner: „Fokus in der Show“ gilt nur für die eine ★-Fokus-Person, was in der Oberfläche missverständlich wirkt. Vorgeschlagen: (1) nur klarer beschriften („gilt für ★ Name“) oder (2) mehrere hervorgehobene Personen mit eigenen Einstellungen (Schwelle, Kamerabewegung, Häufigkeit), Kamera fährt bei Gruppenfotos beide an.
 
 Jeder Meilenstein ergibt eine lauffähige Version und einen eigenen Commit/PR.
 
@@ -122,6 +122,14 @@ Jeder Meilenstein ergibt eine lauffähige Version und einen eigenen Commit/PR.
 - Gesichtserkennung: Testset mit 3–5 bekannten Personen, Treffer- und Fehlerquote bei Standard-Schwelle protokollieren.
 - Installer lokal bauen und manuell auf Windows 11 und einem Linux (z. B. Ubuntu/Mint) testen.
 
+## Erweiterungen (Session 002)
+
+- ✅ Fernbedienung per Handy mit QR-Code (Taste Q in der Show)
+- ✅ Fokus-Partner mit „Gemeinsam fokussieren“ (beantwortet die offene Frage zur Fokus-Karte: Überschrift zeigt jetzt, für wen sie gilt)
+- ✅ Zoomgrenze nach Original- und Bildschirmauflösung
+- ✅ Relativer Fotopfad, portable Windows-Version
+- geplant: Effekte (Partikel wie Konfetti/Schnee/Funkeln mit PixiJS; Vanta.js-Hintergründe für Textfolien), einstellbar nach Häufigkeit, Dauer und Intensität
+
 ## Abweichungen vom ursprünglichen Plan
 
 - **Gesichtserkennung mit onnxruntime-web (WebAssembly) statt onnxruntime-node**, in einem unsichtbaren Analyse-Fenster: keine nativen Module, Windows und Linux identisch, Fotos werden genau wie in der Show dekodiert (EXIF-Drehung), daher passen die Gesichtspositionen garantiert.
@@ -131,4 +139,4 @@ Jeder Meilenstein ergibt eine lauffähige Version und einen eigenen Commit/PR.
 
 ## Offene Punkte für später (nicht im ersten Wurf)
 
-HEIC/RAW-Support, Videos in der Show, Hintergrundmusik, Web-Fernbedienung, mehrere Fokus-Personen, Erkennung kleiner Gesichter in großen Gruppenfotos (Kacheln statt eines 640er-Durchgangs), Texte über Fotos neben statt unter Gesichter setzen.
+HEIC/RAW-Support, Videos in der Show, Hintergrundmusik, mehrere Fokus-Personen, Erkennung kleiner Gesichter in großen Gruppenfotos (Kacheln statt eines 640er-Durchgangs), Texte über Fotos neben statt unter Gesichter setzen.

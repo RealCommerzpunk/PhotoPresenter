@@ -9,6 +9,7 @@ import {
 import type { PhotoList } from '@shared/ipc'
 import { Card, Field, RangeInput, Toggle, WeightedList } from './controls'
 import { PersonsPage } from './PersonsPage'
+import { RemoteCard } from './RemoteCard'
 import { StylesPage } from './StylesPage'
 import { TextsPage } from './TextsPage'
 import { useSettings } from './useSettings'
@@ -152,6 +153,7 @@ function General({ s, update }: { s: Settings; update: Update }): React.JSX.Elem
           />
         </Field>
       </Card>
+      <RemoteCard s={s} update={update} />
       <Card title="Zurücksetzen">
         <Field label="Alle Einstellungen" hint="Der Fotoordner bleibt erhalten.">
           <button
@@ -281,7 +283,10 @@ export function App(): React.JSX.Element {
           ))}
         </nav>
         <div className="mt-auto text-xs leading-relaxed text-white/40">
-          <div>In der Show: Esc beenden · Leertaste Pause · ←/→ blättern · I Dateiname · D fps</div>
+          <div>
+            In der Show: Esc beenden · Leertaste Pause · ←/→ blättern · I Dateiname · Q
+            Fernbedienung · D fps
+          </div>
           <div className="mt-2">Version {version}</div>
         </div>
       </aside>

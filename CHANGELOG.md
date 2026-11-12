@@ -2,6 +2,17 @@
 
 Alle Änderungen je Version. Format: neueste Version oben, Datum im Format JJJJ-MM-TT.
 
+## 0.7.0 – 2026-11-12
+
+Fernbedienung, Fokus-Partner, Zoomgrenze, relativer Fotopfad.
+
+- **Fernbedienung per Handy**: Der Presenter öffnet eine Webseite im lokalen Netz (Port 8765, ohne Passwort). Dort lassen sich Anzeige-, Überblend- und Textdauer, Bewegung, höchste Vergrößerung, Übergänge, Fokus (Person, Partner, gemeinsam, Schwelle, Häufigkeit, andere Gesichter) und Texte (an/aus, neuer Fülltext, Abstand) während der Show ändern; Show starten/beenden, Pause, vor/zurück. Mehrere Handys gleichzeitig, Live-Aktualisierung. Das Hotspot-Netz des iPhones wird bevorzugt.
+- QR-Code mit Adresse in den Einstellungen (Allgemein → Fernbedienung); in der Show blendet die Taste **Q** ihn 30 Sekunden lang ein (auch per Fernbedienung)
+- **Fokus-Partner** (♥): Mit „Gemeinsam fokussieren“ fährt die Kamera bei Fotos mit beiden erst den Partner, dann die Fokus-Person an. Die Fokus-Karte zeigt, für wen sie gilt.
+- **Höchste Vergrößerung** (Standard 125 %): Zoom wird nach Original- und Bildschirmauflösung begrenzt, damit nichts pixelig wird; gilt für alle Bewegungen und den Fokus
+- **Fotoordner relativ** zum Programmordner möglich (z. B. „Fotos“ neben dem Programm); unter Windows auch „/Fotos“. Zusätzlich gibt es eine portable Windows-Version (einzelne .exe, ideal für einen USB-Stick)
+- Sitzungsprotokolle unter `docs/sessions/`
+
 ## 0.6.2 – 2026-11-11
 
 Ruckeln und Zucken vor dem Übergang behoben.
