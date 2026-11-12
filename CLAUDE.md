@@ -1,7 +1,7 @@
 # PhotoPresenter
 
 Zufällige Vollbild-Foto-Diashow für Windows und Linux (Electron + TypeScript).
-Plan und Meilensteine: `docs/PLAN.md` · Änderungen je Version: `CHANGELOG.md` · Überblick für Menschen: `README.md`.
+Plan und Meilensteine: `docs/PLAN.md` · Änderungen je Version: `CHANGELOG.md` · Sitzungsprotokolle: `docs/sessions/Session-NNN.md` · Überblick für Menschen: `README.md`.
 
 ## Befehle
 

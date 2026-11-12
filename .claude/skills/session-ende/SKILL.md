@@ -35,6 +35,12 @@ Veraltetes streichen. Kurz halten; keine Sitzungsprotokolle, die gehören in den
 - Neue Entscheidungen des Nutzers einarbeiten; „Offene Punkte für später“ pflegen.
 - Den Fahrplan in `README.md` gleich halten.
 
+## 5b. Session-Log
+
+- Neues Log `docs/sessions/Session-NNN.md` anlegen (nächste freie dreistellige Nummer, z. B. nach `Session-001.md` kommt `Session-002.md`).
+- Inhalt: Datum, Ergebnis (Version, was fertig ist), Ablauf in nummerierten Schritten, Entscheidungen des Nutzers, Fehler und Lehren, offene Punkte. Kurz und sachlich, Vorlage ist `Session-001.md`.
+- Wird `/session-ende` in derselben Sitzung mehrmals aufgerufen, das bestehende Log der Sitzung ergänzen statt ein neues anzulegen.
+
 ## 6. Memory
 
 Memory-Verzeichnis: `C:\Users\haugu\.claude\projects\c--service-hunda-PhotoPresenter\memory\` mit Index `MEMORY.md`.
