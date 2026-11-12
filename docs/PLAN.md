@@ -130,6 +130,8 @@ Jeder Meilenstein ergibt eine lauffähige Version und einen eigenen Commit/PR.
 - ✅ Zoomgrenze nach Original- und Bildschirmauflösung
 - ✅ Relativer Fotopfad, portable Windows-Version
 - ✅ 0.10.0: Wackelpudding-Würfel, eine Formation je Zwischenspiel, kleine Fotos begrenzen, gezielte Auslöser und Sofort-Texte auf der Fernbedienung
+- ✅ 0.11.1: Bildschirm- und Bereichsauswahl
+- ✅ 0.12.0: Mitnehmen (portabler Datenordner `Data`, Gesichtsindex mit relativen Pfaden, Weitergabe-Paket), Texte „nur auf Abruf“, kompakte Fernbedienung mit Reitern, Eintauchen der 3D-Welt endet in der echten Größe des Fotos
 - ✅ 0.11.0: Rückmeldung auf der Fernbedienung, Emojis, Foto einfrieren (Bewegung in Schleife), Galerie mit eigener Reihenfolge, Info-Tafel (Taste I, EXIF), Fernbedienung als Fenster (Taste R); per Hand Ausgelöstes endet beim nächsten Übergang; ruhiger Start nach der 3D-Welt
 - ✅ 3D-Fotowelt (0.9.0): Zwischenspiel mit Three.js, 9 Formationen (Klassiker aus dem Periodic-Table-Beispiel plus Rahmen, Würfel, Karussell, Tunnel, Welle), Eintauchen in ein Foto
 - ✅ Effekte (0.8.0): 8 Partikel-Effekte mit PixiJS und 5 animierte Textfolien-Hintergründe als Shader (statt Vanta.js: kein zweiter WebGL-Kontext, läuft durch die Übergänge), einstellbar nach Häufigkeit, Dauer und Intensität
@@ -143,4 +145,5 @@ Jeder Meilenstein ergibt eine lauffähige Version und einen eigenen Commit/PR.
 
 ## Offene Punkte für später (nicht im ersten Wurf)
 
-Bildschirm- bzw. Bereichsauswahl für zusammengeschaltete Monitore, HEIC/RAW-Support, Videos in der Show, Hintergrundmusik, mehrere Fokus-Personen, Erkennung kleiner Gesichter in großen Gruppenfotos (Kacheln statt eines 640er-Durchgangs), Texte über Fotos neben statt unter Gesichter setzen.
+- **Internationalisierung (Nutzerwunsch 2026-11-12):** Die App soll übersetzbar sein, vor allem die Oberfläche (Einstellungen, Fernbedienung, Show-Meldungen). Entwickelt und dokumentiert wird weiter vornehmlich auf Deutsch, übersetzt wird später. Grundsprache für Einstellungen und Technisches ist Englisch (Ordner-, Datei- und Schlüsselnamen, z. B. `Data\`, `Photos\`, `README.txt`). Vorgehen später: Texte aus dem Code in Sprachdateien (Schlüssel englisch), Sprache wählbar, Fallback Deutsch/Englisch.
+- Weitere: HEIC/RAW-Support, Videos in der Show, Hintergrundmusik, mehrere Fokus-Personen, Erkennung kleiner Gesichter in großen Gruppenfotos (Kacheln statt eines 640er-Durchgangs), Texte über Fotos neben statt unter Gesichter setzen.

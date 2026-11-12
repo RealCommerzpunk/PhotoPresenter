@@ -420,6 +420,11 @@ async function main(): Promise<void> {
         if (gen !== generation) dispose(p)
         else {
           ready = p
+          // Zielfoto der 3D-Welt: Das Eintauchen endet genau in seiner Größe.
+          if (current instanceof WorldScene && p.kind === 'photo') {
+            const { size, fit } = p.photo
+            current.setFinalFrame(size.w * fit.scale, size.h * fit.scale)
+          }
           failures = 0
         }
       })
@@ -670,6 +675,12 @@ async function main(): Promise<void> {
     }
   }
 
+  /** Nach der 3D-Welt erst überblenden, wenn die Kamera in der Größe des Zielfotos angekommen ist. */
+  function worldLanded(): boolean {
+    if (!(current instanceof WorldScene) || ready?.kind !== 'photo') return true
+    return current.frameSettled
+  }
+
   /** Zwischenspiel sofort (per Fernbedienung oder Einstellungsfenster). */
   function startWorldNow(wanted?: string): void {
     if (thumbs.size < WORLD_MIN_TILES) {
@@ -774,7 +785,7 @@ async function main(): Promise<void> {
         prefetch()
         slideLayer.addChild(current.view)
       }
-    } else if (current?.readyForNext && ready) {
+    } else if (current?.readyForNext && ready && worldLanded()) {
       startTransition(current.fadeOut)
     }
 

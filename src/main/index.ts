@@ -388,7 +388,7 @@ function captureForTests(win: BrowserWindow, prefix: string): void {
     } catch {
       // Fenster gerade verdeckt oder im Aufbau: diese Aufnahme auslassen.
     }
-  }, 2000)
+  }, Number(process.env['PP_CAPTURE_MS']) || 2000)
 }
 
 /** Sitzung des Fernbedienungs-Fensters: Anfragen gehen direkt an den Server-Code, ohne Netzwerk. */

@@ -121,6 +121,12 @@ export class WorldScene extends TimedScene implements Scene {
   private readonly qa: ThreeNS.Quaternion
   private readonly qb: ThreeNS.Quaternion
   private size: Size = { w: 0, h: 0 }
+  /** Größe des Zielfotos in Bildschirmpixeln, wie es nach der 3D-Welt dasteht (eingepasst). */
+  private finalFrame: { w: number; h: number } | null = null
+  /** Weicher Übergang 0 → 1, sobald die Größe bekannt ist (kein Sprung der Kamera). */
+  private frameBlend = 0
+  /** Eigener Rahmen der Zielkachel, damit er beim Eintauchen ausblenden kann. */
+  private finalBorder: ThreeNS.MeshBasicMaterial | null = null
   private readonly jelly: {
     uTime: { value: number }
     uJelly: { value: number }
@@ -286,6 +292,7 @@ export class WorldScene extends TimedScene implements Scene {
 
   update(dt: number, screen: Size): void {
     this.elapsed += dt
+    if (this.finalFrame) this.frameBlend = Math.min(1, this.frameBlend + dt / 0.6)
     // Die 3D-Zeit läuft ab Beginn des Einblendens.
     const t = this.elapsed
     const phase = this.phaseAt(t)
@@ -330,6 +337,7 @@ export class WorldScene extends TimedScene implements Scene {
       }
       ;(mesh.material as ThreeNS.MeshBasicMaterial).opacity = opacity
       mesh.children[0].visible = opacity > 0.6
+      if (phase.kind === 'dive' && i === this.finalIndex) this.shapeFinal(t, phase)
     }
 
     // Wackelpudding-Stärke: wächst beim Einflug, beruhigt sich beim Eintauchen,
@@ -399,6 +407,54 @@ export class WorldScene extends TimedScene implements Scene {
       }
     }
     this.finalIndex = best
+    // Eigener, ausblendbarer Rahmen für die Zielkachel
+    const border = this.meshes[best].children[0] as ThreeNS.Mesh
+    this.finalBorder = (border.material as ThreeNS.MeshBasicMaterial).clone()
+    this.finalBorder.transparent = true
+    this.materials.push(this.finalBorder)
+    border.material = this.finalBorder
+  }
+
+  /**
+   * Wie das Zielfoto nach der 3D-Welt dasteht (Breite und Höhe in Bildschirmpixeln).
+   * Das Eintauchen endet dann genau so: gleiche Größe, gleiches Seitenverhältnis.
+   */
+  setFinalFrame(w: number, h: number): void {
+    if (w > 0 && h > 0) this.finalFrame = { w, h }
+  }
+
+  /** Die Kamera ist an der endgültigen Position angekommen (Übergang darf beginnen). */
+  get frameSettled(): boolean {
+    return this.finalFrame !== null && this.frameBlend >= 1
+  }
+
+  /** Seitenverhältnis, das die Zielkachel am Ende des Eintauchens hat. */
+  private finalAspect(): number {
+    const tile = TILE_W / TILE_H
+    if (!this.finalFrame) return tile
+    return tile + (this.finalFrame.w / this.finalFrame.h - tile) * this.frameBlend
+  }
+
+  /**
+   * Zielkachel beim Eintauchen formen: Seitenverhältnis des Fotos annehmen (Vorschau wird
+   * passend beschnitten, nicht verzerrt) und den hellen Rahmen ausblenden.
+   */
+  private shapeFinal(t: number, phase: Phase): void {
+    const k = easeInOut((t - phase.start) / phase.duration)
+    const mesh = this.meshes[this.finalIndex]
+    const tile = TILE_W / TILE_H
+    const a = tile + (this.finalAspect() - tile) * k
+    const wide = a >= tile
+    mesh.scale.set(wide ? a / tile : 1, wide ? 1 : tile / a, 1)
+    const tex = this.tileTextures[this.finalIndex]
+    const rx = wide ? 1 : a / tile
+    const ry = wide ? tile / a : 1
+    tex.repeat.set(rx, ry)
+    tex.offset.set((1 - rx) / 2, (1 - ry) / 2)
+    if (this.finalBorder) {
+      this.finalBorder.opacity = 1 - Math.min(1, Math.max(0, (k - 0.15) / 0.45))
+      mesh.children[0].visible = this.finalBorder.opacity > 0.01
+    }
   }
 
   /** Kamera vor der Zielkachel, so nah, dass die Kachel das Bild ausfüllt. */
@@ -409,9 +465,17 @@ export class WorldScene extends TimedScene implements Scene {
     const len = Math.hypot(...dir) || 1
     const aspect = this.size.w / Math.max(1, this.size.h)
     const halfFov = (FOV * Math.PI) / 360
-    // so weit weg, dass die Kachel ganz zu sehen ist (wie „einpassen“)
+    // ohne bekannte Fotogröße: so weit weg, dass die Kachel ganz zu sehen ist (wie „einpassen“)
     const fit = Math.max(TILE_H / 2, TILE_W / 2 / aspect) / Math.tan(halfFov)
-    const d = fit * 1.02
+    let d = fit * 1.02
+    if (this.finalFrame) {
+      // so weit weg, dass die Kachel genau so hoch erscheint wie danach das Foto
+      const tile = TILE_W / TILE_H
+      const a = this.finalFrame.w / this.finalFrame.h
+      const height = a >= tile ? TILE_H : (TILE_H * tile) / a
+      const exact = (height * this.size.h) / (2 * Math.tan(halfFov) * this.finalFrame.h)
+      d += (exact - d) * this.frameBlend
+    }
     return {
       pos: [
         p.pos[0] + (dir[0] / len) * d,

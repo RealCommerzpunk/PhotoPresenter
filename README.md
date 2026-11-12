@@ -50,6 +50,10 @@ Tests, Typprüfung und Lint vor jedem Commit lokal ausführen: `npm run typechec
 
 Esc beenden · Leertaste Pause · ←/→ blättern · I Info zum Foto (Auflösung, Zoom, EXIF) · R Fernbedienung als Fenster · Q QR-Code · D fps
 
+## Mitnehmen
+
+Die portable Version (`PhotoPresenter <version>.exe` aus `npm run dist:win`, unter Linux das AppImage) speichert alles im Ordner `Data` neben der Programmdatei. Mit einem Ordner `Photos` daneben und dem Fotoordner „Photos“ in den Einstellungen lässt sich der ganze Ordner kopieren und weitergeben. Einfacher: **Einstellungen → Allgemein → Mitnehmen → Paket für die Weitergabe erstellen**.
+
 ## Aufbau
 
 ```
@@ -71,4 +75,4 @@ resources/      Modelle und Fonts, die mit ausgeliefert werden
 6. ✅ Gesichtserkennung und Fokus-Person
 7. Feinschliff und erstes Release (Ruckelfreiheit erledigt in 0.6.2)
 
-Dazugekommen (0.7–0.11): Fernbedienung per Handy mit QR-Code (mit Emojis, Einfrieren, Galerie und eigener Reihenfolge), Fokus-Partner, Zoomgrenze und Begrenzung kleiner Fotos, relativer Fotopfad und portable Windows-Version, Partikel-Effekte, animierte Textfolien-Hintergründe, 3D-Fotowelt (inkl. Wackelpudding-Würfel).
+Dazugekommen (0.7–0.12): Mitnehmen (portabel, Weitergabe-Paket), Bildschirmauswahl, Fernbedienung per Handy mit QR-Code (mit Emojis, Einfrieren, Galerie und eigener Reihenfolge), Fokus-Partner, Zoomgrenze und Begrenzung kleiner Fotos, relativer Fotopfad und portable Windows-Version, Partikel-Effekte, animierte Textfolien-Hintergründe, 3D-Fotowelt (inkl. Wackelpudding-Würfel).

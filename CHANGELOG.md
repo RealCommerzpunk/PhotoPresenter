@@ -2,6 +2,17 @@
 
 Alle Änderungen je Version. Format: neueste Version oben, Datum im Format JJJJ-MM-TT.
 
+## 0.12.0 – 2026-11-12
+
+Zum Mitnehmen.
+
+- **Portabel**: Die portable Windows-Version und das AppImage speichern Einstellungen, Texte, Personen und Gesichtsindex im Ordner `Data` neben der Programmdatei. Der ganze Ordner lässt sich kopieren (USB-Stick, anderer Rechner) – alles reist mit. Beim ersten Start werden die bisherigen Einstellungen aus dem Benutzerordner übernommen. Die installierte Version nutzt `Data`, wenn der Ordner neben dem Programm liegt
+- **Paket für die Weitergabe** (Allgemein → Mitnehmen): erstellt einen Ordner „PhotoPresenter“ mit Programm, allen Fotos (`Photos`), den aktuellen Einstellungen und einer kurzen Anleitung (`README.txt`)
+- Der Gesichtsindex speichert Pfade relativ zum Fotoordner: Nach dem Kopieren muss nichts neu analysiert werden, von Hand markierte Gesichter bleiben erhalten (auch bei USB-Sticks mit gröberen Zeitstempeln)
+- **Texte „nur auf Abruf“**: Schalter je Text (🔀 im Ablauf / 📱 nur auf Abruf) in den Einstellungen und auf der Fernbedienung; Texte auf Abruf erscheinen nur, wenn sie per Fernbedienung eingeblendet werden
+- **Fernbedienung kompakter**: Kopf mit einer Zeile Symbol-Knöpfen (◀ ⏸ ▶ ❄ QR ⏻), Reiter Live · Fotos · Ablauf · Fokus · Texte · Effekte · 3D statt einer langen Seite; „Live“ bündelt Emojis, Texte auf Abruf, eigenen Text, Effekte und 3D zum Sofort-Auslösen. Der zuletzt benutzte Reiter bleibt gemerkt
+- **3D-Fotowelt → Foto ohne Sprung**: Das Eintauchen endet genau in der Größe und im Seitenverhältnis, in der das Foto danach steht (auch bei verkleinerten kleinen Fotos); der Rahmen der Kachel blendet aus, die Randfüllung blendet weich ein
+
 ## 0.11.1 – 2026-11-12
 
 Bildschirm wählen.
