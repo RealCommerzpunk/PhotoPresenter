@@ -69,4 +69,4 @@ resources/      Modelle und Fonts, die mit ausgeliefert werden
 4. ✅ Übergangs-Bibliothek, weitere Füllmodi, Kamerafahrten
 5. ✅ Texte: Editor, Stile, Animationen
 6. ✅ Gesichtserkennung und Fokus-Person
-7. Feinschliff und erstes Release
+7. Feinschliff und erstes Release (Ruckelfreiheit erledigt in 0.6.2)

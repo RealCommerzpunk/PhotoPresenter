@@ -109,6 +109,9 @@ Tastatur/Maus: Esc beendet, Leertaste pausiert, ←/→ springt, I zeigt Info (D
 5. ✅ **Texte**: Datenmodell, Editor, Stil-Presets, GSAP-Animationen, Fülltexte, Bildtexte vor/nach/über.
 6. ✅ **Gesichtserkennung**: Indexer-Prozess, YuNet+SFace, Personen-Anlernen-UI, Matching, Fokus-Modi, Schwenk über andere Gesichter.
 7. **Feinschliff & Release**: Performance (Vorladen/Decoding im Worker, Texturspeicher freigeben), Installer, erster Release `v0.1.0`.
+   - ✅ erledigt (0.6.2): Bildvorbereitung im Worker, Vorladen nach dem Übergang, Texturen in Streifen vorab hochladen, Effekte vorkompilieren, Zucken vor dem Übergang behoben.
+   - offen: `npm audit` (15 mittlere Warnungen, nur typescript-eslint, also Entwicklungswerkzeug), Test auf 4K und mit großen echten Fotos, Installer auf Linux testen, Release `v0.1.0`.
+   - **Entscheidung ausstehend (Nutzer, 2026-11-11):** „Fokus in der Show“ gilt nur für die eine ★-Fokus-Person, was in der Oberfläche missverständlich wirkt. Vorgeschlagen: (1) nur klarer beschriften („gilt für ★ Name“) oder (2) mehrere hervorgehobene Personen mit eigenen Einstellungen (Schwelle, Kamerabewegung, Häufigkeit), Kamera fährt bei Gruppenfotos beide an.
 
 Jeder Meilenstein ergibt eine lauffähige Version und einen eigenen Commit/PR.
 
