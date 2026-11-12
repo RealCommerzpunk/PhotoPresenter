@@ -254,14 +254,32 @@ export class FaceStore {
     results.forEach((r, i) => {
       if (r?.match && (best < 0 || r.similarity > results[best]!.similarity)) best = i
     })
+    // Fokus-Partner: bester Treffer unter den übrigen Gesichtern (nur mit „Gemeinsam“).
+    let partner = -1
+    const partnerPerson = this.partnerPerson(settings)
+    if (best >= 0 && partnerPerson) {
+      const matchPartner = this.matcher(partnerPerson, settings.focusThreshold)!
+      const partnerResults = entry.faces.map((f) => matchPartner(f.emb))
+      partnerResults.forEach((r, i) => {
+        if (i === best || !r.match) return
+        if (partner < 0 || r.similarity > partnerResults[partner].similarity) partner = i
+      })
+    }
     const faces = entry.faces.map((f, i) => ({
       box: f.box,
       kps: f.kps,
       score: f.score,
       similarity: results[i]?.similarity,
-      focus: i === best
+      focus: i === best,
+      partner: i === partner
     }))
     return { w: entry.w, h: entry.h, faces }
+  }
+
+  private partnerPerson(settings: Settings): Person | undefined {
+    if (!settings.focusEnabled || !settings.focusTogether) return undefined
+    if (settings.focusPartnerId === settings.focusPersonId) return undefined
+    return settings.persons.find((p) => p.id === settings.focusPartnerId && p.samples.length)
   }
 
   /** Fotos, in denen die Fokus-Person erkannt wurde. */

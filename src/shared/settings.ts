@@ -196,6 +196,10 @@ export const settingsSchema = z.object({
   /** Fokus-Person: Gesicht in Fotos suchen und anzoomen. */
   focusEnabled: field(z.boolean(), true),
   focusPersonId: field(z.string(), ''),
+  /** Fokus-Partner: zweite Person, die zusammen mit der Fokus-Person angezoomt wird. */
+  focusPartnerId: field(z.string(), ''),
+  /** Sind beide auf einem Foto, fährt die Kamera beide nacheinander an. */
+  focusTogether: field(z.boolean(), true),
   /** Ab dieser Ähnlichkeit (Kosinus) gilt ein Gesicht als die Person. */
   focusThreshold: field(z.number().min(0).max(1), 0.38),
   focusModes: field(weightedSchema(FOCUS_MODES), defaultFocusModes),

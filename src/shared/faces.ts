@@ -229,6 +229,8 @@ export interface FaceView {
   similarity?: number
   /** true, wenn es die Fokus-Person ist. */
   focus?: boolean
+  /** true, wenn es der Fokus-Partner ist (nur mit „Gemeinsam fokussieren“). */
+  partner?: boolean
 }
 
 export interface FaceInfo {

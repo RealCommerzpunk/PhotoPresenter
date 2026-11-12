@@ -231,7 +231,9 @@ export function planFocusShot(
   focus: FaceBox,
   otherFaces: FaceBox[],
   plan: FocusPlan,
-  rng: Rng = Math.random
+  rng: Rng = Math.random,
+  /** Fokus-Partner auf demselben Foto („Gemeinsam fokussieren“). */
+  partner?: FaceBox
 ): Shot {
   const zFocus = faceZoom(focus, img, screen, scale, plan.faceSize)
   const target = faceKey(focus, img, scale, zFocus)
@@ -244,11 +246,23 @@ export function planFocusShot(
       faceKey(f, img, scale, Math.max(1, faceZoom(f, img, screen, scale, plan.faceSize) * 0.8))
     )
 
-  if (plan.others !== 'off' && others.length) {
-    const stations: Keyframe[] =
-      plan.others === 'before' ? [wide, ...others, target] : [wide, target, ...others]
-    // Die Fokus-Person bekommt die längste Verweildauer.
-    const weights: number[] = stations.map((k) => (k === target ? 2 : 1))
+  // Fokus-Partner: wird voll angezoomt, vor der Fokus-Person (bei „nachher“ danach).
+  const partnerKey = partner
+    ? faceKey(partner, img, scale, faceZoom(partner, img, screen, scale, plan.faceSize))
+    : null
+  const panOthers = plan.others !== 'off' && others.length > 0
+
+  if (partnerKey || panOthers) {
+    const after = plan.others === 'after'
+    const extra = plan.others !== 'off' ? others : []
+    const pair: Keyframe[] = partnerKey
+      ? after
+        ? [target, partnerKey]
+        : [partnerKey, target]
+      : [target]
+    const stations: Keyframe[] = after ? [wide, ...pair, ...extra] : [wide, ...extra, ...pair]
+    // Die Fokus-Person bekommt die längste Verweildauer, der Partner fast so viel.
+    const weights: number[] = stations.map((k) => (k === target ? 2 : k === partnerKey ? 1.6 : 1))
     weights[0] = 0.6
     const total = weights.reduce((a, b) => a + b, 0)
     let acc = 0
@@ -257,7 +271,7 @@ export function planFocusShot(
       acc += weights[i]
       return key
     })
-    if (plan.others === 'before') {
+    if (stations[stations.length - 1] === target) {
       // Am Ende noch etwas auf dem Gesicht ruhen und leicht nachzoomen.
       path[path.length - 1].t = Math.min(0.82, path[path.length - 1].t)
       path.push({

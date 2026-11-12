@@ -406,7 +406,8 @@ export function PersonsPage({ s, update }: { s: Settings; update: Update }): Rea
     const persons = s.persons.filter((p) => p.id !== id)
     update({
       persons,
-      focusPersonId: s.focusPersonId === id ? (persons[0]?.id ?? '') : s.focusPersonId
+      focusPersonId: s.focusPersonId === id ? (persons[0]?.id ?? '') : s.focusPersonId,
+      focusPartnerId: s.focusPartnerId === id ? '' : s.focusPartnerId
     })
     if (selected === id) setSelected(persons[0]?.id ?? '')
   }
@@ -472,6 +473,9 @@ export function PersonsPage({ s, update }: { s: Settings; update: Update }): Rea
               {p.id === s.focusPersonId && (
                 <span className="ml-2 text-xs text-amber-300">★ Fokus</span>
               )}
+              {p.id === s.focusPartnerId && (
+                <span className="ml-2 text-xs text-pink-300">♥ Partner</span>
+              )}
             </button>
           ))}
           <button
@@ -494,9 +498,29 @@ export function PersonsPage({ s, update }: { s: Settings; update: Update }): Rea
                   type="radio"
                   className="accent-amber-400"
                   checked={s.focusPersonId === person.id}
-                  onChange={() => update({ focusPersonId: person.id })}
+                  onChange={() =>
+                    update({
+                      focusPersonId: person.id,
+                      // Eine Person kann nicht beides sein.
+                      focusPartnerId: s.focusPartnerId === person.id ? '' : s.focusPartnerId
+                    })
+                  }
                 />
-                Fokus-Person der Show
+                ★ Fokus-Person
+              </label>
+              <label className="flex items-center gap-2 text-sm text-white/80">
+                <input
+                  type="checkbox"
+                  className="accent-pink-400"
+                  checked={s.focusPartnerId === person.id}
+                  onChange={(e) =>
+                    update({
+                      focusPartnerId: e.target.checked ? person.id : '',
+                      focusPersonId: s.focusPersonId === person.id ? '' : s.focusPersonId
+                    })
+                  }
+                />
+                ♥ Fokus-Partner
               </label>
               {!marking && (
                 <button
@@ -523,16 +547,33 @@ export function PersonsPage({ s, update }: { s: Settings; update: Update }): Rea
         )}
       </Card>
 
-      <Card title="Fokus in der Show">
+      <Card title={focusTitle(s)}>
         <Field
           label="Fokus-Person"
-          hint="Erkannte Fotos zeigen die Person mit einer Kamerafahrt auf ihr Gesicht."
+          hint="Erkannte Fotos zeigen die ★ Fokus-Person mit einer Kamerafahrt auf ihr Gesicht. Diese Einstellungen gelten für alle Personen gemeinsam."
         >
           <Toggle
             checked={s.focusEnabled}
             onChange={(v) => update({ focusEnabled: v })}
             label="Fokus aktiv"
           />
+        </Field>
+        <Field
+          label="Gemeinsam fokussieren"
+          hint="Sind ★ Fokus-Person und ♥ Fokus-Partner auf demselben Foto, fährt die Kamera erst den Partner und dann die Fokus-Person an (bei „Andere Gesichter: nachher“ umgekehrt)."
+        >
+          <div className="flex flex-col gap-1">
+            <Toggle
+              checked={s.focusTogether}
+              onChange={(v) => update({ focusTogether: v })}
+              label="Fokus-Person und Partner nacheinander anzoomen"
+            />
+            {!s.focusPartnerId && (
+              <span className="text-xs text-white/40">
+                Noch kein Fokus-Partner gewählt (oben bei einer Person „♥ Fokus-Partner“ ankreuzen).
+              </span>
+            )}
+          </div>
         </Field>
         <Field
           label="Erkennungsschwelle"
@@ -597,4 +638,14 @@ export function PersonsPage({ s, update }: { s: Settings; update: Update }): Rea
       </Card>
     </>
   )
+}
+
+/** Überschrift der Fokus-Karte mit den gewählten Personen, damit klar ist, wofür sie gilt. */
+function focusTitle(s: Settings): string {
+  const name = (id: string): string | undefined =>
+    s.persons.find((p) => p.id === id)?.name || undefined
+  const focus = name(s.focusPersonId)
+  const partner = name(s.focusPartnerId)
+  if (!focus) return 'Fokus in der Show – noch keine Fokus-Person gewählt'
+  return `Fokus in der Show – gilt für ★ ${focus}${partner ? ` und ♥ ${partner}` : ''}`
 }

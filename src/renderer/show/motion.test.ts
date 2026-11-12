@@ -159,3 +159,49 @@ describe('Zoomgrenze', () => {
     }
   })
 })
+
+describe('Fokus-Partner', () => {
+  const img = { w: 4000, h: 3000 }
+  const { scale } = fitImage(img, screen, 0.12)
+  const focus: [number, number, number, number] = [0.6, 0.35, 0.08, 0.11]
+  const partner: [number, number, number, number] = [0.3, 0.33, 0.08, 0.11]
+  const other: [number, number, number, number] = [0.1, 0.4, 0.06, 0.09]
+
+  it('fährt erst den Partner an und endet auf der Fokus-Person', () => {
+    const shot = planFocusShot(
+      img,
+      screen,
+      scale,
+      focus,
+      [other],
+      { mode: 'slowZoom', faceSize: 0.3, others: 'off' },
+      seededRng(1),
+      partner
+    )
+    const xs = shot.path!.map((k) => k.x)
+    // Station 1 = Partner (links → Bild nach rechts), letzte = Fokus (rechts → nach links)
+    expect(shot.path!.length).toBe(4)
+    expect(xs[1]).toBeGreaterThan(0)
+    expect(xs[xs.length - 1]).toBeLessThan(0)
+    // Partner voll angezoomt (gleiche Gesichtsgröße wie die Fokus-Person)
+    expect(shot.path![1].zoom).toBeCloseTo(shot.path![2].zoom, 5)
+  })
+
+  it('bei „nachher“: erst die Fokus-Person, dann Partner, dann die anderen', () => {
+    const shot = planFocusShot(
+      img,
+      screen,
+      scale,
+      focus,
+      [other],
+      { mode: 'slowZoom', faceSize: 0.3, others: 'after' },
+      seededRng(1),
+      partner
+    )
+    const xs = shot.path!.map((k) => k.x)
+    expect(shot.path!.length).toBe(4)
+    expect(xs[1]).toBeLessThan(0)
+    expect(xs[2]).toBeGreaterThan(0)
+    expect(shot.path![3].t).toBe(1)
+  })
+})

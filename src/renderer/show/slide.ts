@@ -27,6 +27,8 @@ export interface FocusTarget {
   face: FaceBox
   others: FaceBox[]
   plan: FocusPlan
+  /** Fokus-Partner auf demselben Foto (wird mit angezoomt). */
+  partner?: FaceBox
 }
 
 /** Ein Foto auf der Bühne: Randfüllung, Foto, Bewegung und ggf. Texte darüber. */
@@ -70,7 +72,16 @@ export class Slide extends TimedScene implements Scene {
 
     if (focus) {
       this.shot = limitShot(
-        planFocusShot(loaded.size, screen, loaded.fit.scale, focus.face, focus.others, focus.plan),
+        planFocusShot(
+          loaded.size,
+          screen,
+          loaded.fit.scale,
+          focus.face,
+          focus.others,
+          focus.plan,
+          Math.random,
+          focus.partner
+        ),
         maxZoom
       )
       // Genug Zeit, damit die Kamera an jedem Gesicht kurz verweilen kann.
@@ -100,7 +111,9 @@ export class Slide extends TimedScene implements Scene {
   }
 
   get label(): string {
-    return this.focus ? `${this.loaded.name} · Fokus-Person` : this.loaded.name
+    if (!this.focus) return this.loaded.name
+    const who = this.focus.partner ? 'Fokus-Person und Partner' : 'Fokus-Person'
+    return `${this.loaded.name} · ${who}`
   }
 
   get photoName(): string {

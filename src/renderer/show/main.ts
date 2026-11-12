@@ -120,7 +120,10 @@ async function main(): Promise<void> {
     const info = await window.api.getFaces(name).catch(() => null)
     const focusFace = info?.faces.find((f) => f.focus)
     if (!info || !focusFace) return null
-    const others: FaceBox[] = info.faces.filter((f) => f !== focusFace).map((f) => f.box)
+    const partnerFace = info.faces.find((f) => f.partner)
+    const others: FaceBox[] = info.faces
+      .filter((f) => f !== focusFace && f !== partnerFace)
+      .map((f) => f.box)
     const choice = settings.focusPanOthers
     const pan =
       choice === 'random'
@@ -134,10 +137,13 @@ async function main(): Promise<void> {
     const img = { w: info.w, h: info.h }
     const { scale } = fitImage(img, screen(), settings.maxCrop)
     return {
-      target: { face: focusFace.box, others, plan },
+      target: { face: focusFace.box, others, plan, partner: partnerFace?.box },
       // Nur so viel Auflösung laden, wie die Zoomgrenze überhaupt erlaubt.
       zoom: Math.min(
-        faceZoom(focusFace.box, img, screen(), scale, plan.faceSize),
+        Math.max(
+          faceZoom(focusFace.box, img, screen(), scale, plan.faceSize),
+          partnerFace ? faceZoom(partnerFace.box, img, screen(), scale, plan.faceSize) : 1
+        ),
         zoomLimit(scale, app.renderer.resolution, settings.maxUpscale)
       )
     }
