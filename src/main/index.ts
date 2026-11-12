@@ -16,6 +16,7 @@ import {
   IPC,
   type DisplayInfo,
   type EmbedResult,
+  type ExportResult,
   type FaceModel,
   type RelBox,
   type ShowOptions
@@ -33,17 +34,17 @@ import { FaceStore } from './faces'
 import { photoInfo } from './photoInfo'
 import { handlePhotoProtocol, listPhotos, registerPhotoScheme } from './photos'
 import { QueueStore } from './queue'
+import { exportPackage } from './exportPackage'
+import { dataLocation, setupDataLocation } from './portable'
 import { RemoteServer } from './remote'
 import { loadSettings, photoFolder, updateSettings } from './settings'
 import { ThumbCache } from './thumbs'
 
 registerPhotoScheme()
 
-// Nur in der Entwicklung: eigener Datenordner (Einstellungen, Gesichtsindex) für Tests,
-// damit Testläufe nie die echten Daten des Nutzers überschreiben.
-if (!app.isPackaged && process.env['PP_USER_DATA']) {
-  app.setPath('userData', process.env['PP_USER_DATA'])
-}
+// Datenordner: portabel neben dem Programm oder im Benutzerordner; in der Entwicklung
+// PP_USER_DATA, damit Testläufe nie die echten Daten des Nutzers überschreiben.
+setupDataLocation()
 
 let settingsWindow: BrowserWindow | null = null
 let showWindow: BrowserWindow | null = null
@@ -243,6 +244,31 @@ function startShow(options: ShowOptions = {}): void {
   loadPage(showWindow, 'show', !app.isPackaged && process.env['PP_PERF'] ? 'perf' : '')
   captureForTests(showWindow, 'show')
   commandsForTests()
+}
+
+/** Weitergabe-Paket: Zielordner wählen, dann Programm, Fotos und Daten dorthin kopieren. */
+async function createPackage(target?: string): Promise<ExportResult | null> {
+  if (target) return runExport(target)
+  const options: Electron.OpenDialogOptions = {
+    title: 'Wohin soll das Paket? (z. B. USB-Stick)',
+    defaultPath: app.getPath('desktop'),
+    properties: ['openDirectory', 'createDirectory']
+  }
+  const picked = settingsWindow
+    ? await dialog.showOpenDialog(settingsWindow, options)
+    : await dialog.showOpenDialog(options)
+  const parent = picked.canceled ? undefined : picked.filePaths[0]
+  return parent ? runExport(parent) : null
+}
+
+function runExport(parent: string): Promise<ExportResult> {
+  faceStore.flush()
+  return exportPackage(
+    parent,
+    loadSettings(),
+    (file) => faceStore.exportTo(file),
+    (p) => settingsWindow?.webContents.send(IPC.exportProgress, p)
+  )
 }
 
 /** Bildschirme von links nach rechts (bzw. oben nach unten), so nummeriert wie in den Einstellungen. */
@@ -473,6 +499,9 @@ app.whenReady().then(() => {
   ipcMain.handle(IPC.sendShowCommand, (_e, cmd: ShowCommand, arg?: string) => showCommand(cmd, arg))
   ipcMain.on(IPC.showNotice, (_e, notice: ShowNotice) => notify(notice))
   ipcMain.handle(IPC.listDisplays, () => listDisplays())
+  ipcMain.handle(IPC.dataInfo, () => ({ ...dataLocation(), dev: !app.isPackaged }))
+  ipcMain.handle(IPC.exportPackage, () => createPackage())
+  ipcMain.handle(IPC.openPath, (_e, path: string) => void shell.openPath(path))
   ipcMain.handle(IPC.identifyDisplays, () => identifyDisplays())
   ipcMain.handle(IPC.openRemote, () => toggleRemoteWindow())
   ipcMain.handle(IPC.photoInfo, (_e, name: string) => photoInfo(name))
@@ -521,11 +550,20 @@ app.whenReady().then(() => {
   createIndexerWindow()
   void faceStore.rescan()
 
+  // Nur für Tests in der Entwicklung: PP_TEST_EXPORT=<ordner> erstellt dort ein Paket.
+  const testExport = !app.isPackaged ? process.env['PP_TEST_EXPORT'] : undefined
+  if (testExport) {
+    setTimeout(() => {
+      void createPackage(testExport).then((r) => console.log('[export]', JSON.stringify(r)))
+    }, 3000)
+  }
+
   // Nur für Tests in der Entwicklung: Handy-Seite der Fernbedienung in iPhone-Größe öffnen.
   if (!app.isPackaged && process.env['PP_REMOTE_PREVIEW']) {
     setTimeout(() => {
-      // PP_REMOTE_PREVIEW=fotos öffnet die Galerie
-      toggleRemoteWindow(process.env['PP_REMOTE_PREVIEW'] === 'fotos' ? '#fotos' : '')
+      // PP_REMOTE_PREVIEW=fotos (texte, ablauf …) öffnet direkt diesen Reiter
+      const tab = process.env['PP_REMOTE_PREVIEW'] ?? ''
+      toggleRemoteWindow(['1', 'zoom'].includes(tab) ? '' : '#' + tab)
       const phone = remoteWindow
       if (!phone) return
       phone.setAlwaysOnTop(false)

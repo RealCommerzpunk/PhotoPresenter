@@ -44,7 +44,8 @@ export function updateSettings(patch: Partial<Settings>): Settings {
  * der Ordner, in dem die Datei liegt (beide entpacken sich beim Start in einen Temp-Ordner).
  */
 export function programDir(): string {
-  if (!app.isPackaged) return app.getAppPath()
+  // Für Tests in der Entwicklung: so tun, als läge das Programm in diesem Ordner.
+  if (!app.isPackaged) return process.env['PP_PROGRAM_DIR'] || app.getAppPath()
   const portable = process.env['PORTABLE_EXECUTABLE_DIR']
   if (portable) return portable
   const appImage = process.env['APPIMAGE']

@@ -40,8 +40,37 @@ export const IPC = {
   thumbRequest: 'thumbs:request',
   thumbResult: 'thumbs:result',
   listDisplays: 'displays:list',
-  identifyDisplays: 'displays:identify'
+  identifyDisplays: 'displays:identify',
+  dataInfo: 'data:info',
+  exportPackage: 'data:export',
+  exportProgress: 'data:exportProgress',
+  openPath: 'data:openPath'
 } as const
+
+/** Wo die Daten liegen (für die Karte „Mitnehmen“). */
+export interface DataInfo {
+  dir: string
+  /** Liegt neben dem Programm und reist beim Kopieren mit. */
+  portable: boolean
+  /** Beim ersten portablen Start aus dem Benutzerordner übernommen. */
+  migrated: boolean
+  problem?: string
+  /** Läuft als Entwicklungsversion (Paket dann ohne Programm). */
+  dev: boolean
+}
+
+export interface ExportProgress {
+  step: string
+  done: number
+  total: number
+}
+
+export interface ExportResult {
+  ok: boolean
+  path: string
+  notes: string[]
+  error?: string
+}
 
 /** Ein Bildschirm, wie das Betriebssystem ihn meldet (für die Auswahl in den Einstellungen). */
 export interface DisplayInfo {
@@ -195,6 +224,14 @@ export interface PhotoPresenterApi {
   onQueueChanged(callback: (queue: PhotoQueue) => void): () => void
   /** Show-Fenster: dieser Eintrag ist jetzt zu sehen (null: ein normales Foto). */
   queuePlaying(id: string | null): void
+
+  // Mitnehmen
+  dataInfo(): Promise<DataInfo>
+  /** Zielordner wählen lassen und das Weitergabe-Paket erstellen (null = abgebrochen). */
+  exportPackage(): Promise<ExportResult | null>
+  onExportProgress(callback: (p: ExportProgress) => void): () => void
+  /** Ordner im Explorer öffnen. */
+  openPath(path: string): Promise<void>
 
   // Bildschirme
   listDisplays(): Promise<DisplayInfo[]>

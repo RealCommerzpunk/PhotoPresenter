@@ -42,14 +42,23 @@
         top: 0;
         z-index: 2;
         background: var(--bg);
-        padding: 12px 0 8px;
+        padding: 8px 0 6px;
+        margin: 0 -12px;
+        padding-left: 12px;
+        padding-right: 12px;
+        border-bottom: 1px solid var(--line);
       }
-      h1 {
-        font-size: 18px;
-        margin: 0 0 4px;
+      .top {
+        display: flex;
+        align-items: baseline;
+        gap: 8px;
+        font-size: 15px;
+        min-width: 0;
       }
       .status {
-        font-size: 13px;
+        flex: 1;
+        min-width: 0;
+        font-size: 12px;
         color: var(--dim);
         white-space: nowrap;
         overflow: hidden;
@@ -63,9 +72,23 @@
       }
       .controls {
         display: grid;
-        grid-template-columns: repeat(3, 1fr);
-        gap: 8px;
-        margin-top: 10px;
+        grid-template-columns: repeat(6, 1fr);
+        gap: 6px;
+        margin-top: 6px;
+      }
+      .controls button {
+        padding: 0;
+        height: 40px;
+        font-size: 17px;
+        border-radius: 10px;
+      }
+      #startstop.running {
+        color: #fca5a5;
+        border-color: rgba(248, 113, 113, 0.5);
+      }
+      #startstop.stopped {
+        background: #16a34a;
+        border-color: #16a34a;
       }
       button {
         font: inherit;
@@ -90,36 +113,62 @@
         padding: 6px 10px;
         font-size: 14px;
       }
-      .big {
-        font-size: 22px;
-      }
       .tabs {
-        display: grid;
-        grid-template-columns: 1fr 1fr;
+        display: flex;
         gap: 4px;
-        margin-top: 10px;
-        background: #0f1117;
-        border: 1px solid var(--line);
-        border-radius: 12px;
-        padding: 3px;
+        margin-top: 6px;
+        overflow-x: auto;
+        scrollbar-width: none;
+        -webkit-overflow-scrolling: touch;
+      }
+      .tabs::-webkit-scrollbar {
+        display: none;
       }
       .tabs button {
-        border: none;
+        flex: none;
+        border: 1px solid transparent;
         background: transparent;
-        padding: 8px;
-        border-radius: 9px;
+        padding: 6px 12px;
+        border-radius: 999px;
+        font-size: 14px;
         color: var(--dim);
       }
       .tabs button.active {
         background: #262b3a;
+        border-color: var(--line);
         color: var(--text);
+      }
+      .quick {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+        margin-bottom: 8px;
+      }
+      .quick:empty {
+        display: none;
+      }
+      .quick button {
+        max-width: 100%;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+      .mode {
+        flex: none;
+        font-size: 13px;
+        padding: 4px 8px;
+        border-radius: 999px;
+      }
+      .mode.adhoc {
+        border-color: rgba(251, 191, 36, 0.5);
+        color: #fde68a;
       }
       section {
         background: var(--card);
         border: 1px solid var(--line);
-        border-radius: 16px;
-        padding: 14px;
-        margin-top: 12px;
+        border-radius: 14px;
+        padding: 12px;
+        margin-top: 10px;
       }
       h2 {
         font-size: 13px;
@@ -377,160 +426,167 @@
   </head>
   <body>
     <header>
-      <h1>PhotoPresenter</h1>
-      <div class="status" id="status">Verbinde …</div>
+      <div class="top">
+        <b>PhotoPresenter</b>
+        <span class="status" id="status">Verbinde …</span>
+      </div>
       <div id="offline">Keine Verbindung zum Presenter – versuche es erneut …</div>
       <div class="controls">
-        <button class="big" data-cmd="prev" aria-label="Zurück">◀</button>
-        <button class="big" id="pause" aria-label="Pause">⏯</button>
-        <button class="big" data-cmd="next" aria-label="Weiter">▶</button>
-        <button id="startstop" class="primary">Show starten</button>
-        <button data-cmd="qr">QR zeigen</button>
-        <button id="freeze">❄ Einfrieren</button>
+        <button data-cmd="prev" aria-label="Zurück" title="Zurück">◀</button>
+        <button id="pause" aria-label="Pause" title="Pause">⏸</button>
+        <button data-cmd="next" aria-label="Weiter" title="Weiter">▶</button>
+        <button id="freeze" aria-label="Einfrieren" title="Foto einfrieren">❄</button>
+        <button data-cmd="qr" aria-label="QR-Code zeigen" title="QR-Code in der Show zeigen">
+          QR
+        </button>
+        <button id="startstop" aria-label="Show starten" title="Show starten/beenden">⏻</button>
       </div>
-      <div class="tabs">
-        <button data-tab="control" class="active">Steuerung</button>
-        <button data-tab="photos">Fotos</button>
-      </div>
+      <nav class="tabs" id="tabs">
+        <button data-tab="live">Live</button>
+        <button data-tab="fotos">Fotos</button>
+        <button data-tab="ablauf">Ablauf</button>
+        <button data-tab="fokus">Fokus</button>
+        <button data-tab="texte">Texte</button>
+        <button data-tab="effekte">Effekte</button>
+        <button data-tab="3d">3D</button>
+      </nav>
     </header>
 
-    <main id="tab-control">
-      <section>
-        <h2>Jetzt auf dem Foto</h2>
-        <div class="emoji-grid" id="emojiButtons"></div>
-        <div style="margin-top: 8px; display: flex; gap: 8px; align-items: center">
-          <button class="small" id="editEmojis">Emojis ändern</button>
-          <span class="hint">Schweben über dem aktuellen Foto bis zum nächsten Übergang.</span>
+    <!-- Live: alles, was sofort auf dem aktuellen Foto erscheint -->
+    <section data-page="live">
+      <h2>Emojis</h2>
+      <div class="emoji-grid" id="emojiButtons"></div>
+      <div style="margin-top: 8px">
+        <button class="small" id="editEmojis">Emojis ändern</button>
+      </div>
+      <div class="row" id="emojiEditor" style="display: none">
+        <input type="text" id="emojiInput" autocomplete="off" />
+        <div style="margin-top: 8px; display: flex; gap: 8px">
+          <button class="small primary" id="saveEmojis">Speichern</button>
+          <button class="small" id="resetEmojis">Vorgabe</button>
         </div>
-        <div class="row" id="emojiEditor" style="display: none">
-          <input type="text" id="emojiInput" autocomplete="off" />
-          <div style="margin-top: 8px; display: flex; gap: 8px">
-            <button class="small primary" id="saveEmojis">Speichern</button>
-            <button class="small" id="resetEmojis">Vorgabe</button>
-          </div>
-          <div class="hint">Emojis einfach hintereinander eingeben (Emoji-Tastatur).</div>
-        </div>
-        <div class="row">
-          <div class="label">Text sofort einblenden</div>
-          <textarea id="sayText" rows="2" placeholder="z. B. Alles Gute zum Geburtstag!"></textarea>
-          <div style="margin-top: 8px">
-            <button class="small primary" id="sayNow">Jetzt einblenden</button>
-          </div>
-          <div class="hint">Erscheint sofort über dem aktuellen Foto und wird nicht gespeichert.</div>
-        </div>
-      </section>
+        <div class="hint">Emojis einfach hintereinander eingeben (Emoji-Tastatur).</div>
+      </div>
+    </section>
+    <section data-page="live">
+      <h2>Text einblenden</h2>
+      <div class="quick" id="quickTexts"></div>
+      <textarea id="sayText" rows="2" placeholder="Eigener Text, z. B. Alles Gute!"></textarea>
+      <div style="margin-top: 8px">
+        <button class="small primary" id="sayNow">Jetzt einblenden</button>
+      </div>
+      <div class="hint">Alles hier gilt nur für das aktuelle Foto, bis zum nächsten Übergang.</div>
+    </section>
+    <section data-page="live">
+      <h2>Effekt <button class="small" data-cmd="effect">✨ Zufall</button></h2>
+      <div class="triggers" id="effectTriggers"></div>
+    </section>
+    <section data-page="live">
+      <h2>3D-Fotowelt <button class="small" data-cmd="world">🧊 Zufall</button></h2>
+      <div class="triggers" id="worldTriggers"></div>
+    </section>
 
-      <section>
-        <h2>Zeiten</h2>
-        <div id="displayDuration"></div>
-        <div id="transitionDuration"></div>
-        <div id="textDuration"></div>
-      </section>
+    <section data-page="fotos">
+      <h2>
+        Eigene Reihenfolge
+        <button class="small" id="clearQueue">Leeren</button>
+      </h2>
+      <div class="thumbs" id="queue"></div>
+      <div class="hint" style="margin-top: 8px">
+        Tippen entfernt · halten und ziehen ordnet neu. Danach geht es normal weiter.
+      </div>
+    </section>
+    <section data-page="fotos">
+      <h2>Alle Fotos <span id="photoCount"></span></h2>
+      <div class="hint" style="margin-bottom: 8px">
+        Antippen: als Nächstes zeigen, weitere Fotos werden hinten angehängt.
+      </div>
+      <div class="thumbs" id="gallery"></div>
+    </section>
 
-      <section>
-        <h2>Bewegung</h2>
-        <div id="motionIntensity"></div>
-        <div class="row">
-          <label>Höchste Vergrößerung <span class="value" id="maxUpscaleValue"></span></label>
-          <input type="range" id="maxUpscale" min="100" max="250" step="5" />
-        </div>
-      </section>
+    <section data-page="ablauf">
+      <h2>Zeiten</h2>
+      <div id="displayDuration"></div>
+      <div id="transitionDuration"></div>
+    </section>
+    <section data-page="ablauf">
+      <h2>Bewegung</h2>
+      <div id="motionIntensity"></div>
+      <div class="row">
+        <label>Höchste Vergrößerung <span class="value" id="maxUpscaleValue"></span></label>
+        <input type="range" id="maxUpscale" min="100" max="250" step="5" />
+      </div>
+    </section>
+    <section data-page="ablauf">
+      <h2>Übergänge</h2>
+      <div class="chips" id="transitions"></div>
+    </section>
 
-      <section>
-        <h2>Übergänge</h2>
-        <div class="chips" id="transitions"></div>
-      </section>
+    <section data-page="fokus">
+      <div class="switch">Fokus aktiv <input type="checkbox" id="focusEnabled" /></div>
+      <div class="row">
+        <div class="label">★ Fokus-Person</div>
+        <select id="focusPersonId"></select>
+      </div>
+      <div class="row">
+        <div class="label">♥ Fokus-Partner</div>
+        <select id="focusPartnerId"></select>
+      </div>
+      <div class="switch">Gemeinsam fokussieren <input type="checkbox" id="focusTogether" /></div>
+      <div class="row">
+        <div class="label">Andere Gesichter</div>
+        <select id="focusPanOthers"></select>
+      </div>
+      <div class="row">
+        <div class="label">Häufiger zeigen</div>
+        <select id="focusBoost">
+          <option value="0">normal</option>
+          <option value="1">etwas häufiger (×2)</option>
+          <option value="2">häufiger (×3)</option>
+          <option value="3">viel häufiger (×4)</option>
+        </select>
+      </div>
+      <div class="row">
+        <label>Erkennungsschwelle <span class="value" id="focusThresholdValue"></span></label>
+        <input type="range" id="focusThreshold" min="20" max="70" step="1" />
+      </div>
+    </section>
 
-      <section>
-        <h2>Fokus</h2>
-        <div class="switch">Fokus aktiv <input type="checkbox" id="focusEnabled" /></div>
-        <div class="row">
-          <div class="label">★ Fokus-Person</div>
-          <select id="focusPersonId"></select>
+    <section data-page="texte">
+      <h2>Texte</h2>
+      <div class="hint">🔀 im Ablauf: erscheint von selbst · 📱 nur auf Abruf: nur über „Live“</div>
+      <div id="texts"></div>
+    </section>
+    <section data-page="texte">
+      <div id="textFillerEvery"></div>
+      <div id="textDuration"></div>
+      <div class="row">
+        <div class="label">Neuer Text</div>
+        <textarea id="newText" rows="2" placeholder="Text eingeben …"></textarea>
+        <div style="margin-top: 8px; display: flex; gap: 8px">
+          <button class="small" id="addText">🔀 Im Ablauf</button>
+          <button class="small" id="addAdhoc">📱 Nur auf Abruf</button>
         </div>
-        <div class="row">
-          <div class="label">♥ Fokus-Partner</div>
-          <select id="focusPartnerId"></select>
-        </div>
-        <div class="switch">Gemeinsam fokussieren <input type="checkbox" id="focusTogether" /></div>
-        <div class="row">
-          <div class="label">Andere Gesichter</div>
-          <select id="focusPanOthers"></select>
-        </div>
-        <div class="row">
-          <div class="label">Häufiger zeigen</div>
-          <select id="focusBoost">
-            <option value="0">normal</option>
-            <option value="1">etwas häufiger (×2)</option>
-            <option value="2">häufiger (×3)</option>
-            <option value="3">viel häufiger (×4)</option>
-          </select>
-        </div>
-        <div class="row">
-          <label>Erkennungsschwelle <span class="value" id="focusThresholdValue"></span></label>
-          <input type="range" id="focusThreshold" min="20" max="70" step="1" />
-        </div>
-      </section>
+        <div class="hint">Stil wird zufällig gewählt; Feinheiten in den Einstellungen am PC.</div>
+      </div>
+    </section>
 
-      <section>
-        <h2>3D-Fotowelt</h2>
-        <div class="switch">Zwischenspiel aktiv <input type="checkbox" id="worldEnabled" /></div>
-        <div style="margin: 8px 0"><button class="small" data-cmd="world">🧊 3D jetzt</button></div>
-        <div id="worldEvery"></div>
-        <div id="worldDuration"></div>
-        <div class="label" style="margin-top: 10px">Jetzt zeigen</div>
-        <div class="triggers" id="worldTriggers"></div>
-        <div class="label" style="margin-top: 12px">Beim Zufall dabei</div>
-        <div class="chips" id="formations"></div>
-      </section>
+    <section data-page="effekte">
+      <div class="switch">Effekte im Ablauf <input type="checkbox" id="effectsEnabled" /></div>
+      <div id="effectEvery"></div>
+      <div id="effectDuration"></div>
+      <div id="effectIntensity"></div>
+      <div class="label" style="margin-top: 12px">Beim Zufall dabei</div>
+      <div class="chips" id="effects"></div>
+    </section>
 
-      <section>
-        <h2>Effekte</h2>
-        <div class="switch">Effekte aktiv <input type="checkbox" id="effectsEnabled" /></div>
-        <div style="margin: 8px 0">
-          <button class="small" data-cmd="effect">✨ Effekt jetzt</button>
-        </div>
-        <div id="effectEvery"></div>
-        <div id="effectDuration"></div>
-        <div id="effectIntensity"></div>
-        <div class="label" style="margin-top: 10px">Jetzt zeigen</div>
-        <div class="triggers" id="effectTriggers"></div>
-        <div class="label" style="margin-top: 12px">Beim Zufall dabei</div>
-        <div class="chips" id="effects"></div>
-      </section>
-
-      <section>
-        <h2>Texte</h2>
-        <div id="textFillerEvery"></div>
-        <div id="texts"></div>
-        <div class="row">
-          <div class="label">Neuer Fülltext</div>
-          <textarea id="newText" rows="2" placeholder="Text eingeben …"></textarea>
-          <div style="margin-top: 8px"><button class="small" id="addText">Hinzufügen</button></div>
-          <div class="hint">Stil wird zufällig gewählt; Feinheiten in den Einstellungen am PC.</div>
-        </div>
-      </section>
-    </main>
-
-    <main id="tab-photos" style="display: none">
-      <section>
-        <h2>
-          Eigene Reihenfolge
-          <button class="small" id="clearQueue">Leeren</button>
-        </h2>
-        <div class="thumbs" id="queue"></div>
-        <div class="hint" style="margin-top: 8px">
-          Tippen entfernt · halten und ziehen ordnet neu. Danach geht es normal weiter.
-        </div>
-      </section>
-      <section>
-        <h2>Alle Fotos <span id="photoCount"></span></h2>
-        <div class="hint" style="margin-bottom: 8px">
-          Antippen: als Nächstes zeigen, weitere Fotos werden hinten angehängt.
-        </div>
-        <div class="thumbs" id="gallery"></div>
-      </section>
-    </main>
+    <section data-page="3d">
+      <div class="switch">Zwischenspiel im Ablauf <input type="checkbox" id="worldEnabled" /></div>
+      <div id="worldEvery"></div>
+      <div id="worldDuration"></div>
+      <div class="label" style="margin-top: 12px">Beim Zufall dabei</div>
+      <div class="chips" id="formations"></div>
+    </section>
 
     <div id="toasts"></div>
 
@@ -650,7 +706,20 @@
         return text.split(/\s+/).filter(Boolean)
       }
 
-      const DEFAULT_EMOJIS = ['❤️', '😂', '🎉', '👏', '😍', '🥳', '🔥', '⭐', '🥂', '😮', '🙈', '👍']
+      const DEFAULT_EMOJIS = [
+        '❤️',
+        '😂',
+        '🎉',
+        '👏',
+        '😍',
+        '🥳',
+        '🔥',
+        '⭐',
+        '🥂',
+        '😮',
+        '🙈',
+        '👍'
+      ]
 
       function build() {
         rangeControl('displayDuration', 'Anzeigedauer', 's', 1, 60, 0.5)
@@ -721,7 +790,7 @@
           command('say', text)
           $('sayText').value = ''
         }
-        $('addText').onclick = () => {
+        const addText = (adhoc) => {
           const text = $('newText').value.trim()
           if (!text) return
           const item = {
@@ -731,12 +800,15 @@
             kind: 'filler',
             photos: [],
             placement: 'over',
-            style: 'random'
+            style: 'random',
+            adhoc
           }
           $('newText').value = ''
           patch({ texts: [item, ...state.settings.texts] })
-          toast('Fülltext hinzugefügt')
+          toast(adhoc ? 'Text auf Abruf hinzugefügt (unter „Live“)' : 'Text kommt jetzt im Ablauf')
         }
+        $('addText').onclick = () => addText(false)
+        $('addAdhoc').onclick = () => addText(true)
 
         // Emojis
         $('editEmojis').onclick = () => {
@@ -754,22 +826,42 @@
         }
         $('resetEmojis').onclick = () => ($('emojiInput').value = DEFAULT_EMOJIS.join(' '))
 
-        // Reiter
-        document.querySelectorAll('[data-tab]').forEach((b) => {
-          b.onclick = () => {
-            document
-              .querySelectorAll('[data-tab]')
-              .forEach((t) => t.classList.toggle('active', t === b))
-            $('tab-control').style.display = b.dataset.tab === 'control' ? '' : 'none'
-            $('tab-photos').style.display = b.dataset.tab === 'photos' ? '' : 'none'
-            if (b.dataset.tab === 'photos') loadGallery()
-          }
-        })
+        // Reiter: zeigt nur die Abschnitte der gewählten Seite
+        document
+          .querySelectorAll('[data-tab]')
+          .forEach((b) => (b.onclick = () => showTab(b.dataset.tab)))
         $('clearQueue').onclick = () => queueOp({ op: 'clear' })
         setupQueueDrag()
         built = true
-        // #fotos in der Adresse öffnet direkt die Galerie (z. B. als Lesezeichen).
-        if (location.hash === '#fotos') document.querySelector('[data-tab=photos]').click()
+        // #fotos, #texte … in der Adresse öffnet direkt diesen Reiter (z. B. als Lesezeichen),
+        // sonst der zuletzt benutzte.
+        let start = location.hash.slice(1)
+        if (!document.querySelector('[data-tab="' + start + '"]')) {
+          try {
+            start = localStorage.getItem('pp-tab') || 'live'
+          } catch {
+            start = 'live'
+          }
+        }
+        showTab(document.querySelector('[data-tab="' + start + '"]') ? start : 'live')
+      }
+
+      function showTab(tab) {
+        document
+          .querySelectorAll('[data-tab]')
+          .forEach((t) => t.classList.toggle('active', t.dataset.tab === tab))
+        document
+          .querySelectorAll('[data-page]')
+          .forEach((sec) => (sec.style.display = sec.dataset.page === tab ? '' : 'none'))
+        const active = document.querySelector('[data-tab="' + tab + '"]')
+        if (active) active.scrollIntoView({ block: 'nearest', inline: 'nearest' })
+        window.scrollTo(0, 0)
+        if (tab === 'fotos') loadGallery()
+        try {
+          localStorage.setItem('pp-tab', tab)
+        } catch {
+          // ohne Speicher: beim nächsten Mal wieder „Live“
+        }
       }
 
       function render(next) {
@@ -779,13 +871,19 @@
         const s = state.settings
         const show = state.show
         $('status').innerHTML = show.running
-          ? (show.paused ? '<b>Pausiert</b>' : show.frozen ? '<b>Eingefroren</b>' : '<b>Läuft</b>') +
-            (show.label ? ' · ' + escapeHtml(show.label) : '')
+          ? (show.paused
+              ? '<b>Pausiert</b>'
+              : show.frozen
+                ? '<b>Eingefroren</b>'
+                : '<b>Läuft</b>') + (show.label ? ' · ' + escapeHtml(show.label) : '')
           : '<span class="off">Show läuft nicht</span>'
-        $('startstop').textContent = show.running ? 'Show beenden' : 'Show starten'
-        $('pause').textContent = show.paused ? '▶︎ Weiter' : '⏸'
+        $('startstop').className = show.running ? 'running' : 'stopped'
+        $('startstop').title = show.running ? 'Show beenden' : 'Show starten'
+        $('pause').textContent = show.paused ? '▶︎' : '⏸'
+        $('pause').classList.toggle('on', !!show.paused)
+        $('pause').title = show.paused ? 'Weiter' : 'Pause'
         $('freeze').classList.toggle('on', !!show.frozen)
-        $('freeze').textContent = show.frozen ? '❄ Auftauen' : '❄ Einfrieren'
+        $('freeze').title = show.frozen ? 'Auftauen' : 'Foto einfrieren'
 
         for (const key of [
           'displayDuration',
@@ -838,6 +936,7 @@
         chips('effects', s.effects, state.labels.effects, 'effects')
         chips('transitions', s.transitions, state.labels.transitions, 'transitions')
 
+        const firstLine = (t) => escapeHtml(t.text.split('\n')[0] || 'Leerer Text')
         $('texts').innerHTML = s.texts
           .map(
             (t, i) =>
@@ -846,15 +945,44 @@
               '"' +
               (t.enabled ? ' checked' : '') +
               '><span>' +
-              escapeHtml(t.text.split('\n')[0] || 'Leerer Text') +
-              '</span><small>' +
-              (t.kind === 'filler' ? 'Fülltext' : 'an Foto') +
-              '</small><button class="small" data-show="' +
+              firstLine(t) +
+              '</span><button class="mode' +
+              (t.adhoc ? ' adhoc' : '') +
+              '" data-mode="' +
+              i +
+              '">' +
+              (t.adhoc ? '📱 Abruf' : '🔀 Ablauf') +
+              '</button><button class="small" data-show="' +
               escapeHtml(t.id) +
               '">Zeigen</button></div>'
           )
           .join('')
         $('texts')
+          .querySelectorAll('[data-show]')
+          .forEach((b) => (b.onclick = () => command('text', b.dataset.show)))
+        $('texts')
+          .querySelectorAll('[data-mode]')
+          .forEach((b) => {
+            b.onclick = () =>
+              patch({
+                texts: s.texts.map((t, i) =>
+                  i === Number(b.dataset.mode) ? { ...t, adhoc: !t.adhoc } : t
+                )
+              })
+          })
+        // Live: Texte „nur auf Abruf“ als Schnellknöpfe
+        $('quickTexts').innerHTML = s.texts
+          .filter((t) => t.enabled && t.adhoc && t.text.trim())
+          .map(
+            (t) =>
+              '<button class="small" data-show="' +
+              escapeHtml(t.id) +
+              '">' +
+              firstLine(t) +
+              '</button>'
+          )
+          .join('')
+        $('quickTexts')
           .querySelectorAll('[data-show]')
           .forEach((b) => (b.onclick = () => command('text', b.dataset.show)))
         $('texts')

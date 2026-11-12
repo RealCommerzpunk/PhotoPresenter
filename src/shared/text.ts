@@ -341,7 +341,9 @@ export const textItemSchema = z.object({
   photos: z.array(z.string()),
   placement: z.enum(keys(PLACEMENTS)),
   /** Stil-ID oder 'random' (Zufall aus den aktiven Stilen). */
-  style: z.string()
+  style: z.string(),
+  /** Nur auf Abruf (Fernbedienung): kommt nie von selbst im Ablauf. */
+  adhoc: z.boolean().optional()
 })
 export type TextItem = z.infer<typeof textItemSchema>
 

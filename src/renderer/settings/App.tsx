@@ -10,6 +10,7 @@ import type { PhotoList } from '@shared/ipc'
 import { Card, Field, RangeInput, Toggle, WeightedList } from './controls'
 import { EffectsPage } from './EffectsPage'
 import { PersonsPage } from './PersonsPage'
+import { PortableCard } from './PortableCard'
 import { RemoteCard } from './RemoteCard'
 import { ScreenCard } from './ScreenCard'
 import { StylesPage } from './StylesPage'
@@ -191,6 +192,7 @@ function General({ s, update }: { s: Settings; update: Update }): React.JSX.Elem
         </Field>
       </Card>
       <RemoteCard s={s} update={update} />
+      <PortableCard />
       <Card title="Zurücksetzen">
         <Field label="Alle Einstellungen" hint="Der Fotoordner bleibt erhalten.">
           <button

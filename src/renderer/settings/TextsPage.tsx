@@ -109,8 +109,19 @@ function TextEditor({
             {firstLine}
           </span>
           <span className="shrink-0 text-xs text-white/40">
-            {summary} · {styleName ?? 'Zufall'}
+            {item.adhoc ? 'nur auf Abruf' : summary} · {styleName ?? 'Zufall'}
           </span>
+        </button>
+        <button
+          onClick={() => onChange({ adhoc: !item.adhoc })}
+          title="Im Ablauf: erscheint von selbst (zufällig bzw. beim Foto). Nur auf Abruf: erscheint nur, wenn er per Fernbedienung eingeblendet wird."
+          className={`shrink-0 rounded-full border px-2.5 py-0.5 text-xs ${
+            item.adhoc
+              ? 'border-amber-400/50 bg-amber-400/10 text-amber-200'
+              : 'border-white/15 bg-white/5 text-white/60 hover:bg-white/10'
+          }`}
+        >
+          {item.adhoc ? '📱 nur auf Abruf' : '🔀 im Ablauf'}
         </button>
         <button onClick={() => setOpen(!open)} className="text-white/50 hover:text-white">
           {open ? '▲' : '▼'}

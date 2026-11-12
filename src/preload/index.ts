@@ -1,6 +1,12 @@
 import { contextBridge, ipcRenderer, type IpcRendererEvent } from 'electron'
 import type { FaceIndexStatus } from '@shared/faces'
-import { IPC, type EmbedRequest, type PhotoPresenterApi, type ThumbRequest } from '@shared/ipc'
+import {
+  IPC,
+  type EmbedRequest,
+  type ExportProgress,
+  type PhotoPresenterApi,
+  type ThumbRequest
+} from '@shared/ipc'
 import type { PhotoQueue, ShowCommandMessage } from '@shared/remote'
 import type { Settings } from '@shared/settings'
 
@@ -55,6 +61,10 @@ const api: PhotoPresenterApi = {
   onQueueChanged: (callback) => subscribe<PhotoQueue>(IPC.queueChanged, callback),
   queuePlaying: (id) => ipcRenderer.send(IPC.queuePlaying, id),
 
+  dataInfo: () => ipcRenderer.invoke(IPC.dataInfo),
+  exportPackage: () => ipcRenderer.invoke(IPC.exportPackage),
+  onExportProgress: (callback) => subscribe<ExportProgress>(IPC.exportProgress, callback),
+  openPath: (path) => ipcRenderer.invoke(IPC.openPath, path),
   listDisplays: () => ipcRenderer.invoke(IPC.listDisplays),
   identifyDisplays: () => ipcRenderer.invoke(IPC.identifyDisplays),
 

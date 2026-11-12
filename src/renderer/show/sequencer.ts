@@ -30,7 +30,8 @@ export class Sequencer {
   ) {}
 
   setTexts(texts: TextItem[], fillerEvery: Range): void {
-    const active = texts.filter((t) => t.enabled && t.text.trim())
+    // Texte „nur auf Abruf“ gehören der Fernbedienung, nicht dem Ablauf.
+    const active = texts.filter((t) => t.enabled && !t.adhoc && t.text.trim())
     this.fillers = active.filter((t) => t.kind === 'filler')
     const known = new Set(this.fillers.map((t) => t.id))
     this.fillerQueue = this.fillerQueue.filter((t) => known.has(t.id))

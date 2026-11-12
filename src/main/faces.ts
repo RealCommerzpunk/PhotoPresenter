@@ -14,18 +14,14 @@ import {
 } from '@shared/faces'
 import type { EmbedRequest, EmbedResult, FaceListItem, FaceModel, RelBox } from '@shared/ipc'
 import type { FaceSample, Person, Settings } from '@shared/settings'
+import { parseIndex, sameFile, serializeIndex } from './faceIndexFile'
 import { listPhotos } from './photos'
 import { loadSettings, photoFolder } from './settings'
 
-/** Ein Eintrag im Index; Schlüssel ist der absolute Pfad. */
+/** Ein Eintrag im Index; Schlüssel ist der absolute Pfad (in der Datei relativ, siehe faceIndexFile). */
 interface Entry extends PhotoFaces {
   mtime: number
   size: number
-}
-
-interface IndexFile {
-  version: 1
-  photos: Record<string, Entry>
 }
 
 const MODEL_FILES: Record<FaceModel, string> = {
@@ -59,8 +55,8 @@ export class FaceStore {
     private readonly requestEmbed: (request: EmbedRequest) => void
   ) {
     try {
-      const raw = JSON.parse(readFileSync(this.file, 'utf8')) as IndexFile
-      if (raw.version === 1) this.index = new Map(Object.entries(raw.photos))
+      // Relative Einträge gehören zum aktuellen Fotoordner (Index reist mit den Fotos mit).
+      this.index = parseIndex<Entry>(JSON.parse(readFileSync(this.file, 'utf8')), photoFolder())
     } catch {
       // Noch kein Index oder unlesbar: neu aufbauen.
     }
@@ -106,7 +102,7 @@ export class FaceStore {
       }
       try {
         const st = await stat(resolve(list.folder, name))
-        if (st.mtimeMs !== entry.mtime || st.size !== entry.size) pending.push(name)
+        if (!sameFile(entry, st)) pending.push(name)
       } catch {
         // Datei verschwunden: beim nächsten Einlesen fällt sie aus der Liste.
       }
@@ -140,7 +136,7 @@ export class FaceStore {
       const st = await stat(abs)
       // Von Hand markierte Gesichter bleiben, solange sich die Datei nicht geändert hat.
       const old = this.index.get(abs)
-      const unchanged = old && old.mtime === st.mtimeMs && old.size === st.size
+      const unchanged = old && sameFile(old, st)
       const manual = unchanged ? old.faces.filter((f) => f.manual) : []
       // Auch bei Fehlern eintragen (ohne Gesichter), damit das Foto nicht endlos wiederkommt.
       const base = result ?? { w: old?.w ?? 0, h: old?.h ?? 0, faces: [] }
@@ -184,7 +180,7 @@ export class FaceStore {
   }
 
   private async save(): Promise<void> {
-    const data: IndexFile = { version: 1, photos: Object.fromEntries(this.index) }
+    const data = serializeIndex(this.index, this.folder)
     try {
       await mkdir(app.getPath('userData'), { recursive: true })
       await writeFile(`${this.file}.tmp`, JSON.stringify(data))
@@ -192,6 +188,11 @@ export class FaceStore {
     } catch (err) {
       console.error('Gesichtsindex konnte nicht gespeichert werden:', err)
     }
+  }
+
+  /** Index für ein Weitergabe-Paket schreiben (Pfade relativ zum Fotoordner). */
+  async exportTo(file: string): Promise<void> {
+    await writeFile(file, JSON.stringify(serializeIndex(this.index, this.folder, true)))
   }
 
   /** Index sofort schreiben (beim Beenden). */

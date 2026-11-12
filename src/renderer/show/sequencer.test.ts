@@ -29,6 +29,20 @@ function run(seq: Sequencer, n: number): string[] {
 }
 
 describe('Sequencer', () => {
+  it('lässt Texte „nur auf Abruf“ aus dem Ablauf', () => {
+    const range = { min: 1, max: 1, mode: 'fixed' as const }
+    const seq = new Sequencer(new Playlist(['a', 'b', 'c']), range)
+    seq.setTexts(
+      [
+        text('f1', { adhoc: true }),
+        text('p1', { kind: 'photo', photos: ['a'], placement: 'over', adhoc: true })
+      ],
+      range
+    )
+    const out = run(seq, 6)
+    expect(out.some((x) => x.startsWith('T') || x.endsWith('+'))).toBe(false)
+  })
+
   it('streut Fülltexte im festen Abstand ein', () => {
     const seq = new Sequencer(new Playlist(['a', 'b', 'c', 'd', 'e', 'f']), {
       min: 3,
