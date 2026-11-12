@@ -33,17 +33,28 @@ export interface Fit {
   scale: number
   /** true, wenn das Bild den Bildschirm vollständig füllt (ggf. leicht beschnitten). */
   covers: boolean
+  /** Links/rechts bzw. oben/unten bleibt Rand, der aufgefüllt wird. */
+  gapX: boolean
+  gapY: boolean
+  /** Die Größe wurde durch die Grenze der Grundvergrößerung beschränkt. */
+  capped: boolean
 }
 
 /**
  * Füllt den Bildschirm, wenn dafür höchstens `maxCrop` des Bildes wegfällt,
- * sonst wird eingepasst und der Rand später aufgefüllt.
+ * sonst wird eingepasst und der Rand später aufgefüllt. `maxScale` begrenzt die
+ * Vergrößerung (z. B. für schlecht aufgelöste Fotos); dann kann rundum Rand entstehen.
  */
-export function fitImage(img: Size, screen: Size, maxCrop: number): Fit {
+export function fitImage(img: Size, screen: Size, maxCrop: number, maxScale = Infinity): Fit {
   const contain = Math.min(screen.w / img.w, screen.h / img.h)
   const cover = Math.max(screen.w / img.w, screen.h / img.h)
   const crop = 1 - contain / cover
-  return crop <= maxCrop + 1e-9 ? { scale: cover, covers: true } : { scale: contain, covers: false }
+  let scale = crop <= maxCrop + 1e-9 ? cover : contain
+  const capped = scale > maxScale
+  if (capped) scale = maxScale
+  const gapX = img.w * scale < screen.w - 0.5
+  const gapY = img.h * scale < screen.h - 0.5
+  return { scale, covers: !gapX && !gapY, gapX, gapY, capped }
 }
 
 /** Größter erlaubter Versatz je Achse, ohne dass über den Bildrand hinaus Leere sichtbar wird. */

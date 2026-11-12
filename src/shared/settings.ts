@@ -270,6 +270,11 @@ export const settingsSchema = z.object({
    * Darüber wird eingepasst und der Rand aufgefüllt. 0.12 = 12 %.
    */
   maxCrop: field(z.number().min(0).max(0.5), 0.12),
+  /**
+   * Fotos höchstens so weit über ihre Originalauflösung vergrößern (1.5 = 150 %), z. B. für
+   * schlecht gescannte Fotos; der Rand wird wie gewohnt aufgefüllt. 0 = unbegrenzt.
+   */
+  maxBaseScale: field(z.number().min(0).max(8), 0),
   fillModes: field(weightedSchema(FILL_MODES), defaultFillModes),
   /** Nach wie vielen Fotos ein Fülltext erscheint. */
   textFillerEvery: field(rangeSchema, { min: 8, max: 15, mode: 'random' } satisfies Range),

@@ -152,6 +152,32 @@ function General({ s, update }: { s: Settings; update: Update }): React.JSX.Elem
           </div>
         </Field>
         <Field
+          label="Kleine Fotos begrenzen"
+          hint="Schlecht aufgelöste oder gescannte Fotos höchstens so weit über ihre Originalauflösung vergrößern. Sie erscheinen dann kleiner, der Rand wird wie gewohnt aufgefüllt."
+        >
+          <div className="flex flex-wrap items-center gap-4 text-sm text-white/70">
+            <Toggle
+              checked={s.maxBaseScale > 0}
+              onChange={(v) => update({ maxBaseScale: v ? 1.5 : 0 })}
+              label="begrenzen"
+            />
+            {s.maxBaseScale > 0 && (
+              <>
+                <input
+                  type="range"
+                  min={100}
+                  max={400}
+                  step={10}
+                  value={Math.round(s.maxBaseScale * 100)}
+                  onChange={(e) => update({ maxBaseScale: Number(e.target.value) / 100 })}
+                  className="w-56 accent-indigo-500"
+                />
+                <span>höchstens {Math.round(s.maxBaseScale * 100)} %</span>
+              </>
+            )}
+          </div>
+        </Field>
+        <Field
           label="Randfüllung"
           hint="Wie freie Ränder aufgefüllt werden. Pro Foto wird aus den aktiven Arten gewählt."
         >

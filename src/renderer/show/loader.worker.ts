@@ -14,6 +14,7 @@ export type WorkerRequest =
       maxCrop: number
       fill: FillMode
       maxZoom: number
+      maxBase: number
     }
   | { id: number; kind: 'soft'; name: string; screen: Size }
   | { id: number; kind: 'thumb'; name: string }
@@ -36,7 +37,8 @@ self.onmessage = async (e: MessageEvent<WorkerRequest>) => {
         req.pixelRatio,
         req.maxCrop,
         req.fill,
-        req.maxZoom
+        req.maxZoom,
+        req.maxBase
       )
       const msg: WorkerResponse = { id: req.id, ok: true, kind: 'photo', images: r }
       // Bitmaps werden übertragen, nicht kopiert.

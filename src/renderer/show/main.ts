@@ -144,6 +144,11 @@ async function main(): Promise<void> {
     }
   }
 
+  /** Grenze der Grundvergrößerung in Bildschirm- je Originalpixel (Infinity = unbegrenzt). */
+  function baseCap(): number {
+    return settings.maxBaseScale > 0 ? settings.maxBaseScale / app.renderer.resolution : Infinity
+  }
+
   /** Fokusplan für ein Foto, wenn die Fokus-Person darauf erkannt wurde. */
   async function focusFor(name: string): Promise<{ target: FocusTarget; zoom: number } | null> {
     if (!settings.focusEnabled || !settings.focusPersonId) return null
@@ -165,7 +170,7 @@ async function main(): Promise<void> {
       others: pan
     }
     const img = { w: info.w, h: info.h }
-    const { scale } = fitImage(img, screen(), settings.maxCrop)
+    const { scale } = fitImage(img, screen(), settings.maxCrop, baseCap())
     return {
       target: { face: focusFace.box, others, plan, partner: partnerFace?.box },
       // Nur so viel Auflösung laden, wie die Zoomgrenze überhaupt erlaubt.
@@ -215,7 +220,8 @@ async function main(): Promise<void> {
         app.renderer.resolution,
         settings.maxCrop,
         fill,
-        focus?.zoom ?? 1
+        focus?.zoom ?? 1,
+        settings.maxBaseScale
       )
       // Vorab auf die Grafikkarte laden, ein Streifen pro Frame: So blockiert kein Frame
       // lange, und im Übergang ist alles schon da.

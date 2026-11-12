@@ -92,9 +92,11 @@ export async function loadPhoto(
   maxCrop: number,
   fill: FillMode,
   /** Größter geplanter Zoom (z. B. aufs Gesicht); bestimmt die nötige Auflösung. */
-  maxZoom = 1
+  maxZoom = 1,
+  /** Höchste Grundvergrößerung über die Originalauflösung (0 = unbegrenzt). */
+  maxBase = 0
 ): Promise<LoadedPhoto> {
-  const r = await ask({ kind: 'photo', name, screen, pixelRatio, maxCrop, fill, maxZoom })
+  const r = await ask({ kind: 'photo', name, screen, pixelRatio, maxCrop, fill, maxZoom, maxBase })
   if (r.kind !== 'photo') throw new Error('unerwartete Antwort')
   const { images } = r
   const parts = images.strips.map((s) => ({ texture: textureFrom(s.bitmap), y: s.y }))
@@ -104,12 +106,18 @@ export async function loadPhoto(
     name,
     parts,
     backdrop,
-    fill,
+    fill: images.fill,
     soft: images.soft,
     size,
     original: { w: images.originalWidth, h: images.originalHeight },
     pixelRatio,
-    fit: fitImage(size, screen, maxCrop),
+    // Grenze von Originalpixeln auf Texturpixel umrechnen (die Textur ist evtl. verkleinert).
+    fit: fitImage(
+      size,
+      screen,
+      maxCrop,
+      maxBase > 0 ? (maxBase / pixelRatio) * (images.originalWidth / size.w) : Infinity
+    ),
     destroy() {
       for (const p of parts) p.texture.destroy(true)
       backdrop.destroy(true)

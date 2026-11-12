@@ -22,25 +22,20 @@ function featherEdges(
   ctx: OffscreenCanvasRenderingContext2D,
   w: number,
   h: number,
-  horizontal: boolean,
+  sides: boolean,
+  topBottom: boolean,
   width: number
 ): void {
   ctx.globalCompositeOperation = 'destination-out'
-  const edges = horizontal
-    ? [
-        [0, 0, width, 0],
-        [w, 0, w - width, 0]
-      ]
-    : [
-        [0, 0, 0, width],
-        [0, h, 0, h - width]
-      ]
+  const edges: [number, number, number, number][] = []
+  if (sides) edges.push([0, 0, width, 0], [w, 0, w - width, 0])
+  if (topBottom) edges.push([0, 0, 0, width], [0, h, 0, h - width])
   for (const [x0, y0, x1, y1] of edges) {
     const g = ctx.createLinearGradient(x0, y0, x1, y1)
     g.addColorStop(0, 'rgba(0,0,0,1)')
     g.addColorStop(1, 'rgba(0,0,0,0)')
     ctx.fillStyle = g
-    if (horizontal) ctx.fillRect(Math.min(x0, x1), 0, width, h)
+    if (y0 === y1) ctx.fillRect(Math.min(x0, x1), 0, width, h)
     else ctx.fillRect(0, Math.min(y0, y1), w, width)
   }
   ctx.globalCompositeOperation = 'source-over'
@@ -217,6 +212,8 @@ export interface PreparedImages {
   originalHeight: number
   backdrop: ImageBitmap
   soft: ImageBitmap
+  /** Tatsächlich verwendete Randfüllung (Gespiegelt kann auf Weichgezeichnet ausweichen). */
+  fill: FillMode
 }
 
 /** Foto und Randfüllung vorbereiten; Größen in logischen Bildschirmpixeln. */
@@ -225,16 +222,22 @@ export async function preparePhoto(
   screen: Size,
   pixelRatio: number,
   maxCrop: number,
-  fill: FillMode,
-  maxZoom: number
+  requestedFill: FillMode,
+  maxZoom: number,
+  /** Höchste Grundvergrößerung über die Originalauflösung (0 = unbegrenzt). */
+  maxBase = 0
 ): Promise<PreparedImages> {
   const original = await fetchBitmap(name)
 
   const originalWidth = original.width
   const originalHeight = original.height
-  const fit = fitImage({ w: original.width, h: original.height }, screen, maxCrop)
+  const maxScale = maxBase > 0 ? maxBase / pixelRatio : Infinity
+  const fit = fitImage({ w: original.width, h: original.height }, screen, maxCrop, maxScale)
   // Ränder links/rechts, wenn das Bild schmaler ist als der Bildschirm, sonst oben/unten.
-  const horizontalGaps = original.width / original.height < screen.w / screen.h
+  const horizontalGaps = fit.gapX
+  // Spiegeln passt nur zum genau eingepassten Foto: sonst stattdessen weichzeichnen.
+  const fill: FillMode =
+    requestedFill === 'mirror' && (fit.capped || (fit.gapX && fit.gapY)) ? 'blur' : requestedFill
   const physW = screen.w * pixelRatio
   const physH = screen.h * pixelRatio
   const needed =
@@ -253,9 +256,9 @@ export async function preparePhoto(
     if (!fit.covers) {
       // Kantenbreite in Bildschirmpixeln festlegen und in Texturpixel umrechnen.
       const texPerScreenPx = tw / (original.width * fit.scale)
-      const side = horizontalGaps ? tw : th
+      const side = Math.min(tw, th)
       const width = Math.min(side * 0.15, FEATHER * Math.min(screen.w, screen.h) * texPerScreenPx)
-      featherEdges(ctx, tw, th, horizontalGaps, width)
+      featherEdges(ctx, tw, th, fit.gapX, fit.gapY, width)
     }
     photoBitmap = canvas.transferToImageBitmap()
   }
@@ -272,7 +275,16 @@ export async function preparePhoto(
     strips.push({ bitmap: await createImageBitmap(photoBitmap, 0, y, width, h), y })
   }
   photoBitmap.close()
-  return { strips, width, height, originalWidth, originalHeight, backdrop: backdropBitmap, soft }
+  return {
+    strips,
+    width,
+    height,
+    originalWidth,
+    originalHeight,
+    backdrop: backdropBitmap,
+    soft,
+    fill
+  }
 }
 
 /** Größe der Kacheln in der 3D-Fotowelt (4:3, passend zu TILE_W × TILE_H). */

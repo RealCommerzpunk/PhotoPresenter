@@ -205,3 +205,21 @@ describe('Fokus-Partner', () => {
     expect(shot.path![3].t).toBe(1)
   })
 })
+
+describe('Grenze der Grundvergrößerung', () => {
+  it('lässt kleine Fotos kleiner als den Bildschirm, mit Rand rundum', () => {
+    // 800 × 600 auf 1920 × 1080: eingepasst wäre das 1,8-fach – begrenzt auf 1,5
+    const fit = fitImage({ w: 800, h: 600 }, screen, 0.12, 1.5)
+    expect(fit.scale).toBeCloseTo(1.5)
+    expect(fit.capped).toBe(true)
+    expect(fit.gapX && fit.gapY).toBe(true)
+    expect(fit.covers).toBe(false)
+  })
+
+  it('ändert nichts bei Fotos mit genug Auflösung', () => {
+    const fit = fitImage({ w: 4000, h: 3000 }, screen, 0.12, 1.5)
+    expect(fit.capped).toBe(false)
+    expect(fit.gapX).toBe(true)
+    expect(fit.gapY).toBe(false)
+  })
+})
