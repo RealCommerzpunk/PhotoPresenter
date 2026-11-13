@@ -36,8 +36,10 @@
 
 ## Try it
 
-**Prebuilt (Windows):** download the portable `PhotoPresenter x.y.z.exe` from the
-[Releases](https://github.com/RealCommerzpunk/PhotoPresenter/releases) page and run it – nothing to install.
+**Demo download (Windows):** get `PhotoPresenter-Demo-x.y.z.zip` from the
+[latest release](https://github.com/RealCommerzpunk/PhotoPresenter/releases/latest), unzip it and double-click the `.exe` – nothing to install. It contains the program,
+163 demo photos and ready-made demo settings with face recognition already done. The release also offers the
+portable program alone and an installer.
 Windows SmartScreen warns because the build is not signed ("More info" → "Run anyway").
 A step-by-step guide (German) is in [Quickstart.md](Quickstart.md) / [Quickstart.pdf](Quickstart.pdf).
 
