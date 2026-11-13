@@ -1,0 +1,23 @@
+PhotoPresenter @VERSION@ – Linux (x86-64)
+=========================================
+
+DEUTSCH
+Starten:   ./start.sh      (im entpackten Ordner; oder im Dateimanager „Ausführen“)
+Einstellungen, Personen und Gesichtsindex liegen im Ordner Data/ neben dem Programm,
+die Fotos in Photos/ – der ganze Ordner lässt sich kopieren und weitergeben.
+Fehler bitte melden: https://github.com/RealCommerzpunk/PhotoPresenter/issues
+start.sh startet ohne Chromium-Sandbox, wenn chrome-sandbox nicht per SUID (root) eingerichtet
+ist. Das ist bei entpackten Archiven üblich; für die Sandbox:
+  sudo chown root:root chrome-sandbox && sudo chmod 4755 chrome-sandbox
+
+ENGLISH
+Start:     ./start.sh      (in the unpacked folder, or "Run" in your file manager)
+Settings, people and face index are stored in Data/ next to the program, photos in Photos/ –
+the whole folder can be copied and passed on.
+Please report problems: https://github.com/RealCommerzpunk/PhotoPresenter/issues
+start.sh runs without the Chromium sandbox if chrome-sandbox is not set up as SUID root, which is
+normal for unpacked archives. To enable the sandbox:
+  sudo chown root:root chrome-sandbox && sudo chmod 4755 chrome-sandbox
+
+Demo photos (demo package only): RDNE Stock project on Pexels, Pexels License (see Photos/CREDITS.md).
+Program icon: Three Musketeers – Flaticon. Source code (MIT): https://github.com/RealCommerzpunk/PhotoPresenter

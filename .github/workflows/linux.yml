@@ -1,0 +1,86 @@
+# Baut die Linux-Pakete (AppImage, deb, tar.gz, Demo-Paket) auf einem Ubuntu-Rechner von GitHub.
+# Wird NUR von Hand gestartet (Actions → „Linux-Pakete“ → Run workflow); nichts läuft bei einem Push.
+# Windows-Pakete und Tests bleiben lokal. Siehe CLAUDE.md.
+name: Linux-Pakete
+
+on:
+  workflow_dispatch:
+    inputs:
+      release_tag:
+        description: 'Release-Tag, an den die Dateien angehängt werden (z. B. v0.13.0-linux). Leer = nur als Artefakt speichern.'
+        required: false
+        default: ''
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: npm 11 (wie lokal)
+        run: npm install -g npm@11
+
+      - name: Abhängigkeiten
+        run: npm ci
+
+      - name: Prüfen (Typen, Lint, Tests)
+        run: |
+          npm run typecheck
+          npm run lint
+          npm test
+
+      - name: Gesichtsmodelle laden und Programm bauen
+        run: |
+          npm run models
+          npm run build
+
+      - name: Linux-Pakete bauen
+        run: npx electron-builder --linux AppImage deb tar.gz --x64
+
+      - name: Programm kurz starten (Rauchtest)
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq xvfb libgbm1 libasound2t64 libgtk-3-0t64 libnss3 libxss1 >/dev/null
+          export ELECTRON_ENABLE_LOGGING=1
+          xvfb-run -a ./dist/linux-unpacked/photopresenter --no-sandbox --disable-gpu > smoke.log 2>&1 &
+          pid=$!
+          ok=0
+          for i in $(seq 1 60); do
+            sleep 1
+            if grep -q "Gesichtserkennung bereit" smoke.log; then ok=1; break; fi
+            kill -0 "$pid" 2>/dev/null || break
+          done
+          kill "$pid" 2>/dev/null || true
+          if [ "$ok" != 1 ]; then
+            echo "Rauchtest fehlgeschlagen. Letzte Zeilen:"; tail -40 smoke.log; exit 1
+          fi
+          echo "Rauchtest bestanden: Programm startet, Gesichtserkennung geladen."
+
+      - name: Archive packen (mit Ausführungsrechten) und Prüfsummen
+        run: |
+          version=$(node -p "require('./package.json').version")
+          scripts/linux/pack.sh "$version" release-out
+          cp dist/*.AppImage dist/*.deb release-out/
+          (cd release-out && sha256sum *.AppImage *.deb >> SHA256SUMS.txt)
+          ls -la release-out
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: linux-pakete
+          path: release-out/*
+          retention-days: 14
+
+      - name: An Release anhängen
+        if: ${{ inputs.release_tag != '' }}
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh release upload "${{ inputs.release_tag }}" release-out/* --clobber
