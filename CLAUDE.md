@@ -12,6 +12,7 @@ Plan und Meilensteine: `docs/PLAN.md` · Änderungen je Version: `CHANGELOG.md` 
 - `npm run quickstart`: `Quickstart.pdf` aus `Quickstart.md` neu erzeugen (nach jeder Änderung der Anleitung; die PDF kommt per `extraResources` ins Programm und ins Weitergabe-Paket)
 - Icon: `build/icon.png`/`icon.ico` (electron-builder), `resources/icon.png` (Fenster per `iconPath()`, Fernbedienung `/icon.png`); Nennung „Three Musketeers – Flaticon“ muss erhalten bleiben
 - Linux-Pakete: AppImage/deb gehen nicht unter Windows (Symlink-Fehler EPERM, WSL/Docker fehlen). `electron-builder --linux tar.gz` geht, verliert aber die Ausführungsrechte → `make_linux.py`-Muster: Archiv aus `dist/linux-unpacked` mit Python `tarfile` neu packen (Modi 755 für `photopresenter`, `chrome_crashpad_handler`, `*.so`, `start.sh`; `start.sh` nimmt `--no-sandbox`, wenn `chrome-sandbox` nicht SUID root ist). Release `v0.13.0-linux` ist eine ungetestete Vorabversion. `app.asar` ist ~300 MB (Größe prüfen, Backlog).
+- Paketgröße: Nur Pakete, die der Hauptprozess zur Laufzeit lädt (externalisiert: `zod`, `exifr`, `qrcode`), gehören in `dependencies`; alles, was Vite in die Fenster bündelt (pixi, three, react, onnxruntime-web, gsap, Schriften), ist `devDependencies`, sonst landen die Pakete doppelt in `app.asar` (+250 MB). Neues Paket im Hauptprozess → `dependencies`, im Fenster → `devDependencies`; nach dem Bauen `out/main/index.js` auf `require("…")` prüfen.
 - `npm run dist:win`: Installer lokal in `dist/` (Linux-Installer nur auf Linux/WSL)
 - Session abschließen: `/session-ende`
 

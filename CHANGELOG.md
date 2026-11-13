@@ -6,6 +6,7 @@ Alle Änderungen je Version. Format: neueste Version oben, Datum im Format JJJJ-
 
 - **Oberfläche in Deutsch, Englisch, Spanisch und Französisch** (Allgemein → Sprache; „Automatisch“ folgt der Systemsprache). Gilt für Einstellungen, Show-Meldungen, Info-Tafel (Taste I, Zahlen- und Datumsformat inklusive), die Handy-Fernbedienung und die README im Weitergabe-Paket. Weitere Sprachen lassen sich per Pull Request ergänzen: eine Datei je Sprache, Anleitung in `TRANSLATING.md`; Tests prüfen, dass kein Text und kein Platzhalter fehlt
 
+- **Schlankeres Programm**: Die Programmdatei ist rund 250 MB kleiner, weil nur noch wirklich gebrauchte Pakete mitgeliefert werden (der Fenster-Code ist schon gebündelt). Das Demo-Paket und der Linux-Download schrumpfen entsprechend
 - **Doppelte Fotos erkennen** (Allgemein → Doppelte Fotos): Vergleich des Bildinhalts per Wahrnehmungs-Hash, nicht nur nach Name oder Größe – auch verkleinerte, neu gespeicherte, umbenannte oder in anderes Format umgewandelte Kopien werden gefunden. Ähnliche Serienbilder gelten nicht als doppelt. Je Gruppe bleibt die Fassung mit der höchsten Auflösung (bei Gleichstand die größere Datei, dann der Name, der nicht nach Kopie aussieht)
 - **Doppelte in der Show überspringen** (Schalter): Show und Galerie der Fernbedienung zeigen nur die beste Fassung
 - **Aufräumen**: Dubletten in den Unterordner „Duplicates“ verschieben (wird nicht mehr eingelesen) oder in den Papierkorb legen
