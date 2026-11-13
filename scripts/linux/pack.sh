@@ -11,7 +11,9 @@ work="$(mktemp -d)"
 trap 'rm -rf "$work"' EXIT
 
 for demo in 0 1; do
-  name="PhotoPresenter-$([ $demo = 1 ] && echo 'Demo-')$version-linux-x64"
+  prefix="PhotoPresenter-"
+  if [ $demo = 1 ]; then prefix="PhotoPresenter-Demo-"; fi
+  name="$prefix$version-linux-x64"
   dir="$work/$name"
   mkdir -p "$dir"
   cp -a "$root/dist/linux-unpacked/." "$dir/"
