@@ -53,7 +53,7 @@ Memory-Verzeichnis: das im Systemprompt genannte Memory-Verzeichnis dieses Proje
 
 - Alle Änderungen committen, Nachricht auf Deutsch, z. B. `Session-Ende: Doku auf Stand 0.x.y`, mit `Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>`.
 - Commit-Nachricht erst in eine Datei schreiben, dann `git commit -F <datei>`.
-- `git push`. Keine GitHub Actions anlegen oder auslösen.
+- `git push`. Keine weiteren GitHub Actions anlegen; der Linux-Workflow wird nur auf Wunsch von Hand gestartet.
 
 ## 8. Abschluss
 
