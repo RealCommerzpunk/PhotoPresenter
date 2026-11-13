@@ -131,6 +131,7 @@ Jeder Meilenstein ergibt eine lauffähige Version und einen eigenen Commit/PR.
 - ✅ Relativer Fotopfad, portable Windows-Version
 - ✅ 0.10.0: Wackelpudding-Würfel, eine Formation je Zwischenspiel, kleine Fotos begrenzen, gezielte Auslöser und Sofort-Texte auf der Fernbedienung
 - ✅ 0.11.1: Bildschirm- und Bereichsauswahl
+- ✅ 0.13.0: Oberfläche in Deutsch/Englisch/Spanisch/Französisch, Dublettenprüfung (pHash, beste Fassung, Überspringen, Aufräumen), schlankeres Programm (app.asar 32 MB), Linux-Pakete per manuellem GitHub-Workflow
 - ✅ 0.12.5: Fingerabdruck im Gesichtsindex, Demo als Download-Release
 - ✅ 0.12.4: Produktseite (docs/index.html), Fokus-Partner mit neutralem Symbol
 - ✅ 0.12.3: Demo-Fotos, MIT-Lizenz, englische README – Vorbereitung auf öffentliches Repo
@@ -152,4 +153,6 @@ Jeder Meilenstein ergibt eine lauffähige Version und einen eigenen Commit/PR.
 
 - ✅ (0.13.0: de/en/es/fr, Community-Anleitung `TRANSLATING.md`; offen: Produktseite und Quickstart mehrsprachig) **Internationalisierung (Nutzerwunsch 2026-11-12):** Die App soll übersetzbar sein, vor allem die Oberfläche (Einstellungen, Fernbedienung, Show-Meldungen). Entwickelt und dokumentiert wird weiter vornehmlich auf Deutsch, übersetzt wird später. Grundsprache für Einstellungen und Technisches ist Englisch (Ordner-, Datei- und Schlüsselnamen, z. B. `Data\`, `Photos\`, `README.txt`). Vorgehen später: Texte aus dem Code in Sprachdateien (Schlüssel englisch), Sprache wählbar, Fallback Deutsch/Englisch.
 - ✅ (0.13.0, erster Schritt) **Dublettenprüfung (Nutzerwunsch 2026-11-12):** Doppelte Fotos im Ordner erkennen (auch umbenannt, verkleinert oder neu gespeichert, z. B. per Wahrnehmungs-Hash) und in der Show nur einmal zeigen; in den Einstellungen anzeigen, welche Fotos doppelt sind.
+- **Mehrsprachige Doku** (Quickstart, Produktseite `docs/index.html`, evtl. Changelog) in en/es/fr; Muttersprachler-Gegenlesung von es/fr.
+- **Linux auf echter Hardware testen** (AppImage unter Ubuntu 24.04 braucht evtl. `--no-sandbox`; `desktopName` setzen); Dublettenprüfung: ähnliche, aber nicht identische Fotos (Serienbilder) optional gruppieren.
 - Weitere: HEIC/RAW-Support, Videos in der Show, Hintergrundmusik, mehrere Fokus-Personen, Erkennung kleiner Gesichter in großen Gruppenfotos (Kacheln statt eines 640er-Durchgangs), Texte über Fotos neben statt unter Gesichter setzen.
