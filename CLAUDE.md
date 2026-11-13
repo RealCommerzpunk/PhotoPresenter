@@ -16,7 +16,7 @@ Plan und Meilensteine: `docs/PLAN.md` · Änderungen je Version: `CHANGELOG.md` 
 
 ## Arbeitsregeln
 
-- **Kein CI.** GitHub (`RealCommerzpunk/PhotoPresenter`, privat) speichert nur den Code. Keine GitHub-Actions-Workflows anlegen, Builds und Tests laufen lokal (Actions-Minuten sparen, schneller).
+- **Kein CI.** GitHub (`RealCommerzpunk/PhotoPresenter`, **öffentlich** seit 2026-11-13, Produktseite per GitHub Pages aus `main`/`docs`: https://realcommerzpunk.github.io/PhotoPresenter/) speichert den Code; Releases mit Demo-ZIP, portabler .exe und Installer legen wir lokal gebaut per `gh release create` an. Alles Gepushte ist sofort öffentlich. Keine GitHub-Actions-Workflows anlegen, Builds und Tests laufen lokal (Actions-Minuten sparen, schneller).
 - **Nie den Bildschirm aufnehmen.** Zum visuellen Prüfen `PP_CAPTURE_DIR=<ordner>` setzen: Die App speichert dann im Entwicklungsmodus alle 2 s Bilder ihrer eigenen Fenster (`captureForTests` in `src/main/index.ts`). Testbilder und Aufnahmen gehören ins Scratchpad, nicht ins Repo.
 - **Nie im echten Datenordner testen** (`%APPDATA%/PhotoPresenter`: Einstellungen, Personen, Gesichtsindex des Nutzers). Für jeden Testlauf `PP_USER_DATA=<scratchpad>/userdata` setzen (nur Entwicklung) und Testeinstellungen nur dort ablegen. Das gepackte Programm nutzt immer den echten Ordner.
 - Produktseite: `docs/index.html` + `docs/media/` (GitHub Pages aus `main`/`docs`, Clips als animierte WebP aus `PP_CAPTURE_DIR`-Aufnahmen mit `PP_SHOW_SIZE=1280x720`, `PP_CAPTURE_MS=100`). Vorerst Deutsch.
