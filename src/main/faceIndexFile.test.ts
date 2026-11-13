@@ -1,6 +1,8 @@
 import { join, resolve } from 'node:path'
 import { describe, expect, it } from 'vitest'
-import { parseIndex, sameFile, serializeIndex } from './faceIndexFile'
+import { mkdtemp, rm, utimes, writeFile } from 'node:fs/promises'
+import { tmpdir } from 'node:os'
+import { fileFingerprint, parseIndex, sameFile, serializeIndex } from './faceIndexFile'
 
 const folder = resolve('/daten/Fotos')
 const outside = resolve('/anderswo/bild.jpg')
@@ -39,6 +41,25 @@ describe('Gesichtsindex-Datei', () => {
   it('verwirft Unlesbares', () => {
     expect(parseIndex(null, folder).size).toBe(0)
     expect(parseIndex({ version: 9, photos: {} }, folder).size).toBe(0)
+  })
+})
+
+describe('fileFingerprint', () => {
+  it('hängt nur am Inhalt, nicht an der Änderungszeit', async () => {
+    const dir = await mkdtemp(join(tmpdir(), 'pp-print-'))
+    const a = join(dir, 'a.jpg')
+    const b = join(dir, 'b.jpg')
+    const big = Buffer.alloc(200_000, 7)
+    await writeFile(a, big)
+    await writeFile(b, big)
+    await utimes(b, new Date(2001, 0, 1), new Date(2001, 0, 1))
+    expect(await fileFingerprint(a)).toBe(await fileFingerprint(b))
+    big[199_999] = 8 // Ende geändert
+    await writeFile(b, big)
+    expect(await fileFingerprint(a)).not.toBe(await fileFingerprint(b))
+    await writeFile(b, Buffer.alloc(10, 7)) // kleine Datei
+    expect(await fileFingerprint(b)).toHaveLength(20)
+    await rm(dir, { recursive: true })
   })
 })
 

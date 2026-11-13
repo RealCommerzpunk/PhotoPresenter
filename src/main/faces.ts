@@ -14,7 +14,7 @@ import {
 } from '@shared/faces'
 import type { EmbedRequest, EmbedResult, FaceListItem, FaceModel, RelBox } from '@shared/ipc'
 import type { FaceSample, Person, Settings } from '@shared/settings'
-import { parseIndex, sameFile, serializeIndex } from './faceIndexFile'
+import { fileFingerprint, parseIndex, sameFile, serializeIndex } from './faceIndexFile'
 import { listPhotos } from './photos'
 import { loadSettings, photoFolder } from './settings'
 
@@ -22,6 +22,8 @@ import { loadSettings, photoFolder } from './settings'
 interface Entry extends PhotoFaces {
   mtime: number
   size: number
+  /** Fingerabdruck des Inhalts (`fileFingerprint`): erkennt Fotos auch bei neuer Änderungszeit. */
+  hash?: string
 }
 
 const MODEL_FILES: Record<FaceModel, string> = {
@@ -94,19 +96,36 @@ export class FaceStore {
     this.scanFolder = list.folder
     this.total = list.files.length
     const pending: string[] = []
+    let changed = false
     for (const name of list.files) {
-      const entry = this.index.get(resolve(list.folder, name))
+      const abs = resolve(list.folder, name)
+      const entry = this.index.get(abs)
       if (!entry) {
         pending.push(name)
         continue
       }
       try {
-        const st = await stat(resolve(list.folder, name))
-        if (!sameFile(entry, st)) pending.push(name)
+        const st = await stat(abs)
+        if (sameFile(entry, st)) {
+          // Ältere Einträge bekommen ihren Fingerabdruck nachträglich.
+          if (!entry.hash) {
+            entry.hash = await fileFingerprint(abs)
+            changed = true
+          }
+        } else if (
+          entry.hash &&
+          entry.size === st.size &&
+          (await fileFingerprint(abs)) === entry.hash
+        ) {
+          // Gleicher Inhalt, nur neue Änderungszeit (git clone, entpackte ZIP): nicht neu analysieren.
+          entry.mtime = st.mtimeMs
+          changed = true
+        } else pending.push(name)
       } catch {
         // Datei verschwunden: beim nächsten Einlesen fällt sie aus der Liste.
       }
     }
+    if (changed) this.scheduleSave()
     this.queue = pending
     this.emitStatus()
     if (pending.length) this.wakeIndexer()
@@ -134,15 +153,17 @@ export class FaceStore {
     const abs = resolve(this.scanFolder, name)
     try {
       const st = await stat(abs)
+      const hash = await fileFingerprint(abs)
       // Von Hand markierte Gesichter bleiben, solange sich die Datei nicht geändert hat.
       const old = this.index.get(abs)
-      const unchanged = old && sameFile(old, st)
+      const unchanged = old && (sameFile(old, st) || (old.size === st.size && old.hash === hash))
       const manual = unchanged ? old.faces.filter((f) => f.manual) : []
       // Auch bei Fehlern eintragen (ohne Gesichter), damit das Foto nicht endlos wiederkommt.
       const base = result ?? { w: old?.w ?? 0, h: old?.h ?? 0, faces: [] }
       this.index.set(abs, {
         mtime: st.mtimeMs,
         size: st.size,
+        hash,
         w: base.w,
         h: base.h,
         faces: [...base.faces, ...manual]

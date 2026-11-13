@@ -2,6 +2,12 @@
 
 Alle Änderungen je Version. Format: neueste Version oben, Datum im Format JJJJ-MM-TT.
 
+## 0.12.5 – 2026-11-13
+
+- **Gesichtsindex erkennt Fotos am Inhalt**: Ein Fingerabdruck (Größe + Anfang und Ende der Datei) verhindert, dass nach `git clone`, dem Entpacken einer ZIP oder dem Kopieren in eine andere Zeitzone alle Fotos neu analysiert werden. Ältere Indizes bekommen den Fingerabdruck beim nächsten Start nachgetragen
+- Demo-Gesichtsindex in `Data/` mit Fingerabdrücken: Die Demo startet aus dem Repo und aus dem Demo-Download ohne Wartezeit
+- **Demo zum Herunterladen** als Release auf GitHub (portable Programm + Demo-Fotos + Demo-Einstellungen)
+
 ## 0.12.4 – 2026-11-12
 
 - **Produktseite** `docs/index.html` (für GitHub Pages) mit Clips der Show, Einstellungen und Fernbedienung

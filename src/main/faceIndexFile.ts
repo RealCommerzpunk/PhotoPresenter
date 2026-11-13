@@ -1,3 +1,5 @@
+import { createHash } from 'node:crypto'
+import { open } from 'node:fs/promises'
 import { isAbsolute, relative, resolve, sep } from 'node:path'
 
 /**
@@ -52,4 +54,31 @@ export function sameFile(
   st: { mtimeMs: number; size: number }
 ): boolean {
   return entry.size === st.size && Math.abs(entry.mtime - st.mtimeMs) <= 2000
+}
+
+/** So viel vom Anfang und vom Ende einer Datei fließt in den Fingerabdruck ein. */
+const PRINT_BYTES = 64 * 1024
+
+/**
+ * Fingerabdruck einer Datei: Größe plus SHA-1 über die ersten und letzten 64 KB. Erkennt ein Foto
+ * wieder, wenn sich nur die Änderungszeit geändert hat (git clone, ZIP aus anderer Zeitzone),
+ * ohne die ganze Datei zu lesen.
+ */
+export async function fileFingerprint(path: string): Promise<string> {
+  const file = await open(path, 'r')
+  try {
+    const { size } = await file.stat()
+    const hash = createHash('sha1').update(String(size))
+    const head = Buffer.alloc(Math.min(PRINT_BYTES, size))
+    await file.read(head, 0, head.length, 0)
+    hash.update(head)
+    if (size > PRINT_BYTES) {
+      const tail = Buffer.alloc(Math.min(PRINT_BYTES, size - PRINT_BYTES))
+      await file.read(tail, 0, tail.length, size - tail.length)
+      hash.update(tail)
+    }
+    return hash.digest('hex').slice(0, 20)
+  } finally {
+    await file.close()
+  }
 }

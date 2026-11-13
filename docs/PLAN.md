@@ -131,6 +131,7 @@ Jeder Meilenstein ergibt eine lauffähige Version und einen eigenen Commit/PR.
 - ✅ Relativer Fotopfad, portable Windows-Version
 - ✅ 0.10.0: Wackelpudding-Würfel, eine Formation je Zwischenspiel, kleine Fotos begrenzen, gezielte Auslöser und Sofort-Texte auf der Fernbedienung
 - ✅ 0.11.1: Bildschirm- und Bereichsauswahl
+- ✅ 0.12.5: Fingerabdruck im Gesichtsindex, Demo als Download-Release
 - ✅ 0.12.4: Produktseite (docs/index.html), Fokus-Partner mit neutralem Symbol
 - ✅ 0.12.3: Demo-Fotos, MIT-Lizenz, englische README – Vorbereitung auf öffentliches Repo
 - ✅ 0.12.2: Programm-Icon, Schnellstart-Anleitung (Markdown + PDF im Paket)
