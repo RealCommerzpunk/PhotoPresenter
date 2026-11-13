@@ -1,3 +1,4 @@
+import { t } from '@shared/i18n'
 import { readFile, stat } from 'node:fs/promises'
 import { readFileSync } from 'node:fs'
 import { mkdir, rename, writeFile } from 'node:fs/promises'
@@ -93,7 +94,7 @@ export class FaceStore {
     try {
       return new Uint8Array(await readFile(this.modelPath(model)))
     } catch {
-      this.error = 'Modelle für die Gesichtserkennung fehlen (im Projekt: npm run models).'
+      this.error = t('main.modelsMissing')
       this.emitStatus()
       throw new Error(this.error)
     }

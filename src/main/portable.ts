@@ -1,3 +1,4 @@
+import { t } from '@shared/i18n'
 import { copyFileSync, existsSync, mkdirSync, rmSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { app } from 'electron'
@@ -75,7 +76,7 @@ export function setupDataLocation(): DataLocation {
       dir: standard,
       portable: false,
       migrated: false,
-      problem: `${dir} ist nicht beschreibbar (${(err as Error).message})`
+      problem: t('main.notWritable', { dir, error: (err as Error).message })
     }
   }
   return location

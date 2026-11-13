@@ -1,65 +1,101 @@
 import { z } from 'zod'
+import { labelMap, tk } from './i18n'
 
 /** Texte, Stile und Animationen. Wird von Show und Einstellungsfenster gemeinsam genutzt. */
 
 // ---------- Schriften (gebündelt über Fontsource, Lizenz OFL) ----------
 
 export const FONTS = {
-  playfair: { family: 'Playfair Display', label: 'Playfair Display (elegant)' },
-  cinzel: { family: 'Cinzel', label: 'Cinzel (Kino, Versalien)' },
-  dancing: { family: 'Dancing Script', label: 'Dancing Script (Handschrift)' },
-  caveat: { family: 'Caveat', label: 'Caveat (Notiz)' },
-  bebas: { family: 'Bebas Neue', label: 'Bebas Neue (Plakat)' },
-  montserrat: { family: 'Montserrat', label: 'Montserrat (modern)' },
-  courier: { family: 'Courier Prime', label: 'Courier Prime (Schreibmaschine)' },
-  pacifico: { family: 'Pacifico', label: 'Pacifico (Retro)' }
+  playfair: {
+    family: 'Playfair Display',
+    get label() {
+      return `Playfair Display (${tk('font.playfair')})`
+    }
+  },
+  cinzel: {
+    family: 'Cinzel',
+    get label() {
+      return `Cinzel (${tk('font.cinzel')})`
+    }
+  },
+  dancing: {
+    family: 'Dancing Script',
+    get label() {
+      return `Dancing Script (${tk('font.dancing')})`
+    }
+  },
+  caveat: {
+    family: 'Caveat',
+    get label() {
+      return `Caveat (${tk('font.caveat')})`
+    }
+  },
+  bebas: {
+    family: 'Bebas Neue',
+    get label() {
+      return `Bebas Neue (${tk('font.bebas')})`
+    }
+  },
+  montserrat: {
+    family: 'Montserrat',
+    get label() {
+      return `Montserrat (${tk('font.montserrat')})`
+    }
+  },
+  courier: {
+    family: 'Courier Prime',
+    get label() {
+      return `Courier Prime (${tk('font.courier')})`
+    }
+  },
+  pacifico: {
+    family: 'Pacifico',
+    get label() {
+      return `Pacifico (${tk('font.pacifico')})`
+    }
+  }
 } as const
 export type FontId = keyof typeof FONTS
 const FONT_IDS = Object.keys(FONTS) as [FontId, ...FontId[]]
 
 // ---------- Animationen ----------
 
-export const ANIMS_IN = {
-  fadeUp: 'Sanft einblenden',
-  letters: 'Buchstaben erscheinen',
-  typewriter: 'Schreibmaschine',
-  wordsUp: 'Wörter fliegen hoch',
-  zoom: 'Heranzoomen',
-  handwriting: 'Schreiben (Handschrift)',
-  kinetic: 'Wörter springen',
-  glitch: 'Glitch',
-  wave: 'Welle'
-} as const
+const ANIMS_IN_IDS = [
+  'fadeUp',
+  'letters',
+  'typewriter',
+  'wordsUp',
+  'zoom',
+  'handwriting',
+  'kinetic',
+  'glitch',
+  'wave'
+] as const
+export const ANIMS_IN: Record<(typeof ANIMS_IN_IDS)[number], string> = labelMap(
+  'animIn',
+  ANIMS_IN_IDS
+)
 export type AnimIn = keyof typeof ANIMS_IN
 
-export const ANIMS_OUT = {
-  fade: 'Sanft ausblenden',
-  lettersOut: 'Buchstaben verschwinden',
-  zoomOut: 'Wegzoomen',
-  wordsOut: 'Wörter fallen',
-  glitchOut: 'Glitch'
-} as const
+const ANIMS_OUT_IDS = ['fade', 'lettersOut', 'zoomOut', 'wordsOut', 'glitchOut'] as const
+export const ANIMS_OUT: Record<(typeof ANIMS_OUT_IDS)[number], string> = labelMap(
+  'animOut',
+  ANIMS_OUT_IDS
+)
 export type AnimOut = keyof typeof ANIMS_OUT
 
-export const EFFECTS = {
-  shadow: 'Schatten',
-  glow: 'Leuchten',
-  outline: 'Kontur',
-  gradient: 'Farbverlauf',
-  none: 'ohne'
-} as const
-export const BOXES = {
-  none: 'ohne',
-  glass: 'Milchglas',
-  band: 'Band',
-  solid: 'Fläche'
-} as const
-export const POSITIONS = {
-  center: 'Mitte',
-  top: 'Oben',
-  bottom: 'Unten',
-  lowerThird: 'Unteres Drittel (links)'
-} as const
+const EFFECTS_IDS = ['shadow', 'glow', 'outline', 'gradient', 'none'] as const
+export const EFFECTS: Record<(typeof EFFECTS_IDS)[number], string> = labelMap(
+  'textEffect',
+  EFFECTS_IDS
+)
+const BOXES_IDS = ['none', 'glass', 'band', 'solid'] as const
+export const BOXES: Record<(typeof BOXES_IDS)[number], string> = labelMap('box', BOXES_IDS)
+const POSITIONS_IDS = ['center', 'top', 'bottom', 'lowerThird'] as const
+export const POSITIONS: Record<(typeof POSITIONS_IDS)[number], string> = labelMap(
+  'position',
+  POSITIONS_IDS
+)
 
 const keys = <T extends object>(o: T) =>
   Object.keys(o) as [keyof T & string, ...(keyof T & string)[]]
@@ -95,7 +131,9 @@ type Preset = Omit<TextStyle, 'custom'>
 export const PRESET_STYLES: Preset[] = [
   {
     id: 'elegant',
-    label: 'Elegant',
+    get label() {
+      return tk('style.elegant')
+    },
     font: 'playfair',
     weight: 400,
     italic: true,
@@ -114,7 +152,9 @@ export const PRESET_STYLES: Preset[] = [
   },
   {
     id: 'kino',
-    label: 'Kino',
+    get label() {
+      return tk('style.kino')
+    },
     font: 'cinzel',
     weight: 600,
     italic: false,
@@ -133,7 +173,9 @@ export const PRESET_STYLES: Preset[] = [
   },
   {
     id: 'schreibmaschine',
-    label: 'Schreibmaschine',
+    get label() {
+      return tk('style.schreibmaschine')
+    },
     font: 'courier',
     weight: 400,
     italic: false,
@@ -152,7 +194,9 @@ export const PRESET_STYLES: Preset[] = [
   },
   {
     id: 'handschrift',
-    label: 'Handschrift',
+    get label() {
+      return tk('style.handschrift')
+    },
     font: 'dancing',
     weight: 600,
     italic: false,
@@ -171,7 +215,9 @@ export const PRESET_STYLES: Preset[] = [
   },
   {
     id: 'notiz',
-    label: 'Notiz',
+    get label() {
+      return tk('style.notiz')
+    },
     font: 'caveat',
     weight: 500,
     italic: false,
@@ -190,7 +236,9 @@ export const PRESET_STYLES: Preset[] = [
   },
   {
     id: 'plakat',
-    label: 'Plakat',
+    get label() {
+      return tk('style.plakat')
+    },
     font: 'bebas',
     weight: 400,
     italic: false,
@@ -209,7 +257,9 @@ export const PRESET_STYLES: Preset[] = [
   },
   {
     id: 'neon',
-    label: 'Neon',
+    get label() {
+      return tk('style.neon')
+    },
     font: 'montserrat',
     weight: 300,
     italic: false,
@@ -228,7 +278,9 @@ export const PRESET_STYLES: Preset[] = [
   },
   {
     id: 'minimal',
-    label: 'Minimal',
+    get label() {
+      return tk('style.minimal')
+    },
     font: 'montserrat',
     weight: 200,
     italic: false,
@@ -247,7 +299,9 @@ export const PRESET_STYLES: Preset[] = [
   },
   {
     id: 'retro',
-    label: 'Retro',
+    get label() {
+      return tk('style.retro')
+    },
     font: 'pacifico',
     weight: 400,
     italic: false,
@@ -266,7 +320,9 @@ export const PRESET_STYLES: Preset[] = [
   },
   {
     id: 'festlich',
-    label: 'Festlich',
+    get label() {
+      return tk('style.festlich')
+    },
     font: 'cinzel',
     weight: 700,
     italic: false,
@@ -285,7 +341,9 @@ export const PRESET_STYLES: Preset[] = [
   },
   {
     id: 'untertitel',
-    label: 'Untertitel',
+    get label() {
+      return tk('style.untertitel')
+    },
     font: 'montserrat',
     weight: 500,
     italic: false,
@@ -304,7 +362,9 @@ export const PRESET_STYLES: Preset[] = [
   },
   {
     id: 'zitat',
-    label: 'Zitat',
+    get label() {
+      return tk('style.zitat')
+    },
     font: 'playfair',
     weight: 400,
     italic: true,
@@ -325,11 +385,11 @@ export const PRESET_STYLES: Preset[] = [
 
 // ---------- Texte ----------
 
-export const PLACEMENTS = {
-  before: 'vor dem Foto',
-  after: 'nach dem Foto',
-  over: 'über dem Foto'
-} as const
+const PLACEMENTS_IDS = ['before', 'after', 'over'] as const
+export const PLACEMENTS: Record<(typeof PLACEMENTS_IDS)[number], string> = labelMap(
+  'placement',
+  PLACEMENTS_IDS
+)
 
 export const textItemSchema = z.object({
   id: z.string().min(1),

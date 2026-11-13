@@ -1,3 +1,4 @@
+import { t } from '@shared/i18n'
 import { Container, FillGradient, Graphics, ImageSource, Sprite, Texture } from 'pixi.js'
 import { pick } from '@shared/random'
 import type { Settings, TextBackgroundId } from '@shared/settings'
@@ -62,7 +63,7 @@ export class TextSlide extends TimedScene implements Scene {
 
   get label(): string {
     const first = this.item.text.trim().split('\n')[0]
-    return `Text: ${first.length > 50 ? first.slice(0, 50) + '…' : first}`
+    return t('show.textLabel', { text: first.length > 50 ? first.slice(0, 50) + '…' : first })
   }
 
   readonly photoName = undefined

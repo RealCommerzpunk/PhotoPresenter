@@ -1,3 +1,4 @@
+import { MESSAGES, getLanguage, resolveLanguage, setLanguage, t } from '@shared/i18n'
 import { mkdir, writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
 import {
@@ -57,12 +58,25 @@ let powerBlockId: number | null = null
 let faceStore: FaceStore
 let showStatus: ShowStatus = { running: false, paused: false, label: '' }
 
+/** Wörterbuch der Handy-Seite: nur die Texte der Fernbedienung, Deutsch als Quelle für die Rückwärtssuche. */
+function remoteMessages(): {
+  lang: string
+  de: Record<string, string>
+  msg: Record<string, string>
+} {
+  const lang = getLanguage()
+  const pick = (m: Record<string, string>): Record<string, string> =>
+    Object.fromEntries(Object.entries(m).filter(([k]) => k.startsWith('remote.')))
+  return { lang, de: pick(MESSAGES.de), msg: pick(MESSAGES[lang]) }
+}
+
 /** Fernbedienung: Zustand für die Handy-Seite. */
 function remoteState(): RemoteState {
   const s = loadSettings()
   const settings = Object.fromEntries(REMOTE_KEYS.map((k) => [k, s[k]])) as RemoteState['settings']
   return {
     version: app.getVersion(),
+    lang: getLanguage(),
     show: showStatus,
     queue: queue.get(),
     settings,
@@ -80,7 +94,7 @@ function showCommand(cmd: ShowCommand, arg?: string): void {
   if (cmd === 'start') startShow()
   else if (cmd === 'stop') stopShow()
   else if (showWindow) showWindow.webContents.send(IPC.showCommand, { cmd, arg })
-  else if (cmd !== 'qr') notify({ text: 'Die Show läuft nicht – erst starten', kind: 'warn' })
+  else if (cmd !== 'qr') notify({ text: t('main.showNotRunning'), kind: 'warn' })
 }
 
 /** Rückmeldung an die Fernbedienung. */
@@ -98,7 +112,7 @@ function applyQueueOp(op: QueueOp): void {
   // Die Anfrage kommt vom Handy: nur bekannte Befehle mit passenden Werten.
   if (op?.op === 'add' && typeof op.name === 'string') {
     queue.apply({ op: 'add', name: op.name })
-    if (!showWindow) notify({ text: 'Vorgemerkt – läuft, sobald die Show startet', kind: 'ok' })
+    if (!showWindow) notify({ text: t('main.queued'), kind: 'ok' })
   } else if (op?.op === 'remove' && typeof op.id === 'string') queue.apply(op)
   else if (op?.op === 'move' && typeof op.id === 'string' && typeof op.to === 'number')
     queue.apply(op)
@@ -130,7 +144,8 @@ const remote = new RemoteServer({
   photos: async () => (await showPhotos()).files,
   thumb: (name) => thumbs.get(name),
   queue: applyQueueOp,
-  icon: iconPng
+  icon: iconPng,
+  i18n: remoteMessages
 })
 
 /** Sendet an alle sichtbaren Fenster (nicht an das Analyse-Fenster). */
@@ -225,7 +240,7 @@ function startShow(options: ShowOptions = {}): void {
       useContentSize: !!fixed,
       x: Math.round(work.x + (work.width - width) / 2),
       y: Math.round(work.y + (work.height - height) / 2),
-      title: 'PhotoPresenter – Vorschau',
+      title: t('main.previewTitle'),
       autoHideMenuBar: true
     }
   } else if (showArea === 'full') {
@@ -286,7 +301,7 @@ function startShow(options: ShowOptions = {}): void {
 async function createPackage(target?: string): Promise<ExportResult | null> {
   if (target) return runExport(target)
   const options: Electron.OpenDialogOptions = {
-    title: 'Wohin soll das Paket? (z. B. USB-Stick)',
+    title: t('main.exportDialog'),
     defaultPath: app.getPath('desktop'),
     properties: ['openDirectory', 'createDirectory']
   }
@@ -324,7 +339,7 @@ function listDisplays(): DisplayInfo[] {
   return sortedDisplays().map((d, i) => ({
     id: String(d.id),
     number: i + 1,
-    label: d.label || `Bildschirm ${i + 1}`,
+    label: d.label || t('main.display', { n: i + 1 }),
     width: Math.round(d.size.width * d.scaleFactor),
     height: Math.round(d.size.height * d.scaleFactor),
     primary: d.id === primary
@@ -468,7 +483,7 @@ function toggleRemoteWindow(hash = ''): { ok: boolean; error?: string } {
     y: area.y + 20,
     width,
     height,
-    title: 'PhotoPresenter – Fernbedienung',
+    title: t('main.remoteTitle'),
     backgroundColor: '#0b0d12',
     autoHideMenuBar: true,
     // Auf demselben Bildschirm über der Vollbild-Show bleiben.
@@ -502,7 +517,7 @@ function stopShow(): void {
 async function pickFolder(): Promise<string | null> {
   const parent = settingsWindow ?? BrowserWindow.getFocusedWindow()
   const options: Electron.OpenDialogOptions = {
-    title: 'Fotoordner wählen',
+    title: t('main.pickFolder'),
     defaultPath: photoFolder() || app.getPath('pictures'),
     properties: ['openDirectory']
   }
@@ -512,9 +527,15 @@ async function pickFolder(): Promise<string | null> {
   return result.canceled ? null : (result.filePaths[0] ?? null)
 }
 
+/** Sprache des Hauptprozesses (Dialoge, Meldungen, Fernbedienung). */
+function applyLanguage(): void {
+  setLanguage(resolveLanguage(loadSettings().language, app.getLocale()))
+}
+
 function setSettings(patch: Partial<Settings>): Settings {
   const prev = loadSettings()
   const next = updateSettings(patch)
+  if (next.language !== prev.language) applyLanguage()
   broadcast(IPC.settingsChanged, next)
   if (next.photoFolder !== prev.photoFolder || next.includeSubfolders !== prev.includeSubfolders) {
     void faceStore.rescan()
@@ -527,6 +548,7 @@ function setSettings(patch: Partial<Settings>): Settings {
 }
 
 app.whenReady().then(() => {
+  applyLanguage()
   handlePhotoProtocol()
   ipcMain.handle(IPC.startShow, (_e, options?: ShowOptions) => startShow(options))
   ipcMain.handle(IPC.stopShow, () => stopShow())

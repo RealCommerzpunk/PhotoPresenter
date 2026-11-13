@@ -1,4 +1,5 @@
 import { z } from 'zod'
+import { labelMap, LANGUAGES } from './i18n'
 import type { Range, WeightedOption } from './random'
 import {
   defaultTexts,
@@ -37,12 +38,7 @@ function field<S extends z.ZodType>(schema: S, fallback: z.infer<S>) {
 export const MOTION_KINDS = ['zoomIn', 'zoomOut', 'pan', 'journey'] as const
 export type MotionKind = (typeof MOTION_KINDS)[number]
 
-export const MOTION_LABELS: Record<MotionKind, string> = {
-  zoomIn: 'Hineinzoomen',
-  zoomOut: 'Herauszoomen',
-  pan: 'Schwenk',
-  journey: 'Kamerafahrt'
-}
+export const MOTION_LABELS: Record<MotionKind, string> = labelMap('motion', MOTION_KINDS)
 
 const defaultMotionKinds: WeightedOption<MotionKind>[] = [
   { id: 'zoomIn', enabled: true, weight: 2 },
@@ -56,11 +52,7 @@ const defaultMotionKinds: WeightedOption<MotionKind>[] = [
 export const FILL_MODES = ['blur', 'ambient', 'mirror'] as const
 export type FillMode = (typeof FILL_MODES)[number]
 
-export const FILL_LABELS: Record<FillMode, string> = {
-  blur: 'Weichgezeichnet',
-  ambient: 'Farbverlauf',
-  mirror: 'Gespiegelt'
-}
+export const FILL_LABELS: Record<FillMode, string> = labelMap('fill', FILL_MODES)
 
 const defaultFillModes: WeightedOption<FillMode>[] = [
   { id: 'blur', enabled: true, weight: 3 },
@@ -87,21 +79,7 @@ export const TRANSITIONS = [
 ] as const
 export type TransitionId = (typeof TRANSITIONS)[number]
 
-export const TRANSITION_LABELS: Record<TransitionId, string> = {
-  fade: 'Überblenden',
-  fadeBlack: 'Über Schwarz',
-  wipe: 'Wischen',
-  push: 'Schieben',
-  circle: 'Kreis öffnen',
-  zoomBlur: 'Zoom-Unschärfe',
-  dissolve: 'Auflösen',
-  clock: 'Uhrzeiger',
-  pixelize: 'Verpixeln',
-  ripple: 'Welle',
-  glow: 'Lichtblende',
-  blinds: 'Jalousie',
-  swirl: 'Strudel'
-}
+export const TRANSITION_LABELS: Record<TransitionId, string> = labelMap('transition', TRANSITIONS)
 
 const defaultTransitions: WeightedOption<TransitionId>[] = TRANSITIONS.map((id) => ({
   id,
@@ -123,16 +101,7 @@ export const EFFECTS = [
 ] as const
 export type EffectId = (typeof EFFECTS)[number]
 
-export const EFFECT_LABELS: Record<EffectId, string> = {
-  confetti: 'Konfetti',
-  snow: 'Schnee',
-  sparkles: 'Funkeln',
-  hearts: 'Herzen',
-  bubbles: 'Seifenblasen',
-  fireworks: 'Feuerwerk',
-  petals: 'Blütenblätter',
-  goldDust: 'Goldstaub'
-}
+export const EFFECT_LABELS: Record<EffectId, string> = labelMap('effect', EFFECTS)
 
 const defaultEffects: WeightedOption<EffectId>[] = EFFECTS.map((id) => ({
   id,
@@ -143,14 +112,10 @@ const defaultEffects: WeightedOption<EffectId>[] = EFFECTS.map((id) => ({
 export const TEXT_BACKGROUNDS = ['photo', 'aurora', 'nebula', 'waves', 'bokeh', 'stars'] as const
 export type TextBackgroundId = (typeof TEXT_BACKGROUNDS)[number]
 
-export const TEXT_BACKGROUND_LABELS: Record<TextBackgroundId, string> = {
-  photo: 'Foto weichgezeichnet',
-  aurora: 'Polarlicht',
-  nebula: 'Nebel',
-  waves: 'Wellen',
-  bokeh: 'Lichter (Bokeh)',
-  stars: 'Sternenhimmel'
-}
+export const TEXT_BACKGROUND_LABELS: Record<TextBackgroundId, string> = labelMap(
+  'textBackground',
+  TEXT_BACKGROUNDS
+)
 
 const defaultTextBackgrounds: WeightedOption<TextBackgroundId>[] = TEXT_BACKGROUNDS.map((id) => ({
   id,
@@ -174,18 +139,10 @@ export const WORLD_FORMATIONS = [
 ] as const
 export type WorldFormation = (typeof WORLD_FORMATIONS)[number]
 
-export const WORLD_FORMATION_LABELS: Record<WorldFormation, string> = {
-  sphere: 'Kugel',
-  helix: 'Spirale',
-  grid: '3D-Raster',
-  table: 'Wand',
-  frames: 'Schwebende Rahmen',
-  cube: 'Würfel',
-  carousel: 'Karussell',
-  tunnel: 'Tunnel',
-  wave: 'Welle',
-  jelly: 'Wackelpudding-Würfel'
-}
+export const WORLD_FORMATION_LABELS: Record<WorldFormation, string> = labelMap(
+  'formation',
+  WORLD_FORMATIONS
+)
 
 const defaultWorldFormations: WeightedOption<WorldFormation>[] = WORLD_FORMATIONS.map((id) => ({
   id,
@@ -198,11 +155,7 @@ const defaultWorldFormations: WeightedOption<WorldFormation>[] = WORLD_FORMATION
 export const FOCUS_MODES = ['slowZoom', 'fastZoom', 'journey'] as const
 export type FocusMode = (typeof FOCUS_MODES)[number]
 
-export const FOCUS_LABELS: Record<FocusMode, string> = {
-  slowZoom: 'Langsam anzoomen',
-  fastZoom: 'Schnell anzoomen',
-  journey: 'Kamerafahrt zum Gesicht'
-}
+export const FOCUS_LABELS: Record<FocusMode, string> = labelMap('focusMode', FOCUS_MODES)
 
 const defaultFocusModes: WeightedOption<FocusMode>[] = [
   { id: 'slowZoom', enabled: true, weight: 2 },
@@ -213,14 +166,7 @@ const defaultFocusModes: WeightedOption<FocusMode>[] = [
 /** Teil des Bildschirms, den die Show füllt (für zusammengeschaltete Monitore). */
 export const SHOW_AREAS = ['full', 'left', 'center', 'right', 'leftHalf', 'rightHalf'] as const
 export type ShowArea = (typeof SHOW_AREAS)[number]
-export const SHOW_AREA_LABELS: Record<ShowArea, string> = {
-  full: 'ganzer Bildschirm',
-  left: 'linkes Drittel',
-  center: 'mittleres Drittel',
-  right: 'rechtes Drittel',
-  leftHalf: 'linke Hälfte',
-  rightHalf: 'rechte Hälfte'
-}
+export const SHOW_AREA_LABELS: Record<ShowArea, string> = labelMap('area', SHOW_AREAS)
 
 /** Vorgabe für die Emoji-Knöpfe der Fernbedienung. */
 export const DEFAULT_EMOJIS = [
@@ -238,13 +184,9 @@ export const DEFAULT_EMOJIS = [
   '👍'
 ]
 
-export const PAN_OTHERS = {
-  off: 'nie',
-  before: 'vorher über die anderen Gesichter',
-  after: 'nachher über die anderen Gesichter',
-  random: 'zufällig vorher, nachher oder nie'
-} as const
-export type PanOthers = keyof typeof PAN_OTHERS
+export const PAN_OTHERS_IDS = ['off', 'before', 'after', 'random'] as const
+export type PanOthers = (typeof PAN_OTHERS_IDS)[number]
+export const PAN_OTHERS: Record<PanOthers, string> = labelMap('panOthers', PAN_OTHERS_IDS)
 
 const sampleSchema = z.object({ photo: z.string(), face: z.number().int().min(0), emb: z.string() })
 export type FaceSample = z.infer<typeof sampleSchema>
@@ -349,6 +291,8 @@ export const settingsSchema = z.object({
   worldFormations: field(weightedSchema(WORLD_FORMATIONS), defaultWorldFormations),
   /** Fernbedienung per Handy (Webserver im lokalen Netz, ohne Passwort). */
   /** Bildschirm der Show (Electron-Display-ID); leer = wo gerade die Maus ist. */
+  /** Sprache der Oberfläche ('auto' = Systemsprache). */
+  language: field(z.enum(['auto', ...LANGUAGES]), 'auto'),
   /** Doppelte Fotos überspringen: nur die hochauflösendste Fassung zeigen. */
   dupesSkip: field(z.boolean(), false),
   showDisplay: field(z.string(), ''),

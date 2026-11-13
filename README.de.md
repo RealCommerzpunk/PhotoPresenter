@@ -88,9 +88,9 @@ resources/      Modelle und Fonts, die mit ausgeliefert werden
 6. ✅ Gesichtserkennung und Fokus-Person
 7. Feinschliff und erstes Release (Ruckelfreiheit erledigt in 0.6.2)
 
-Dazugekommen (0.7–0.12): Mitnehmen (portabel, Weitergabe-Paket), Bildschirmauswahl, Fernbedienung per Handy mit QR-Code (mit Emojis, Einfrieren, Galerie und eigener Reihenfolge), Fokus-Partner, Zoomgrenze und Begrenzung kleiner Fotos, relativer Fotopfad und portable Windows-Version, Partikel-Effekte, animierte Textfolien-Hintergründe, 3D-Fotowelt (inkl. Wackelpudding-Würfel), Texte und Emojis weichen Gesichtern aus, Programm-Icon, Schnellstart-Anleitung, Demo-Fotos und Demo-Einstellungen, Produktseite.
+Dazugekommen (0.7–0.13): Oberfläche in Deutsch, Englisch, Spanisch und Französisch (Übersetzungen per Pull Request: [TRANSLATING.md](TRANSLATING.md)), Erkennung doppelter Fotos, Mitnehmen (portabel, Weitergabe-Paket), Bildschirmauswahl, Fernbedienung per Handy mit QR-Code (mit Emojis, Einfrieren, Galerie und eigener Reihenfolge), Fokus-Partner, Zoomgrenze und Begrenzung kleiner Fotos, relativer Fotopfad und portable Windows-Version, Partikel-Effekte, animierte Textfolien-Hintergründe, 3D-Fotowelt (inkl. Wackelpudding-Würfel), Texte und Emojis weichen Gesichtern aus, Programm-Icon, Schnellstart-Anleitung, Demo-Fotos und Demo-Einstellungen, Produktseite.
 
-Danach geplant: Leistung auf 4K-Bildschirmen, Linux-Installer testen, erstes Release `v0.1.0`, Internationalisierung (englische Oberfläche), Dublettenprüfung, HEIC/RAW, Videos, Hintergrundmusik.
+Danach geplant: Leistung auf 4K-Bildschirmen, Linux-Installer testen, erstes Release `v0.1.0`, mehrsprachige Doku und Produktseite, HEIC/RAW, Videos, Hintergrundmusik.
 
 ## Datenschutz und Sicherheit
 

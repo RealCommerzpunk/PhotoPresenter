@@ -1,3 +1,4 @@
+import { t } from '@shared/i18n'
 import { copyFile, cp, mkdir, readdir, stat, writeFile } from 'node:fs/promises'
 import { basename, dirname, join } from 'node:path'
 import { app } from 'electron'
@@ -12,28 +13,6 @@ import { DEFAULT_PHOTO_DIR } from './settings'
 const PHOTOS_DIR = DEFAULT_PHOTO_DIR
 
 const QUICKSTART = 'Quickstart.pdf'
-
-const README = `PhotoPresenter – zum Mitnehmen
-==============================
-
-Starten: Die Programmdatei in diesem Ordner doppelklicken
-(Windows: „PhotoPresenter … .exe“, Linux: „PhotoPresenter … .AppImage“).
-
-Windows warnt beim ersten Start, weil das Programm nicht signiert ist:
-„Weitere Informationen“ → „Trotzdem ausführen“.
-
-Ordner:
-  Photos\\  die Fotos der Diashow (weitere einfach hineinkopieren)
-  Data\\    Einstellungen, Texte, Personen und Gesichtsindex
-
-Den ganzen Ordner kann man beliebig kopieren (USB-Stick, anderer Rechner) –
-alles reist mit.
-
-Ausführliche Anleitung zum Loslegen und Ausprobieren: Quickstart.pdf
-
-Programm-Icon: Three Musketeers – Flaticon
-https://www.flaticon.com/authors/three-musketeers
-`
 
 /** Freier Zielordner: „PhotoPresenter“, sonst „PhotoPresenter (2)“ usw. */
 async function freeFolder(parent: string): Promise<string> {
@@ -50,7 +29,7 @@ async function freeFolder(parent: string): Promise<string> {
 /** Das laufende Programm kopieren: portable .exe, AppImage oder den Programmordner. */
 async function copyProgram(dest: string): Promise<string | undefined> {
   if (!app.isPackaged) {
-    return 'Programm nicht enthalten (Entwicklungsversion): mit „npm run dist:win“ bauen und die portable .exe dazulegen.'
+    return t('main.export.noProgram')
   }
   const portable = process.env['PORTABLE_EXECUTABLE_FILE']
   const appImage = process.env['APPIMAGE']
@@ -83,7 +62,7 @@ export async function exportPackage(
   try {
     await mkdir(join(dest, DATA_DIR_NAME), { recursive: true })
 
-    progress({ step: 'Programm kopieren …', done: 0, total: 0 })
+    progress({ step: t('main.export.program'), done: 0, total: 0 })
     const programNote = await copyProgram(dest)
     if (programNote) notes.push(programNote)
 
@@ -96,23 +75,23 @@ export async function exportPackage(
         // Änderungszeit bleibt erhalten, damit der Gesichtsindex die Fotos wiedererkennt.
         await cp(join(list.folder, name), target, { preserveTimestamps: true })
         if (i % 10 === 0 || i === total - 1) {
-          progress({ step: 'Fotos kopieren …', done: i + 1, total })
+          progress({ step: t('main.export.photos'), done: i + 1, total })
         }
       }
     } else {
       await mkdir(join(dest, PHOTOS_DIR), { recursive: true })
-      notes.push('Keine Fotos gefunden – der Ordner „Photos“ ist leer.')
+      notes.push(t('main.export.noPhotos'))
     }
 
-    progress({ step: 'Einstellungen schreiben …', done: 0, total: 0 })
+    progress({ step: t('main.export.settings'), done: 0, total: 0 })
     const data: Settings = { ...settings, photoFolder: PHOTOS_DIR }
     await writeFile(join(dest, DATA_DIR_NAME, 'settings.json'), JSON.stringify(data, null, 2))
     await writeFaceIndex(join(dest, DATA_DIR_NAME, 'faces.json'))
-    await writeFile(join(dest, 'README.txt'), README.replace(/\n/g, '\r\n'))
+    await writeFile(join(dest, 'README.txt'), t('main.export.readme').replace(/\n/g, '\r\n'))
     // Anleitung als PDF (gepackt unter resources/, in der Entwicklung im Projektordner)
     const guide = app.isPackaged ? resourcePath(QUICKSTART) : join(app.getAppPath(), QUICKSTART)
     await copyFile(guide, join(dest, QUICKSTART)).catch(() => {
-      notes.push('Anleitung (Quickstart.pdf) nicht gefunden.')
+      notes.push(t('main.export.noGuide'))
     })
     return { ok: true, path: dest, notes }
   } catch (err) {

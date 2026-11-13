@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { t } from '@shared/i18n'
 import type { TextStyle } from '@shared/text'
 import { loadFont } from '../text/fonts'
 import { TextOverlay } from '../text/overlay'
@@ -55,7 +56,7 @@ export function TextPreview({
   return (
     <div
       onClick={() => setRun((r) => r + 1)}
-      title="Klicken zum erneuten Abspielen"
+      title={t('ui.preview.replay')}
       className="relative aspect-video w-full cursor-pointer overflow-hidden rounded-lg border border-white/10 bg-gradient-to-br from-[#1b1830] to-[#0c0b14]"
     >
       {background && (

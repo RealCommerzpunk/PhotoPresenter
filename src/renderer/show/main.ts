@@ -1,4 +1,5 @@
 // Ohne eval auskommen, damit die strenge Content-Security-Policy greift.
+import { MESSAGES, resolveLanguage, setLanguage, t } from '@shared/i18n'
 import 'pixi.js/unsafe-eval'
 import { Application, Container, RenderTexture, Sprite, type Texture } from 'pixi.js'
 import { gsap } from 'gsap'
@@ -48,6 +49,17 @@ const qrEl = document.getElementById('qr')!
 const emojiHost = document.getElementById('emojis')!
 
 /** Rückmeldung an die Fernbedienung (erscheint dort als kurzer Hinweis). */
+/** Sprache der Show aus den Einstellungen (bzw. der Systemsprache); feste Texte der Seite übersetzen. */
+function applyLanguage(s: Settings): void {
+  const lang = resolveLanguage(s.language, navigator.language)
+  setLanguage(lang)
+  document.documentElement.lang = lang
+  const qrTitle = document.querySelector('.qr-title')
+  if (qrTitle) qrTitle.textContent = t('show.remote')
+  if (messageEl.textContent === MESSAGES.de['show.loading'])
+    messageEl.textContent = t('show.loading')
+}
+
 function notice(text: string, kind: ShowNotice['kind'] = 'ok'): void {
   window.api.notice({ text, kind })
 }
@@ -106,6 +118,7 @@ async function main(): Promise<void> {
   document.getElementById('stage')!.appendChild(app.canvas)
 
   let settings: Settings = await window.api.getSettings()
+  applyLanguage(settings)
   const playlist = new Playlist([])
   const sequencer = new Sequencer(playlist, settings.textFillerEvery)
   sequencer.setTexts(settings.texts, settings.textFillerEvery)
@@ -410,11 +423,10 @@ async function main(): Promise<void> {
     thumbs.setItems(list.files)
     void refreshFocusPhotos()
     const hasFillers = settings.texts.some((t) => t.enabled && t.kind === 'filler')
-    if (list.error) showMessage(`Fotoordner nicht lesbar:\n${list.error}`)
-    else if (!list.folder && !hasFillers)
-      showMessage('Kein Fotoordner gewählt.\nBitte in den Einstellungen festlegen.')
+    if (list.error) showMessage(t('show.folderError', { error: list.error }))
+    else if (!list.folder && !hasFillers) showMessage(t('show.noFolder'))
     else if (list.files.length === 0 && !hasFillers)
-      showMessage(`Keine Fotos gefunden in\n${list.folder}`)
+      showMessage(t('show.noPhotos', { folder: list.folder }))
     else if (!current) showMessage(null)
   }
 
@@ -565,7 +577,7 @@ async function main(): Promise<void> {
     // Textanimationen laufen über GSAP und werden mit angehalten.
     if (paused) gsap.globalTimeline.pause()
     else gsap.globalTimeline.resume()
-    flashStatus(paused ? 'Pause' : 'Weiter')
+    flashStatus(paused ? t('show.pause') : t('show.resume'))
     reportStatus()
   }
 
@@ -585,9 +597,7 @@ async function main(): Promise<void> {
       text.textContent = info.urls[0].replace(/\/$/, '')
     } else {
       svg.innerHTML = ''
-      text.textContent = info.enabled
-        ? 'Fernbedienung nicht erreichbar: kein Netzwerk (z. B. Handy-Hotspot verbinden)'
-        : 'Fernbedienung ist in den Einstellungen ausgeschaltet'
+      text.textContent = info.enabled ? t('show.remoteNoNetwork') : t('show.remoteOff')
     }
     qrEl.style.opacity = '1'
     window.clearTimeout(qrTimer)
@@ -603,22 +613,22 @@ async function main(): Promise<void> {
     else if (cmd === 'qr') void toggleQr()
     else if (cmd === 'effect') {
       const kind = startEffect(arg, true)
-      if (kind) notice(`${EFFECT_LABELS[kind]} läuft bis zum nächsten Foto`)
-      else notice('Kein Effekt ausgewählt', 'warn')
+      if (kind) notice(t('show.effectRunning', { name: EFFECT_LABELS[kind] }))
+      else notice(t('show.noEffect'), 'warn')
     } else if (cmd === 'world') startWorldNow(arg)
     else if (cmd === 'text') {
       const item = settings.texts.find((t) => t.id === arg)
       if (item) {
         void showTextNow(item.text, item.style)
-        notice('Text eingeblendet')
-      } else notice('Text nicht gefunden', 'warn')
+        notice(t('show.textShown'))
+      } else notice(t('show.textMissing'), 'warn')
     } else if (cmd === 'say' && arg?.trim()) {
       void showTextNow(arg, RANDOM_STYLE)
-      notice('Text eingeblendet')
+      notice(t('show.textShown'))
     } else if (cmd === 'emoji' && arg) {
       const slide = photoOnScreen()
       emojis.show(arg, slide ? slide.upcomingFaces(6) : [])
-      notice(`${arg} eingeblendet`)
+      notice(t('show.emojiShown', { emoji: arg }))
     } else if (cmd === 'freeze') setFrozen(arg === 'on' ? true : arg === 'off' ? false : undefined)
   })
 
@@ -629,17 +639,17 @@ async function main(): Promise<void> {
   function setFrozen(wanted?: boolean): void {
     if (incoming) {
       freezeAfterTransition = wanted ?? !freezeAfterTransition
-      notice(freezeAfterTransition ? 'Das nächste Foto wird eingefroren' : 'Einfrieren aufgehoben')
+      notice(freezeAfterTransition ? t('show.freezeNext') : t('show.freezeCancelled'))
       return
     }
     if (!(current instanceof Slide)) {
-      notice('Einfrieren geht nur bei Fotos', 'warn')
+      notice(t('show.freezeOnlyPhotos'), 'warn')
       return
     }
     const on = wanted ?? !current.frozen
     current.setFrozen(on)
-    flashStatus(on ? 'Eingefroren' : 'Weiter im Ablauf')
-    notice(on ? 'Foto eingefroren – Bewegung läuft in einer Schleife' : 'Weiter im Ablauf')
+    flashStatus(on ? t('show.frozen') : t('show.continue'))
+    notice(on ? t('show.frozenNotice') : t('show.continue'))
     reportStatus()
   }
 
@@ -714,13 +724,13 @@ async function main(): Promise<void> {
   /** Zwischenspiel sofort (per Fernbedienung oder Einstellungsfenster). */
   function startWorldNow(wanted?: string): void {
     if (thumbs.size < WORLD_MIN_TILES) {
-      const text = `3D-Fotowelt lädt noch Vorschaubilder (${thumbs.size}/${WORLD_MIN_TILES})`
+      const text = t('show.worldLoading', { have: thumbs.size, need: WORLD_MIN_TILES })
       flashStatus(text)
       notice(text, 'warn')
       return
     }
     if (current instanceof WorldScene && !incoming) {
-      notice('Die 3D-Fotowelt läuft bereits', 'warn')
+      notice(t('show.worldRunning'), 'warn')
       return
     }
     worldForced = true
@@ -728,8 +738,9 @@ async function main(): Promise<void> {
       worldFormationWanted = wanted as WorldFormation
     }
     notice(
-      `3D-Fotowelt startet` +
-        (worldFormationWanted ? `: ${WORLD_FORMATION_LABELS[worldFormationWanted]}` : '')
+      worldFormationWanted
+        ? t('show.worldStartsWith', { name: WORLD_FORMATION_LABELS[worldFormationWanted] })
+        : t('show.worldStarts')
     )
     if (incoming) {
       // Mitten im Übergang: direkt nach dem Übergang starten.
@@ -758,8 +769,8 @@ async function main(): Promise<void> {
     if (direction === -1) {
       const entry = lastPhoto ? sequencer.back(lastPhoto) : undefined
       if (!entry) {
-        flashStatus('Anfang erreicht')
-        notice('Anfang erreicht', 'warn')
+        flashStatus(t('show.start'))
+        notice(t('show.start'), 'warn')
         return
       }
       discardReady()
@@ -867,6 +878,7 @@ async function main(): Promise<void> {
       next.includeSubfolders !== settings.includeSubfolders ||
       next.dupesSkip !== settings.dupesSkip
     settings = next
+    applyLanguage(settings)
     sequencer.setTexts(settings.texts, settings.textFillerEvery)
     void refreshFocusPhotos()
     if (folderChanged) {

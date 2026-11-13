@@ -1,10 +1,11 @@
+import { getLanguage, t } from '@shared/i18n'
 import { stat } from 'node:fs/promises'
 import exifr from 'exifr'
 import type { PhotoDetails } from '@shared/ipc'
 import { resolvePhoto } from './photos'
 
 const num = (v: number, digits = 1): string =>
-  v.toLocaleString('de-DE', { maximumFractionDigits: digits })
+  v.toLocaleString(getLanguage(), { maximumFractionDigits: digits })
 
 /** Belichtungszeit lesbar: 0.008 → „1/125 s“, 2 → „2 s“. */
 export function formatExposure(seconds: number): string {
@@ -14,7 +15,7 @@ export function formatExposure(seconds: number): string {
 
 function formatDate(value: unknown): string | undefined {
   if (value instanceof Date && !isNaN(value.getTime())) {
-    return value.toLocaleString('de-DE', { dateStyle: 'medium', timeStyle: 'short' })
+    return value.toLocaleString(getLanguage(), { dateStyle: 'medium', timeStyle: 'short' })
   }
   return typeof value === 'string' && value.trim() ? value.trim() : undefined
 }
@@ -34,17 +35,20 @@ export function formatExif(tags: Record<string, unknown>): [string, string][] {
     return typeof v === 'number' && isFinite(v) ? v : undefined
   }
 
-  add('Aufgenommen', formatDate(tags['DateTimeOriginal'] ?? tags['CreateDate']))
+  add(t('exif.taken'), formatDate(tags['DateTimeOriginal'] ?? tags['CreateDate']))
   const make = str('Make')
   const model = str('Model')
   // Viele Hersteller wiederholen ihren Namen im Modell („Canon“ + „Canon EOS 5D“).
-  add('Kamera', model && make && !model.startsWith(make) ? `${make} ${model}` : (model ?? make))
-  add('Objektiv', str('LensModel'))
+  add(
+    t('exif.camera'),
+    model && make && !model.startsWith(make) ? `${make} ${model}` : (model ?? make)
+  )
+  add(t('exif.lens'), str('LensModel'))
   const exposure = n('ExposureTime')
   const f = n('FNumber')
   const iso = n('ISO')
   add(
-    'Belichtung',
+    t('exif.exposure'),
     [
       exposure !== undefined ? formatExposure(exposure) : '',
       f !== undefined ? `f/${num(f)}` : '',
@@ -57,22 +61,24 @@ export function formatExif(tags: Record<string, unknown>): [string, string][] {
   const focal35 = n('FocalLengthIn35mmFormat')
   if (focal !== undefined) {
     add(
-      'Brennweite',
-      `${num(focal)} mm` + (focal35 && focal35 !== Math.round(focal) ? ` (KB ${focal35} mm)` : '')
+      t('exif.focal'),
+      `${num(focal)} mm` +
+        (focal35 && focal35 !== Math.round(focal) ? t('exif.focal35', { mm: focal35 }) : '')
     )
   }
   const flash = str('Flash')
-  if (flash) add('Blitz', /did not fire|no flash|off/i.test(flash) ? 'nein' : 'ja')
+  if (flash)
+    add(t('exif.flash'), /did not fire|no flash|off/i.test(flash) ? t('exif.no') : t('exif.yes'))
   const lat = n('latitude')
   const lon = n('longitude')
-  if (lat !== undefined && lon !== undefined) add('Ort (GPS)', `${num(lat, 5)}, ${num(lon, 5)}`)
+  if (lat !== undefined && lon !== undefined) add(t('exif.gps'), `${num(lat, 5)}, ${num(lon, 5)}`)
   const w = n('ExifImageWidth')
   const h = n('ExifImageHeight')
-  if (w && h) add('EXIF-Größe', `${w} × ${h}`)
-  add('Software', str('Software'))
-  add('Beschreibung', str('ImageDescription'))
-  add('Urheber', str('Artist'))
-  add('Copyright', str('Copyright'))
+  if (w && h) add(t('exif.size'), `${w} × ${h}`)
+  add(t('exif.software'), str('Software'))
+  add(t('exif.description'), str('ImageDescription'))
+  add(t('exif.artist'), str('Artist'))
+  add(t('exif.copyright'), str('Copyright'))
   return out
 }
 

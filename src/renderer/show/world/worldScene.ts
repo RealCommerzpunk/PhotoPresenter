@@ -1,3 +1,4 @@
+import { t } from '@shared/i18n'
 import type * as ThreeNS from 'three'
 import { Container, Sprite, Texture } from 'pixi.js'
 import type { WorldFormation } from '@shared/settings'
@@ -105,7 +106,9 @@ const JELLY_VERTEX = /* glsl */ `
  */
 export class WorldScene extends TimedScene implements Scene {
   readonly view = new Container()
-  readonly label = '3D-Fotowelt'
+  get label(): string {
+    return t('show.world')
+  }
   readonly photoName = undefined
   private readonly sprite: Sprite
   private readonly texture: Texture

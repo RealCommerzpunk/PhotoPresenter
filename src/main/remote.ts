@@ -35,6 +35,8 @@ export interface RemoteHandlers {
   queue(op: QueueOp): void
   /** Programm-Icon (PNG) für Lesezeichen und Startbildschirm des Handys. */
   icon?(): Promise<Buffer | null>
+  /** Wörterbuch der Handy-Seite in der Sprache des Presenters. */
+  i18n?(): { lang: string; de: Record<string, string>; msg: Record<string, string> }
 }
 
 /** Verbundenes Handy (Server-Sent Events). */
@@ -138,6 +140,9 @@ export class RemoteServer {
         return new Response(new Uint8Array(image), {
           headers: { 'Content-Type': 'image/png', 'Cache-Control': 'max-age=86400' }
         })
+      }
+      if (method === 'GET' && url.pathname === '/api/i18n') {
+        return json(this.handlers.i18n?.() ?? { lang: 'de', de: {}, msg: {} })
       }
       if (method === 'GET' && url.pathname === '/api/state') return json(this.handlers.state())
       if (method === 'GET' && url.pathname === '/api/events') return this.events()

@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react'
+import { t } from '@shared/i18n'
 import type { Range, WeightedOption } from '@shared/random'
 
 export function Card({
@@ -112,7 +113,7 @@ export function RangeInput({
   const set = (patch: Partial<Range>): void => onChange({ ...value, ...patch })
   return (
     <div className="flex flex-wrap items-center gap-3 text-sm text-white/70">
-      {random && <span>von</span>}
+      {random && <span>{t('ui.range.from')}</span>}
       <NumberInput
         value={value.min * factor}
         min={min}
@@ -125,7 +126,7 @@ export function RangeInput({
       />
       {random && (
         <>
-          <span>bis</span>
+          <span>{t('ui.range.to')}</span>
           <NumberInput
             value={value.max * factor}
             min={min}
@@ -141,7 +142,7 @@ export function RangeInput({
       <span className="min-w-6 pr-2">{unit}</span>
       <Toggle
         checked={random}
-        label="Zufall"
+        label={t('ui.range.random')}
         onChange={(on) =>
           set(on ? { mode: 'random', max: Math.max(value.max, value.min) } : { mode: 'fixed' })
         }
@@ -172,10 +173,10 @@ export function WeightedList<T extends string>({
       {columns === 2 && (
         <div className="flex gap-4">
           <button className={linkClass} onClick={() => setAll(true)}>
-            alle an
+            {t('ui.weighted.allOn')}
           </button>
           <button className={linkClass} onClick={() => setAll(false)}>
-            alle aus
+            {t('ui.weighted.allOff')}
           </button>
         </div>
       )}
@@ -200,7 +201,7 @@ export function WeightedList<T extends string>({
               className={`${columns === 2 ? 'w-20' : 'w-40'} accent-indigo-500 disabled:opacity-30`}
             />
             <span className="text-xs text-white/40">
-              {columns === 2 ? o.weight : `Häufigkeit ${o.weight}`}
+              {columns === 2 ? o.weight : t('ui.weighted.weight', { n: o.weight })}
             </span>
           </div>
         ))}

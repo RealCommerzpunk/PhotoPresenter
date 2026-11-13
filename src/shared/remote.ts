@@ -97,6 +97,8 @@ export type RemoteSettings = Pick<Settings, (typeof REMOTE_KEYS)[number]>
 
 /** Alles, was die Handy-Seite anzeigt. */
 export interface RemoteState {
+  /** Sprache des Presenters; wechselt sie, lädt die Handy-Seite neu. */
+  lang?: string
   version: string
   show: ShowStatus
   queue: PhotoQueue

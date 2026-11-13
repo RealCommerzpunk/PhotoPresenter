@@ -602,7 +602,45 @@
     <div id="toasts"></div>
 
     <script>
-      'use strict'
+      // ---------- Übersetzung (Wörterbuch kommt vom Presenter: /api/i18n) ----------
+      let I18N = { lang: 'de', de: {}, msg: {} }
+      function t(key, params) {
+        let text = I18N.msg[key] ?? I18N.de[key] ?? key
+        if (text.includes('|') && params && typeof params.n === 'number') {
+          const [one, other] = text.split('|')
+          text = params.n === 1 ? one : other
+        }
+        return params
+          ? text.replace(/\{(\w+)\}/g, (m, k) => (k in params ? String(params[k]) : m))
+          : text
+      }
+      /** Feste deutsche Texte der Seite (Textknoten, title, placeholder, aria-label) übersetzen. */
+      function translateStatic() {
+        const back = new Map()
+        for (const [key, text] of Object.entries(I18N.de)) back.set(text, key)
+        const tr = (text) => {
+          const norm = text.replace(/\s+/g, ' ').trim()
+          const key = back.get(norm)
+          return key && I18N.msg[key] ? text.replace(text.trim(), I18N.msg[key]) : null
+        }
+        const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT)
+        for (let n = walker.nextNode(); n; n = walker.nextNode()) {
+          if (n.parentElement && n.parentElement.closest('script, style')) continue
+          if (!n.nodeValue.trim()) continue
+          const out = tr(n.nodeValue)
+          if (out !== null) n.nodeValue = out
+        }
+        for (const el of document.querySelectorAll('[title], [placeholder], [aria-label]')) {
+          for (const attr of ['title', 'placeholder', 'aria-label']) {
+            const v = el.getAttribute(attr)
+            const out = v && tr(v)
+            if (out) el.setAttribute(attr, out)
+          }
+        }
+        document.title = t('remote.title')
+      }
+
+      ;('use strict')
       let state = null
       let built = false
       const $ = (id) => document.getElementById(id)
@@ -615,7 +653,7 @@
             body: JSON.stringify(body)
           })
           if (res.ok) render(await res.json())
-          else toast('Fehler: ' + (await res.text()), 'warn')
+          else toast(t('remote.error', { error: await res.text() }), 'warn')
         } catch {
           showOffline(true)
         }
@@ -654,9 +692,15 @@
           '<label>' +
           title +
           ' <span class="value"></span></label>' +
-          '<div class="sub">von <input type="range" data-part="min"></div>' +
-          '<div class="sub">bis <input type="range" data-part="max"></div>' +
-          '<div class="switch" style="font-size:14px">Zufällig im Bereich <input type="checkbox" data-part="mode"></div>'
+          '<div class="sub">' +
+          t('remote.from') +
+          ' <input type="range" data-part="min"></div>' +
+          '<div class="sub">' +
+          t('remote.to') +
+          ' <input type="range" data-part="max"></div>' +
+          '<div class="switch" style="font-size:14px">' +
+          t('remote.randomRange') +
+          ' <input type="checkbox" data-part="mode"></div>'
         const [lo, hi] = box.querySelectorAll('input[type=range]')
         for (const el of [lo, hi]) Object.assign(el, { min, max, step })
         const mode = box.querySelector('[data-part=mode]')
@@ -733,16 +777,17 @@
       ]
 
       function build() {
-        rangeControl('displayDuration', 'Anzeigedauer', 's', 1, 60, 0.5)
-        rangeControl('transitionDuration', 'Überblenddauer', 's', 0, 8, 0.1)
-        rangeControl('textDuration', 'Textdauer', 's', 1, 30, 0.5)
-        rangeControl('motionIntensity', 'Bewegung (Zoom)', '%', 0, 60, 1, 100)
-        rangeControl('textFillerEvery', 'Fülltext alle', 'Fotos', 1, 50, 1)
-        rangeControl('effectEvery', 'Effekt alle', 'Fotos', 1, 50, 1)
-        rangeControl('effectDuration', 'Effektdauer', 's', 1, 30, 0.5)
-        rangeControl('effectIntensity', 'Intensität', '%', 5, 100, 5, 100)
-        rangeControl('worldEvery', '3D alle', 'Fotos', 2, 100, 1)
-        rangeControl('worldDuration', '3D-Dauer', 's', 8, 90, 1)
+        const photosUnit = t('remote.unit.photos')
+        rangeControl('displayDuration', t('remote.displayDuration'), 's', 1, 60, 0.5)
+        rangeControl('transitionDuration', t('remote.transitionDuration'), 's', 0, 8, 0.1)
+        rangeControl('textDuration', t('remote.textDuration'), 's', 1, 30, 0.5)
+        rangeControl('motionIntensity', t('remote.motionIntensity'), '%', 0, 60, 1, 100)
+        rangeControl('textFillerEvery', t('remote.fillerEvery'), photosUnit, 1, 50, 1)
+        rangeControl('effectEvery', t('remote.effectEvery'), photosUnit, 1, 50, 1)
+        rangeControl('effectDuration', t('remote.effectDuration'), 's', 1, 30, 0.5)
+        rangeControl('effectIntensity', t('remote.effectIntensity'), '%', 5, 100, 5, 100)
+        rangeControl('worldEvery', t('remote.worldEvery'), photosUnit, 2, 100, 1)
+        rangeControl('worldDuration', t('remote.worldDuration'), 's', 8, 90, 1)
         $('worldEnabled').onchange = (e) => patch({ worldEnabled: e.target.checked })
         $('effectsEnabled').onchange = (e) => patch({ effectsEnabled: e.target.checked })
 
@@ -816,7 +861,7 @@
           }
           $('newText').value = ''
           patch({ texts: [item, ...state.settings.texts] })
-          toast(adhoc ? 'Text auf Abruf hinzugefügt (unter „Live“)' : 'Text kommt jetzt im Ablauf')
+          toast(adhoc ? t('remote.added.adhoc') : t('remote.added.flow'))
         }
         $('addText').onclick = () => addText(false)
         $('addAdhoc').onclick = () => addText(true)
@@ -833,7 +878,7 @@
           if (!list.length) return toast('Bitte mindestens ein Emoji eingeben', 'warn')
           patch({ emojis: list })
           $('emojiEditor').style.display = 'none'
-          toast('Emojis gespeichert')
+          toast(t('remote.emojisSaved'))
         }
         $('resetEmojis').onclick = () => ($('emojiInput').value = DEFAULT_EMOJIS.join(' '))
 
@@ -876,6 +921,10 @@
       }
 
       function render(next) {
+        if (next.lang && I18N.lang && next.lang !== I18N.lang && Object.keys(I18N.de).length) {
+          location.reload()
+          return
+        }
         state = next
         showOffline(false)
         if (!built) build()
@@ -883,18 +932,19 @@
         const show = state.show
         $('status').innerHTML = show.running
           ? (show.paused
-              ? '<b>Pausiert</b>'
+              ? '<b>' + t('remote.paused') + '</b>'
               : show.frozen
-                ? '<b>Eingefroren</b>'
-                : '<b>Läuft</b>') + (show.label ? ' · ' + escapeHtml(show.label) : '')
-          : '<span class="off">Show läuft nicht</span>'
+                ? '<b>' + t('remote.frozen') + '</b>'
+                : '<b>' + t('remote.running') + '</b>') +
+            (show.label ? ' · ' + escapeHtml(show.label) : '')
+          : '<span class="off">' + t('remote.notRunning') + '</span>'
         $('startstop').className = show.running ? 'running' : 'stopped'
-        $('startstop').title = show.running ? 'Show beenden' : 'Show starten'
+        $('startstop').title = show.running ? t('remote.stop') : t('remote.start')
         $('pause').textContent = show.paused ? '▶︎' : '⏸'
         $('pause').classList.toggle('on', !!show.paused)
-        $('pause').title = show.paused ? 'Weiter' : 'Pause'
+        $('pause').title = show.paused ? t('remote.next') : t('remote.pause')
         $('freeze').classList.toggle('on', !!show.frozen)
-        $('freeze').title = show.frozen ? 'Auftauen' : 'Foto einfrieren'
+        $('freeze').title = show.frozen ? t('remote.unfreeze') : t('remote.freezePhoto')
 
         for (const key of [
           'displayDuration',
@@ -919,11 +969,11 @@
         $('focusEnabled').checked = s.focusEnabled
         $('focusTogether').checked = s.focusTogether
 
-        const people = state.persons.map((p) => [p.id, escapeHtml(p.name || 'Ohne Namen')])
-        options($('focusPersonId'), [['', '– keine –'], ...people], s.focusPersonId)
+        const people = state.persons.map((p) => [p.id, escapeHtml(p.name || t('remote.unnamed'))])
+        options($('focusPersonId'), [['', t('remote.nobody')], ...people], s.focusPersonId)
         options(
           $('focusPartnerId'),
-          [['', '– kein Partner –'], ...people.filter(([id]) => id !== s.focusPersonId)],
+          [['', t('remote.noPartner')], ...people.filter(([id]) => id !== s.focusPersonId)],
           s.focusPartnerId
         )
         options($('focusPanOthers'), Object.entries(state.labels.panOthers), s.focusPanOthers)
@@ -947,25 +997,27 @@
         chips('effects', s.effects, state.labels.effects, 'effects')
         chips('transitions', s.transitions, state.labels.transitions, 'transitions')
 
-        const firstLine = (t) => escapeHtml(t.text.split('\n')[0] || 'Leerer Text')
+        const firstLine = (item) => escapeHtml(item.text.split('\n')[0] || t('remote.emptyText'))
         $('texts').innerHTML = s.texts
           .map(
-            (t, i) =>
+            (item, i) =>
               '<div class="text-item"><input type="checkbox" data-i="' +
               i +
               '"' +
-              (t.enabled ? ' checked' : '') +
+              (item.enabled ? ' checked' : '') +
               '><span>' +
-              firstLine(t) +
+              firstLine(item) +
               '</span><button class="mode' +
-              (t.adhoc ? ' adhoc' : '') +
+              (item.adhoc ? ' adhoc' : '') +
               '" data-mode="' +
               i +
               '">' +
-              (t.adhoc ? '📱 Abruf' : '🔀 Ablauf') +
+              (item.adhoc ? t('remote.modeAdhoc') : t('remote.modeFlow')) +
               '</button><button class="small" data-show="' +
-              escapeHtml(t.id) +
-              '">Zeigen</button></div>'
+              escapeHtml(item.id) +
+              '">' +
+              t('remote.show') +
+              '</button></div>'
           )
           .join('')
         $('texts')
@@ -1051,7 +1103,7 @@
           $('photoCount').textContent = '(' + files.length + ')'
           const box = $('gallery')
           box.innerHTML = ''
-          if (!files.length) box.innerHTML = '<div class="empty">Keine Fotos gefunden.</div>'
+          if (!files.length) box.innerHTML = '<div class="empty">' + t('remote.noPhotos') + '</div>'
           for (const name of files) {
             const tile = document.createElement('div')
             tile.className = 'tile'
@@ -1064,7 +1116,7 @@
           markGallery()
         } catch {
           galleryLoaded = false
-          toast('Fotoliste nicht abrufbar', 'warn')
+          toast(t('remote.galleryError'), 'warn')
         }
       }
 
@@ -1073,8 +1125,8 @@
         queueOp({ op: 'add', name })
         toast(
           upcoming === 0
-            ? 'Als Nächstes: ' + shortName(name)
-            : 'Angehängt an Platz ' + (upcoming + 1) + ': ' + shortName(name)
+            ? t('remote.nextUp', { name: shortName(name) })
+            : t('remote.appended', { n: upcoming + 1, name: shortName(name) })
         )
       }
 
@@ -1122,7 +1174,7 @@
         const box = $('queue')
         if (!q.items.length) {
           box.innerHTML =
-            '<div class="empty" style="grid-column: 1 / -1">Noch leer – unten Fotos antippen.</div>'
+            '<div class="empty" style="grid-column: 1 / -1">' + t('remote.queueEmpty') + '</div>'
           return
         }
         let n = 0
@@ -1138,7 +1190,7 @@
               '"><img draggable="false" alt="" src="' +
               thumbUrl(item.name) +
               '"><div class="tag">' +
-              (now ? 'läuft' : n === 1 ? 'als Nächstes' : n + '.') +
+              (now ? t('remote.playing') : n === 1 ? t('remote.upNext') : n + '.') +
               '</div></div>'
             )
           })
@@ -1214,7 +1266,7 @@
             }
           } else if (!p.moved) {
             queueOp({ op: 'remove', id: p.tile.dataset.id })
-            toast('Aus der Reihenfolge entfernt')
+            toast(t('remote.removed'))
           }
         }
         const cancel = () => {
@@ -1265,7 +1317,16 @@
         })
         events.onerror = () => showOffline(true)
       }
-      connect()
+      // Erst Wörterbuch laden und die Seite übersetzen, dann verbinden.
+      fetch('/api/i18n')
+        .then((r) => r.json())
+        .then((d) => {
+          I18N = d
+          document.documentElement.lang = d.lang
+          translateStatic()
+        })
+        .catch(() => undefined)
+        .finally(connect)
     </script>
   </body>
 </html>

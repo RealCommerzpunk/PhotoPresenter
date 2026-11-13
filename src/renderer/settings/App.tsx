@@ -1,4 +1,13 @@
 import { useEffect, useState } from 'react'
+import {
+  LANGUAGE_NAMES,
+  LANGUAGES,
+  MESSAGES,
+  resolveLanguage,
+  setLanguage,
+  t,
+  tk
+} from '@shared/i18n'
 import appIcon from '../../../resources/icon.png'
 import {
   defaultSettings,
@@ -8,7 +17,7 @@ import {
   type Settings
 } from '@shared/settings'
 import type { PhotoList } from '@shared/ipc'
-import { Card, Field, RangeInput, Toggle, WeightedList } from './controls'
+import { Card, Field, RangeInput, Select, Toggle, WeightedList } from './controls'
 import { EffectsPage } from './EffectsPage'
 import { PersonsPage } from './PersonsPage'
 import { DuplicatesCard } from './DuplicatesCard'
@@ -20,15 +29,27 @@ import { TextsPage } from './TextsPage'
 import { useSettings } from './useSettings'
 
 const sections = [
-  'Allgemein',
-  'Bewegung',
-  'Übergänge',
-  'Personen',
-  'Texte',
-  'Stile',
-  'Effekte'
+  'general',
+  'motion',
+  'transitions',
+  'persons',
+  'texts',
+  'styles',
+  'effects'
 ] as const
 type Section = (typeof sections)[number]
+
+/** Seite aus dem URL-Anker: Kennung (#texts) oder Seitenname in einer der Sprachen (#Texte). */
+function sectionFromHash(hash: string): Section {
+  const wanted = hash.toLowerCase()
+  return (
+    sections.find(
+      (s) =>
+        s === wanted ||
+        LANGUAGES.some((lang) => MESSAGES[lang][`nav.${s}`].toLowerCase() === wanted)
+    ) ?? 'general'
+  )
+}
 
 type Update = (patch: Partial<Settings>) => void
 
@@ -63,14 +84,14 @@ function FolderInput({
           onChange={(e) => setDraft(e.target.value)}
           onBlur={commit}
           onKeyDown={(e) => e.key === 'Enter' && commit()}
-          placeholder="z. B. Fotos oder C:\Bilder\Urlaub"
+          placeholder={t('ui.folder.placeholder')}
           className="min-w-0 flex-1 rounded-md border border-white/15 bg-black/40 px-2 py-1.5 text-sm outline-none focus:border-indigo-400"
         />
         <button
           onClick={onPick}
           className="shrink-0 whitespace-nowrap rounded-md border border-white/15 bg-white/5 px-3 py-1.5 text-sm hover:bg-white/10"
         >
-          Ordner wählen …
+          {t('ui.folder.pick')}
         </button>
       </div>
       {photos && s.photoFolder && (
@@ -81,19 +102,23 @@ function FolderInput({
             </span>
           )}
           <span className={photos.error ? 'text-red-400' : 'text-white/40'}>
-            {photos.error ?? `${photos.files.length} Fotos gefunden`}
+            {photos.error ?? t('ui.folder.found', { n: photos.files.length })}
           </span>
           {relative && !isRelative && (
             <button
               onClick={() => update({ photoFolder: relative })}
               className="self-start text-indigo-300 hover:text-indigo-200"
             >
-              Relativ zum Programmordner speichern („{relative}“)
+              {t('ui.folder.makeRelative', { path: relative })}
             </button>
           )}
         </div>
       )}
-      {base && <span className="truncate text-[11px] text-white/30">Programmordner: {base}</span>}
+      {base && (
+        <span className="truncate text-[11px] text-white/30">
+          {t('ui.folder.programDir', { path: base })}
+        </span>
+      )}
     </div>
   )
 }
@@ -116,11 +141,20 @@ function General({ s, update }: { s: Settings; update: Update }): React.JSX.Elem
 
   return (
     <>
-      <Card title="Fotos">
-        <Field
-          label="Fotoordner"
-          hint="Auch relativ zum Programmordner möglich, z. B. „Fotos“: dann wird der Ordner Fotos neben dem Programm verwendet (praktisch für einen USB-Stick)."
-        >
+      <Card title={t('ui.language.title')}>
+        <Field label={t('ui.language.label')} hint={t('ui.language.hint')}>
+          <Select
+            value={s.language}
+            onChange={(v) => update({ language: v as Settings['language'] })}
+            options={[
+              { value: 'auto', label: t('ui.language.auto') },
+              ...LANGUAGES.map((lang) => ({ value: lang, label: LANGUAGE_NAMES[lang] }))
+            ]}
+          />
+        </Field>
+      </Card>
+      <Card title={t('ui.photos.title')}>
+        <Field label={t('ui.photos.folder')} hint={t('ui.photos.folderHint')}>
           <FolderInput
             key={s.photoFolder}
             s={s}
@@ -129,20 +163,17 @@ function General({ s, update }: { s: Settings; update: Update }): React.JSX.Elem
             onPick={() => void pick()}
           />
         </Field>
-        <Field label="Unterordner">
+        <Field label={t('ui.photos.subfolders')}>
           <Toggle
             checked={s.includeSubfolders}
             onChange={(v) => update({ includeSubfolders: v })}
-            label="Fotos aus Unterordnern einbeziehen"
+            label={t('ui.photos.includeSubfolders')}
           />
         </Field>
       </Card>
       <ScreenCard s={s} update={update} />
-      <Card title="Bildschirm füllen">
-        <Field
-          label="Höchstens beschneiden"
-          hint="Weicht das Seitenverhältnis nur wenig ab, wird das Foto leicht beschnitten und füllt den Bildschirm. Darüber wird der Rand aus dem Foto weich aufgefüllt."
-        >
+      <Card title={t('ui.fill.title')}>
+        <Field label={t('ui.fill.maxCrop')} hint={t('ui.fill.maxCropHint')}>
           <div className="flex items-center gap-3 text-sm text-white/70">
             <input
               type="range"
@@ -156,15 +187,12 @@ function General({ s, update }: { s: Settings; update: Update }): React.JSX.Elem
             <span>{Math.round(s.maxCrop * 100)} %</span>
           </div>
         </Field>
-        <Field
-          label="Kleine Fotos begrenzen"
-          hint="Schlecht aufgelöste oder gescannte Fotos höchstens so weit über ihre Originalauflösung vergrößern. Sie erscheinen dann kleiner, der Rand wird wie gewohnt aufgefüllt."
-        >
+        <Field label={t('ui.fill.limitSmall')} hint={t('ui.fill.limitSmallHint')}>
           <div className="flex flex-wrap items-center gap-4 text-sm text-white/70">
             <Toggle
               checked={s.maxBaseScale > 0}
               onChange={(v) => update({ maxBaseScale: v ? 1.5 : 0 })}
-              label="begrenzen"
+              label={t('ui.fill.limit')}
             />
             {s.maxBaseScale > 0 && (
               <>
@@ -177,15 +205,12 @@ function General({ s, update }: { s: Settings; update: Update }): React.JSX.Elem
                   onChange={(e) => update({ maxBaseScale: Number(e.target.value) / 100 })}
                   className="w-56 accent-indigo-500"
                 />
-                <span>höchstens {Math.round(s.maxBaseScale * 100)} %</span>
+                <span>{t('ui.fill.atMost', { value: Math.round(s.maxBaseScale * 100) })}</span>
               </>
             )}
           </div>
         </Field>
-        <Field
-          label="Randfüllung"
-          hint="Wie freie Ränder aufgefüllt werden. Pro Foto wird aus den aktiven Arten gewählt."
-        >
+        <Field label={t('ui.fill.modes')} hint={t('ui.fill.modesHint')}>
           <WeightedList
             value={s.fillModes}
             labels={FILL_LABELS}
@@ -196,17 +221,17 @@ function General({ s, update }: { s: Settings; update: Update }): React.JSX.Elem
       <DuplicatesCard s={s} update={update} />
       <RemoteCard s={s} update={update} />
       <PortableCard />
-      <Card title="Zurücksetzen">
-        <Field label="Alle Einstellungen" hint="Der Fotoordner bleibt erhalten.">
+      <Card title={t('ui.reset.title')}>
+        <Field label={t('ui.reset.all')} hint={t('ui.reset.hint')}>
           <button
             onClick={() => {
-              if (window.confirm('Alle Einstellungen auf die Standardwerte zurücksetzen?')) {
-                update({ ...defaultSettings, photoFolder: s.photoFolder })
+              if (window.confirm(t('ui.reset.confirm'))) {
+                update({ ...defaultSettings, photoFolder: s.photoFolder, language: s.language })
               }
             }}
             className="rounded-md border border-red-400/30 bg-red-500/10 px-3 py-1.5 text-sm text-red-200 hover:bg-red-500/20"
           >
-            Auf Standardwerte zurücksetzen
+            {t('ui.reset.button')}
           </button>
         </Field>
       </Card>
@@ -216,8 +241,8 @@ function General({ s, update }: { s: Settings; update: Update }): React.JSX.Elem
 
 function Motion({ s, update }: { s: Settings; update: Update }): React.JSX.Element {
   return (
-    <Card title="Bewegung">
-      <Field label="Anzeigedauer" hint="Wie lange ein Foto steht, ohne Überblendung.">
+    <Card title={t('ui.motion.title')}>
+      <Field label={t('ui.motion.duration')} hint={t('ui.motion.durationHint')}>
         <RangeInput
           value={s.displayDuration}
           onChange={(v) => update({ displayDuration: v })}
@@ -227,7 +252,7 @@ function Motion({ s, update }: { s: Settings; update: Update }): React.JSX.Eleme
           unit="s"
         />
       </Field>
-      <Field label="Intensität" hint="Wie stark gezoomt wird: 10 % ist ruhig, 30 % deutlich.">
+      <Field label={t('ui.motion.intensity')} hint={t('ui.motion.intensityHint')}>
         <RangeInput
           value={s.motionIntensity}
           onChange={(v) => update({ motionIntensity: v })}
@@ -238,10 +263,7 @@ function Motion({ s, update }: { s: Settings; update: Update }): React.JSX.Eleme
           factor={100}
         />
       </Field>
-      <Field
-        label="Höchste Vergrößerung"
-        hint="Wie weit über die Originalauflösung des Fotos gezoomt werden darf. 100 % = nie vergrößern (gestochen scharf), 125 % = kaum sichtbar, ab 150 % wird es weich. Gilt für alle Bewegungen und den Fokus; kleine Fotos zoomen entsprechend weniger."
-      >
+      <Field label={t('ui.motion.maxUpscale')} hint={t('ui.motion.maxUpscaleHint')}>
         <div className="flex items-center gap-3 text-sm text-white/70">
           <input
             type="range"
@@ -255,7 +277,7 @@ function Motion({ s, update }: { s: Settings; update: Update }): React.JSX.Eleme
           <span>{Math.round(s.maxUpscale * 100)} %</span>
         </div>
       </Field>
-      <Field label="Bewegungsarten" hint="Aus den aktiven Arten wird pro Foto zufällig gewählt.">
+      <Field label={t('ui.motion.kinds')} hint={t('ui.motion.kindsHint')}>
         <WeightedList
           value={s.motionKinds}
           labels={MOTION_LABELS}
@@ -268,8 +290,8 @@ function Motion({ s, update }: { s: Settings; update: Update }): React.JSX.Eleme
 
 function Transitions({ s, update }: { s: Settings; update: Update }): React.JSX.Element {
   return (
-    <Card title="Übergänge">
-      <Field label="Überblenddauer">
+    <Card title={t('ui.transitions.title')}>
+      <Field label={t('ui.transitions.duration')}>
         <RangeInput
           value={s.transitionDuration}
           onChange={(v) => update({ transitionDuration: v })}
@@ -279,10 +301,7 @@ function Transitions({ s, update }: { s: Settings; update: Update }): React.JSX.
           unit="s"
         />
       </Field>
-      <Field
-        label="Effekte"
-        hint="Pro Fotowechsel wird ein aktiver Effekt gewählt; der Regler bestimmt, wie oft (1–5)."
-      >
+      <Field label={t('ui.transitions.effects')} hint={t('ui.transitions.effectsHint')}>
         <WeightedList
           value={s.transitions}
           labels={TRANSITION_LABELS}
@@ -297,11 +316,15 @@ function Transitions({ s, update }: { s: Settings; update: Update }): React.JSX.
 export function App(): React.JSX.Element {
   const [version, setVersion] = useState('')
   // Startseite über den URL-Anker wählbar (z. B. #Texte), sonst „Allgemein“.
-  const [active, setActive] = useState<Section>(() => {
-    const hash = decodeURIComponent(window.location.hash.slice(1))
-    return (sections as readonly string[]).includes(hash) ? (hash as Section) : 'Allgemein'
-  })
+  const [active, setActive] = useState<Section>(() =>
+    sectionFromHash(decodeURIComponent(window.location.hash.slice(1)))
+  )
   const [settings, update] = useSettings()
+  // Sprache vor dem Zeichnen der Seiten setzen (sie lesen sie über t()).
+  setLanguage(resolveLanguage(settings?.language, navigator.language))
+  useEffect(() => {
+    document.documentElement.lang = resolveLanguage(settings?.language, navigator.language)
+  }, [settings?.language])
 
   useEffect(() => {
     void window.api.appVersion().then(setVersion)
@@ -323,18 +346,15 @@ export function App(): React.JSX.Element {
                 active === s ? 'bg-white/10 text-white' : 'text-white/60 hover:bg-white/5'
               }`}
             >
-              {s}
+              {tk(`nav.${s}`)}
             </button>
           ))}
         </nav>
         <div className="mt-auto text-xs leading-relaxed text-white/40">
-          <div>
-            In der Show: Esc beenden · Leertaste Pause · ←/→ blättern · I Info zum Foto · R
-            Fernbedienung als Fenster · Q QR-Code · D fps
-          </div>
-          <div className="mt-2">Version {version}</div>
+          <div>{t('ui.app.keys')}</div>
+          <div className="mt-2">{t('ui.app.version', { version })}</div>
           <div className="mt-1">
-            Icon:{' '}
+            {t('ui.app.icon')}{' '}
             <a
               href="https://www.flaticon.com/authors/three-musketeers"
               target="_blank"
@@ -349,43 +369,39 @@ export function App(): React.JSX.Element {
 
       <main className="flex flex-1 flex-col overflow-hidden">
         <header className="flex items-center justify-between border-b border-white/10 px-8 py-4">
-          <h2 className="text-xl font-medium">{active}</h2>
+          <h2 className="text-xl font-medium">{tk(`nav.${active}`)}</h2>
           <div className="flex items-center gap-3">
             <button
               onClick={() => void window.api.startShow({ windowed: true })}
               disabled={!settings?.photoFolder}
               className="rounded-lg border border-white/15 bg-white/5 px-4 py-2 text-sm text-white/90 hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-40"
             >
-              Vorschau
+              {t('ui.app.preview')}
             </button>
             <button
               onClick={() => void window.api.startShow()}
               disabled={!settings?.photoFolder}
               className="rounded-lg bg-indigo-500 px-5 py-2 text-sm font-medium text-white shadow hover:bg-indigo-400 disabled:cursor-not-allowed disabled:opacity-40"
             >
-              ▶ Diashow starten
+              {t('ui.app.start')}
             </button>
           </div>
         </header>
         <section className="flex-1 overflow-auto p-8">
-          {!settings ? null : active === 'Allgemein' ? (
+          {!settings ? null : active === 'general' ? (
             <General s={settings} update={update} />
-          ) : active === 'Bewegung' ? (
+          ) : active === 'motion' ? (
             <Motion s={settings} update={update} />
-          ) : active === 'Übergänge' ? (
+          ) : active === 'transitions' ? (
             <Transitions s={settings} update={update} />
-          ) : active === 'Personen' ? (
+          ) : active === 'persons' ? (
             <PersonsPage s={settings} update={update} />
-          ) : active === 'Texte' ? (
+          ) : active === 'texts' ? (
             <TextsPage s={settings} update={update} />
-          ) : active === 'Effekte' ? (
+          ) : active === 'effects' ? (
             <EffectsPage s={settings} update={update} />
-          ) : active === 'Stile' ? (
-            <StylesPage s={settings} update={update} />
           ) : (
-            <p className="text-white/50">
-              Die Einstellungen für „{active}“ folgen in späteren Meilensteinen.
-            </p>
+            <StylesPage s={settings} update={update} />
           )}
         </section>
       </main>

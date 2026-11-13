@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import type { RemoteInfo } from '@shared/remote'
 import type { Settings } from '@shared/settings'
+import { t } from '@shared/i18n'
 import { Card, Field, Toggle } from './controls'
 
 /** Fernbedienung: QR-Code und Adressen; aktualisiert sich, wenn das Netzwerk wechselt. */
@@ -34,19 +35,16 @@ export function RemoteCard({
   }
 
   return (
-    <Card title="Fernbedienung">
-      <Field
-        label="Per Handy steuern"
-        hint="Der Presenter öffnet eine kleine Webseite im lokalen Netz (ohne Passwort). Damit lassen sich Dauer, Bewegung, Übergänge, Fokus und Texte während der Show ändern."
-      >
+    <Card title={t('ui.remote.title')}>
+      <Field label={t('ui.remote.phone')} hint={t('ui.remote.phoneHint')}>
         <div className="flex flex-wrap items-center gap-4">
           <Toggle
             checked={s.remoteEnabled}
             onChange={(v) => update({ remoteEnabled: v })}
-            label="Fernbedienung aktiv"
+            label={t('ui.remote.enabled')}
           />
           <label className="flex items-center gap-2 text-sm text-white/70">
-            Port
+            {t('ui.remote.port')}
             <input
               value={port}
               onChange={(e) => setPort(e.target.value)}
@@ -58,10 +56,7 @@ export function RemoteCard({
         </div>
       </Field>
       {s.remoteEnabled && info && (
-        <Field
-          label="Verbinden"
-          hint="Handy mit demselben Netz verbinden (z. B. diesen PC mit dem Handy-Hotspot) und den Code scannen. In der Show blendet die Taste Q den Code 30 Sekunden lang ein."
-        >
+        <Field label={t('ui.remote.connect')} hint={t('ui.remote.connectHint')}>
           {info.error && <div className="mb-2 text-sm text-red-300">{info.error}</div>}
           {info.urls.length ? (
             <div className="flex flex-wrap items-start gap-5">
@@ -79,17 +74,12 @@ export function RemoteCard({
                   </span>
                 ))}
                 <span className="mt-3 max-w-md text-xs leading-snug text-white/40">
-                  Fragt Windows beim ersten Start nach der Firewall, den Zugriff erlauben – bei
-                  einem Handy-Hotspot auch für „öffentliche Netzwerke“, sonst erreicht das Handy den
-                  PC nicht.
+                  {t('ui.remote.firewall')}
                 </span>
               </div>
             </div>
           ) : (
-            <div className="text-sm text-amber-300">
-              Kein Netzwerk gefunden. Den PC mit einem WLAN oder dem Handy-Hotspot verbinden – die
-              Adresse erscheint dann hier automatisch.
-            </div>
+            <div className="text-sm text-amber-300">{t('ui.remote.noNetwork')}</div>
           )}
         </Field>
       )}

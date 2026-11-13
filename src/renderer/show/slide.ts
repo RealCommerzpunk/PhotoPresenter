@@ -1,3 +1,4 @@
+import { t } from '@shared/i18n'
 import { Container, Sprite } from 'pixi.js'
 import { pick, pickWeighted } from '@shared/random'
 import { FOCUS_LABELS, MOTION_LABELS, type MotionKind, type Settings } from '@shared/settings'
@@ -138,8 +139,8 @@ export class Slide extends TimedScene implements Scene {
       const mode = this.stillStart && focus.plan.mode === 'journey' ? 'slowZoom' : focus.plan.mode
       const pan = focus.others.length ? focus.plan.others : 'off'
       this.motionText =
-        `Fokus: ${FOCUS_LABELS[mode]}` +
-        (pan === 'off' ? '' : `, Schwenk ${pan === 'before' ? 'vorher' : 'nachher'}`)
+        t('show.motionFocus', { mode: FOCUS_LABELS[mode] }) +
+        (pan === 'off' ? '' : pan === 'before' ? t('show.panBefore') : t('show.panAfter'))
       // Genug Zeit, damit die Kamera an jedem Gesicht kurz verweilen kann.
       const stations = this.shot.path?.length ?? 2
       this.display = Math.max(this.display, 5, stations * 2)
@@ -219,7 +220,7 @@ export class Slide extends TimedScene implements Scene {
 
   get label(): string {
     if (!this.focus) return this.loaded.name
-    const who = this.focus.partner ? 'Fokus-Person und Partner' : 'Fokus-Person'
+    const who = this.focus.partner ? t('show.focusPartner') : t('show.focus')
     return `${this.loaded.name} · ${who}`
   }
 

@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { t } from '@shared/i18n'
 import { photoUrl } from '@shared/ipc'
 import type { Settings } from '@shared/settings'
 import {
@@ -56,7 +57,11 @@ function PhotoPicker({
           onClick={() => setOpen(!open)}
           className="rounded-md border border-white/15 bg-white/5 px-3 py-1 text-xs hover:bg-white/10"
         >
-          {open ? 'Auswahl schließen' : selected.length ? 'Fotos ändern …' : 'Fotos wählen …'}
+          {open
+            ? t('ui.texts.closePicker')
+            : selected.length
+              ? t('ui.texts.changePhotos')
+              : t('ui.texts.pickPhotos')}
         </button>
       </div>
       {open && <PhotoBrowser files={all} isSelected={(n) => chosen.has(n)} onPick={toggle} />}
@@ -82,13 +87,15 @@ function TextEditor({
   onDelete: () => void
 }): React.JSX.Element {
   const [open, setOpen] = useState(false)
-  const firstLine = item.text.trim().split('\n')[0] || 'Leerer Text'
+  const firstLine = item.text.trim().split('\n')[0] || t('ui.texts.empty')
   const styleName =
-    item.style === RANDOM_STYLE ? 'Zufall' : styles.find((s) => s.id === item.style)?.label
+    item.style === RANDOM_STYLE
+      ? t('ui.texts.random')
+      : styles.find((s) => s.id === item.style)?.label
   const summary =
     item.kind === 'filler'
-      ? 'Fülltext'
-      : `${PLACEMENTS[item.placement]} · ${item.photos.length} Foto${item.photos.length === 1 ? '' : 's'}`
+      ? t('ui.texts.filler')
+      : t('ui.texts.boundSummary', { placement: PLACEMENTS[item.placement], n: item.photos.length })
   const bgPhoto = item.kind === 'photo' ? item.photos[0] : photos[0]
 
   return (
@@ -99,7 +106,7 @@ function TextEditor({
           className="h-4 w-4 accent-indigo-500"
           checked={item.enabled}
           onChange={(e) => onChange({ enabled: e.target.checked })}
-          title="Aktiv"
+          title={t('ui.texts.active')}
         />
         <button
           onClick={() => setOpen(!open)}
@@ -109,19 +116,19 @@ function TextEditor({
             {firstLine}
           </span>
           <span className="shrink-0 text-xs text-white/40">
-            {item.adhoc ? 'nur auf Abruf' : summary} · {styleName ?? 'Zufall'}
+            {item.adhoc ? t('ui.texts.adhocShort') : summary} · {styleName ?? t('ui.texts.random')}
           </span>
         </button>
         <button
           onClick={() => onChange({ adhoc: !item.adhoc })}
-          title="Im Ablauf: erscheint von selbst (zufällig bzw. beim Foto). Nur auf Abruf: erscheint nur, wenn er per Fernbedienung eingeblendet wird."
+          title={t('ui.texts.modeHint')}
           className={`shrink-0 rounded-full border px-2.5 py-0.5 text-xs ${
             item.adhoc
               ? 'border-amber-400/50 bg-amber-400/10 text-amber-200'
               : 'border-white/15 bg-white/5 text-white/60 hover:bg-white/10'
           }`}
         >
-          {item.adhoc ? '📱 nur auf Abruf' : '🔀 im Ablauf'}
+          {item.adhoc ? t('ui.texts.modeAdhoc') : t('ui.texts.modeFlow')}
         </button>
         <button onClick={() => setOpen(!open)} className="text-white/50 hover:text-white">
           {open ? '▲' : '▼'}
@@ -134,7 +141,7 @@ function TextEditor({
               value={item.text}
               onChange={(e) => onChange({ text: e.target.value })}
               rows={3}
-              placeholder="Text eingeben … (Zeilenumbrüche werden übernommen)"
+              placeholder={t('ui.texts.placeholder')}
               className="w-full resize-y rounded-md border border-white/15 bg-black/40 px-3 py-2 text-sm outline-none focus:border-indigo-400"
             />
             <div className="flex flex-wrap items-center gap-4 text-sm">
@@ -145,7 +152,7 @@ function TextEditor({
                   checked={item.kind === 'filler'}
                   onChange={() => onChange({ kind: 'filler' })}
                 />
-                Fülltext zwischen den Fotos
+                {t('ui.texts.kindFiller')}
               </label>
               <label className="flex items-center gap-2">
                 <input
@@ -154,13 +161,13 @@ function TextEditor({
                   checked={item.kind === 'photo'}
                   onChange={() => onChange({ kind: 'photo' })}
                 />
-                An Fotos gebunden
+                {t('ui.texts.kindPhoto')}
               </label>
             </div>
             {item.kind === 'photo' && (
               <>
                 <div className="flex items-center gap-3 text-sm text-white/70">
-                  Einblenden
+                  {t('ui.texts.show')}
                   <Select
                     value={item.placement}
                     options={Object.entries(PLACEMENTS).map(([value, label]) => ({ value, label }))}
@@ -175,7 +182,7 @@ function TextEditor({
               </>
             )}
             <div className="flex items-center gap-3 text-sm text-white/70">
-              Stil
+              {t('ui.texts.style')}
               <Select
                 value={item.style}
                 options={styleOptions}
@@ -185,11 +192,11 @@ function TextEditor({
             <div>
               <button
                 onClick={() => {
-                  if (window.confirm('Diesen Text löschen?')) onDelete()
+                  if (window.confirm(t('ui.texts.deleteConfirm'))) onDelete()
                 }}
                 className="text-xs text-red-300 hover:text-red-200"
               >
-                Text löschen
+                {t('ui.texts.delete')}
               </button>
             </div>
           </div>
@@ -223,7 +230,7 @@ export function TextsPage({ s, update }: { s: Settings; update: Update }): React
   const photos = usePhotoList(s.photoFolder, s.includeSubfolders)
   const styles = allStyles(s.customStyles)
   const styleOptions = [
-    { value: RANDOM_STYLE, label: 'Zufall (aus den aktiven Stilen)' },
+    { value: RANDOM_STYLE, label: t('ui.texts.randomStyle') },
     ...styles.map((st) => ({ value: st.id, label: st.label + (st.custom ? ' (eigener)' : '') }))
   ]
   const firstActive = styles.find((st) => s.textStyles.find((o) => o.id === st.id && o.enabled))
@@ -245,8 +252,8 @@ export function TextsPage({ s, update }: { s: Settings; update: Update }): React
 
   return (
     <>
-      <Card title="Ablauf">
-        <Field label="Fülltext alle" hint="Nach wie vielen Fotos ein Fülltext erscheint.">
+      <Card title={t('ui.texts.flow')}>
+        <Field label={t('ui.texts.fillerEvery')} hint={t('ui.texts.fillerEveryHint')}>
           <RangeInput
             value={s.textFillerEvery}
             onChange={(v) => update({ textFillerEvery: v })}
@@ -256,7 +263,7 @@ export function TextsPage({ s, update }: { s: Settings; update: Update }): React
             unit="Fotos"
           />
         </Field>
-        <Field label="Textdauer" hint="Wie lange ein Text steht, ohne Ein- und Ausblenden.">
+        <Field label={t('ui.texts.duration')} hint={t('ui.texts.durationHint')}>
           <RangeInput
             value={s.textDuration}
             onChange={(v) => update({ textDuration: v })}
@@ -267,18 +274,16 @@ export function TextsPage({ s, update }: { s: Settings; update: Update }): React
           />
         </Field>
       </Card>
-      <Card title={`Texte (${s.texts.length})`}>
+      <Card title={t('ui.texts.listTitle', { n: s.texts.length })}>
         <div>
           <button
             onClick={add}
             className="rounded-md bg-indigo-500 px-3 py-1.5 text-sm font-medium text-white hover:bg-indigo-400"
           >
-            + Neuer Text
+            {t('ui.texts.new')}
           </button>
         </div>
-        {s.texts.length === 0 && (
-          <div className="text-sm text-white/40">Noch keine Texte angelegt.</div>
-        )}
+        {s.texts.length === 0 && <div className="text-sm text-white/40">{t('ui.texts.none')}</div>}
         <div className="flex flex-col gap-2">
           {s.texts.map((item) => (
             <TextEditor

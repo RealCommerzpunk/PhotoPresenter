@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { t } from '@shared/i18n'
 import type { Settings } from '@shared/settings'
 import {
   allStyles,
@@ -14,8 +15,6 @@ import { Card, Field, Select, Toggle, WeightedList } from './controls'
 import { TextPreview } from './TextPreview'
 
 type Update = (patch: Partial<Settings>) => void
-
-const SAMPLE = 'Die schönsten Momente\nsind die geteilten'
 
 const options = (o: Record<string, string>): { value: string; label: string }[] =>
   Object.entries(o).map(([value, label]) => ({ value, label }))
@@ -64,19 +63,19 @@ function StyleEditor({
   onDelete: () => void
   onClose: () => void
 }): React.JSX.Element {
-  const [sample, setSample] = useState(SAMPLE)
+  const [sample, setSample] = useState(t('ui.styles.sample'))
   return (
-    <Card title={`Stil bearbeiten: ${style.label}`}>
+    <Card title={t('ui.styles.edit', { name: style.label })}>
       <div className="grid grid-cols-[minmax(0,1fr)_380px] gap-6">
         <div className="flex flex-col gap-4">
-          <Field label="Name">
+          <Field label={t('ui.styles.name')}>
             <input
               value={style.label}
               onChange={(e) => onChange({ label: e.target.value })}
               className="w-64 rounded-md border border-white/15 bg-black/40 px-2 py-1 text-sm outline-none focus:border-indigo-400"
             />
           </Field>
-          <Field label="Schrift">
+          <Field label={t('ui.styles.font')}>
             <div className="flex flex-wrap items-center gap-3">
               <Select
                 value={style.font}
@@ -87,23 +86,23 @@ function StyleEditor({
                 value={String(style.weight)}
                 options={[200, 300, 400, 500, 600, 700, 800].map((w) => ({
                   value: String(w),
-                  label: `Stärke ${w}`
+                  label: t('ui.styles.weight', { n: w })
                 }))}
                 onChange={(v) => onChange({ weight: Number(v) })}
               />
               <Toggle
                 checked={style.italic}
-                label="kursiv"
+                label={t('ui.styles.italic')}
                 onChange={(v) => onChange({ italic: v })}
               />
               <Toggle
                 checked={style.uppercase}
-                label="Großbuchstaben"
+                label={t('ui.styles.uppercase')}
                 onChange={(v) => onChange({ uppercase: v })}
               />
             </div>
           </Field>
-          <Field label="Größe" hint="In Prozent der Bildschirmhöhe.">
+          <Field label={t('ui.styles.size')} hint={t('ui.styles.sizeHint')}>
             <Slider
               value={style.size}
               min={2}
@@ -113,7 +112,7 @@ function StyleEditor({
               onChange={(v) => onChange({ size: v })}
             />
           </Field>
-          <Field label="Zeichenabstand">
+          <Field label={t('ui.styles.spacing')}>
             <Slider
               value={style.letterSpacing}
               min={-0.05}
@@ -123,7 +122,7 @@ function StyleEditor({
               onChange={(v) => onChange({ letterSpacing: v })}
             />
           </Field>
-          <Field label="Farben" hint="Zweitfarbe für Leuchten, Kontur, Verlauf und Fläche.">
+          <Field label={t('ui.styles.colors')} hint={t('ui.styles.colorsHint')}>
             <div className="flex items-center gap-4 text-sm text-white/70">
               <label className="flex items-center gap-2">
                 <input
@@ -131,7 +130,7 @@ function StyleEditor({
                   value={style.color}
                   onChange={(e) => onChange({ color: e.target.value })}
                 />
-                Text
+                {t('ui.styles.text')}
               </label>
               <label className="flex items-center gap-2">
                 <input
@@ -139,11 +138,11 @@ function StyleEditor({
                   value={style.accent}
                   onChange={(e) => onChange({ accent: e.target.value })}
                 />
-                Zweitfarbe
+                {t('ui.styles.accent')}
               </label>
             </div>
           </Field>
-          <Field label="Effekt und Kasten">
+          <Field label={t('ui.styles.effectBox')}>
             <div className="flex flex-wrap items-center gap-3">
               <Select
                 value={style.effect}
@@ -152,17 +151,20 @@ function StyleEditor({
               />
               <Select
                 value={style.box}
-                options={options(BOXES).map((o) => ({ ...o, label: `Kasten: ${o.label}` }))}
+                options={options(BOXES).map((o) => ({
+                  ...o,
+                  label: t('ui.styles.box', { name: o.label })
+                }))}
                 onChange={(v) => onChange({ box: v as TextStyle['box'] })}
               />
               <Toggle
                 checked={style.quotes}
-                label="„Anführungszeichen“"
+                label={t('ui.styles.quotes')}
                 onChange={(v) => onChange({ quotes: v })}
               />
             </div>
           </Field>
-          <Field label="Anordnung">
+          <Field label={t('ui.styles.layout')}>
             <div className="flex flex-wrap items-center gap-3">
               <Select
                 value={style.position}
@@ -172,24 +174,30 @@ function StyleEditor({
               <Select
                 value={style.align}
                 options={[
-                  { value: 'left', label: 'linksbündig' },
-                  { value: 'center', label: 'zentriert' },
-                  { value: 'right', label: 'rechtsbündig' }
+                  { value: 'left', label: t('ui.styles.left') },
+                  { value: 'center', label: t('ui.styles.center') },
+                  { value: 'right', label: t('ui.styles.right') }
                 ]}
                 onChange={(v) => onChange({ align: v as TextStyle['align'] })}
               />
             </div>
           </Field>
-          <Field label="Animation">
+          <Field label={t('ui.styles.animation')}>
             <div className="flex flex-wrap items-center gap-3">
               <Select
                 value={style.animIn}
-                options={options(ANIMS_IN).map((o) => ({ ...o, label: `Ein: ${o.label}` }))}
+                options={options(ANIMS_IN).map((o) => ({
+                  ...o,
+                  label: t('ui.styles.in', { name: o.label })
+                }))}
                 onChange={(v) => onChange({ animIn: v as TextStyle['animIn'] })}
               />
               <Select
                 value={style.animOut}
-                options={options(ANIMS_OUT).map((o) => ({ ...o, label: `Aus: ${o.label}` }))}
+                options={options(ANIMS_OUT).map((o) => ({
+                  ...o,
+                  label: t('ui.styles.out', { name: o.label })
+                }))}
                 onChange={(v) => onChange({ animOut: v as TextStyle['animOut'] })}
               />
             </div>
@@ -199,15 +207,15 @@ function StyleEditor({
               onClick={onClose}
               className="rounded-md border border-white/15 bg-white/5 px-3 py-1.5 text-sm hover:bg-white/10"
             >
-              Fertig
+              {t('ui.styles.done')}
             </button>
             <button
               onClick={() => {
-                if (window.confirm(`Stil „${style.label}“ löschen?`)) onDelete()
+                if (window.confirm(t('ui.styles.deleteConfirm', { name: style.label }))) onDelete()
               }}
               className="text-xs text-red-300 hover:text-red-200"
             >
-              Stil löschen
+              {t('ui.styles.delete')}
             </button>
           </div>
         </div>
@@ -235,7 +243,7 @@ export function StylesPage({ s, update }: { s: Settings; update: Update }): Reac
     const copy: TextStyle = {
       ...base,
       id: `eigen-${Date.now().toString(36)}`,
-      label: `${base.label} (eigen)`,
+      label: t('ui.styles.derivedName', { name: base.label }),
       custom: true
     }
     update({ customStyles: [...s.customStyles, copy] })
@@ -261,19 +269,18 @@ export function StylesPage({ s, update }: { s: Settings; update: Update }): Reac
           onClose={() => setEditing(null)}
         />
       )}
-      <Card title="Stile">
-        <div className="text-xs text-white/40">
-          Klick auf eine Vorschau spielt sie erneut ab. Vorlagen lassen sich nicht ändern, aber als
-          eigener Stil ableiten.
-        </div>
+      <Card title={t('ui.styles.title')}>
+        <div className="text-xs text-white/40">{t('ui.styles.intro')}</div>
         <div className="grid grid-cols-[repeat(auto-fill,minmax(250px,1fr))] gap-4">
           {styles.map((st) => (
             <div key={st.id} className="flex flex-col gap-2">
-              <TextPreview text={SAMPLE} style={st} />
+              <TextPreview text={t('ui.styles.sample')} style={st} />
               <div className="flex items-center justify-between text-sm">
                 <span>
                   {st.label}
-                  {st.custom && <span className="ml-2 text-xs text-indigo-300">eigener</span>}
+                  {st.custom && (
+                    <span className="ml-2 text-xs text-indigo-300">{t('ui.styles.custom')}</span>
+                  )}
                 </span>
                 <span className="flex gap-3 text-xs">
                   {st.custom && (
@@ -281,14 +288,14 @@ export function StylesPage({ s, update }: { s: Settings; update: Update }): Reac
                       onClick={() => setEditing(st.id)}
                       className="text-indigo-300 hover:text-indigo-200"
                     >
-                      Bearbeiten
+                      {t('ui.styles.editButton')}
                     </button>
                   )}
                   <button
                     onClick={() => derive(st)}
                     className="text-indigo-300 hover:text-indigo-200"
                   >
-                    Ableiten
+                    {t('ui.styles.derive')}
                   </button>
                 </span>
               </div>
@@ -296,11 +303,8 @@ export function StylesPage({ s, update }: { s: Settings; update: Update }): Reac
           ))}
         </div>
       </Card>
-      <Card title="Zufallsauswahl">
-        <Field
-          label="Aktive Stile"
-          hint="Texte mit Stil „Zufall“ wählen aus diesen Stilen; der Regler bestimmt, wie oft."
-        >
+      <Card title={t('ui.styles.randomTitle')}>
+        <Field label={t('ui.styles.active')} hint={t('ui.styles.activeHint')}>
           <WeightedList
             value={s.textStyles}
             labels={labels}

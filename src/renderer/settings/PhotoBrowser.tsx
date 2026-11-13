@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import { t } from '@shared/i18n'
 import { photoUrl } from '@shared/ipc'
 
 /** Fotoliste des aktuellen Ordners (lädt neu, wenn sich Ordner oder Unterordner-Einstellung ändern). */
@@ -39,7 +40,7 @@ export function PhotoBrowser({
           setQuery(e.target.value)
           setLimit(60)
         }}
-        placeholder="Dateiname oder Ordner suchen …"
+        placeholder={t('ui.browser.search')}
         className="mb-3 w-full rounded-md border border-white/15 bg-black/40 px-2 py-1 text-sm outline-none focus:border-indigo-400"
       />
       {files.length === 0 && (
@@ -71,7 +72,7 @@ export function PhotoBrowser({
           onClick={() => setLimit(limit + 120)}
           className="mt-3 text-xs text-indigo-300 hover:text-indigo-200"
         >
-          Weitere anzeigen ({matches.length - limit})
+          {t('ui.browser.more', { n: matches.length - limit })}
         </button>
       )}
     </div>

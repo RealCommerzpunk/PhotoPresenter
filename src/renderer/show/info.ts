@@ -1,3 +1,4 @@
+import { getLanguage, t } from '@shared/i18n'
 import type { PhotoDetails } from '@shared/ipc'
 import { FILL_LABELS } from '@shared/settings'
 import type { LoadedPhoto } from './loader'
@@ -19,8 +20,9 @@ export interface InfoData {
   faces?: number
 }
 
+/** Zahl im Format der eingestellten Sprache. */
 const de = (v: number, digits = 2): string =>
-  v.toLocaleString('de-DE', { maximumFractionDigits: digits, minimumFractionDigits: 0 })
+  v.toLocaleString(getLanguage(), { maximumFractionDigits: digits, minimumFractionDigits: 0 })
 
 function escapeHtml(s: string): string {
   return s.replace(
@@ -43,55 +45,54 @@ export function infoHtml(d: InfoData): string {
     const { original, size, fit, fill } = p.loaded
     const mp = (original.w * original.h) / 1e6
     rows.push([
-      'Original',
+      t('info.original'),
       `${original.w} × ${original.h} px (${de(mp, 1)} MP)` +
         (d.details ? ` · ${fileSize(d.details.size)}` : '')
     ])
-    rows.push(['Geladen', `${size.w} × ${size.h} px`])
+    rows.push([t('info.loaded'), `${size.w} × ${size.h} px`])
     rows.push([
-      'Bildschirm',
-      `${screenPx} px` + (d.resolution !== 1 ? ` (Skalierung ${de(d.resolution)})` : '')
+      t('info.screen'),
+      `${screenPx} px` + (d.resolution !== 1 ? t('info.scaling', { value: de(d.resolution) }) : '')
     ])
     const s = p.stats
     rows.push([
-      'Zoom',
-      `${de(s.zoom)}× (Grenze ${de(s.maxZoom)}×)` + (s.frozen ? ' · eingefroren' : '')
+      t('info.zoom'),
+      t('info.zoomValue', { zoom: de(s.zoom), max: de(s.maxZoom) }) +
+        (s.frozen ? t('info.frozen') : '')
     ])
     // Bildschirmpixel je Originalpixel: über 1 wird das Foto vergrößert.
     const upscale = s.scale > 1.001
     rows.push([
-      'Vergrößerung',
-      `${de(s.scale * 100, 0)} % des Originals` +
-        (upscale ? ' (hochskaliert)' : '') +
-        ` · eingepasst ${de(s.baseScale * 100, 0)} %`
+      t('info.upscale'),
+      t('info.ofOriginal', { value: de(s.scale * 100, 0) }) +
+        (upscale ? t('info.upscaled') : '') +
+        t('info.fitted', { value: de(s.baseScale * 100, 0) })
     ])
-    rows.push(['Bewegung', `${escapeHtml(s.motion)} · ${de(s.progress * 100, 0)} %`])
+    rows.push([t('info.motion'), `${escapeHtml(s.motion)} · ${de(s.progress * 100, 0)} %`])
     rows.push([
-      'Rand',
-      fit.covers
-        ? 'füllt den Bildschirm'
-        : `${FILL_LABELS[fill]}` + (fit.capped ? ' (Grundgröße begrenzt)' : '')
+      t('info.border'),
+      fit.covers ? t('info.fills') : `${FILL_LABELS[fill]}` + (fit.capped ? t('info.capped') : '')
     ])
     if (d.faces !== undefined) {
-      const who = p.focus ? (p.partner ? ' · Fokus-Person und Partner' : ' · Fokus-Person') : ''
-      rows.push(['Gesichter', `${d.faces}${who}`])
+      const who = p.focus ? ` · ${p.partner ? t('show.focusPartner') : t('show.focus')}` : ''
+      rows.push([t('info.faces'), `${d.faces}${who}`])
     }
     for (const [label, value] of d.details?.exif ?? []) rows.push([label, escapeHtml(value)])
     if (d.details) {
       rows.push([
-        'Datei geändert',
-        new Date(d.details.modified).toLocaleString('de-DE', {
+        t('info.modified'),
+        new Date(d.details.modified).toLocaleString(getLanguage(), {
           dateStyle: 'medium',
           timeStyle: 'short'
         })
       ])
     }
   } else {
-    rows.push(['Bildschirm', `${screenPx} px`])
+    rows.push([t('info.screen'), `${screenPx} px`])
   }
   return (
     `<div class="info-title">${escapeHtml(d.label)}</div>` +
     `<table>${rows.map(([k, v]) => `<tr><th>${k}</th><td>${v}</td></tr>`).join('')}</table>` +
-    `<div class="info-hint">I blendet aus</div>`
+    `<div class="info-hint">${t('info.hint')}</div>`
   )
 }

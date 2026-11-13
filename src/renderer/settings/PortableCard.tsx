@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import type { DataInfo, ExportProgress, ExportResult } from '@shared/ipc'
+import { t } from '@shared/i18n'
 import { Card, Field } from './controls'
 
 /** Wo die Daten liegen und Weitergabe-Paket (Programm + Fotos + Einstellungen). */
@@ -28,49 +29,37 @@ export function PortableCard(): React.JSX.Element {
   }
 
   return (
-    <Card title="Mitnehmen">
-      <Field
-        label="Daten"
-        hint="Einstellungen, Texte, Personen und Gesichtsindex. Liegen sie neben dem Programm, reisen sie mit, wenn der Ordner kopiert wird."
-      >
+    <Card title={t('ui.portable.title')}>
+      <Field label={t('ui.portable.data')} hint={t('ui.portable.dataHint')}>
         {info && (
           <div className="flex flex-col gap-1 text-sm">
             <span className={info.portable ? 'text-emerald-300' : 'text-white/70'}>
-              {info.portable ? 'Portabel – neben dem Programm' : 'Im Benutzerordner dieses Rechners'}
+              {info.portable ? t('ui.portable.portable') : t('ui.portable.userFolder')}
             </span>
             <button
               onClick={() => void window.api.openPath(info.dir)}
               className="max-w-full self-start break-all text-left text-xs text-indigo-300 hover:text-indigo-200"
-              title="Ordner öffnen"
+              title={t('ui.portable.openFolder')}
             >
               {info.dir}
             </button>
             {info.migrated && (
-              <span className="text-xs text-white/50">
-                Beim ersten Start aus dem Benutzerordner übernommen.
-              </span>
+              <span className="text-xs text-white/50">{t('ui.portable.migrated')}</span>
             )}
             {info.problem && <span className="text-xs text-amber-300">{info.problem}</span>}
           </div>
         )}
       </Field>
-      <Field
-        label="Weitergeben"
-        hint="Erstellt einen Ordner „PhotoPresenter“ mit Programm, allen Fotos und den aktuellen Einstellungen. Den Ordner einfach weitergeben (USB-Stick, Cloud) – dort die Programmdatei starten, fertig."
-      >
+      <Field label={t('ui.portable.share')} hint={t('ui.portable.shareHint')}>
         <div className="flex flex-col gap-2 text-sm">
           <button
             disabled={busy}
             onClick={() => void start()}
             className="self-start rounded-md bg-indigo-500 px-3 py-1.5 font-medium text-white hover:bg-indigo-400 disabled:opacity-50"
           >
-            {busy ? 'Paket wird erstellt …' : 'Paket für die Weitergabe erstellen …'}
+            {busy ? t('ui.portable.busy') : t('ui.portable.create')}
           </button>
-          {info?.dev && (
-            <span className="text-xs text-white/40">
-              Entwicklungsversion: Das Paket enthält Fotos und Daten, aber kein Programm.
-            </span>
-          )}
+          {info?.dev && <span className="text-xs text-white/40">{t('ui.portable.dev')}</span>}
           {busy && progress && (
             <div className="flex flex-col gap-1">
               <span className="text-white/70">
@@ -90,8 +79,9 @@ export function PortableCard(): React.JSX.Element {
           {result && (
             <div className="flex flex-col gap-1">
               <span className={result.ok ? 'text-emerald-300' : 'text-red-300'}>
-                {result.ok ? 'Fertig: ' : 'Fehler: '}
-                {result.ok ? result.path : result.error}
+                {result.ok
+                  ? t('ui.portable.done', { path: result.path })
+                  : t('ui.portable.error', { error: result.error ?? '' })}
               </span>
               {result.notes.map((n) => (
                 <span key={n} className="text-xs text-amber-300">
@@ -103,7 +93,7 @@ export function PortableCard(): React.JSX.Element {
                   onClick={() => void window.api.openPath(result.path)}
                   className="self-start text-xs text-indigo-300 hover:text-indigo-200"
                 >
-                  Ordner öffnen
+                  {t('ui.portable.openFolder')}
                 </button>
               )}
             </div>

@@ -11,7 +11,7 @@
 
 <p align="center"><img src="docs/images/show.jpg" width="720" alt="PhotoPresenter showing a demo photo"></p>
 
-> The user interface and most documentation are currently **German**. Internationalization is on the roadmap.
+> The interface is available in **German, English, Spanish and French** (Settings → General → Language). Most documentation is still German. Want to add or improve a language? See [TRANSLATING.md](TRANSLATING.md).
 
 ## Features
 
@@ -110,7 +110,7 @@ More in [CLAUDE.md](CLAUDE.md) (German), the plan in [docs/PLAN.md](docs/PLAN.md
 ## Status
 
 In active development (version 0.x). Roadmap: performance on 4K screens, Linux installer testing, first
-release `v0.1.0`, internationalization (English UI), duplicate photo detection, HEIC/RAW support, videos, background music.
+release `v0.1.0`, multilingual documentation and product page, HEIC/RAW support, videos, background music.
 
 ## License and credits
 
