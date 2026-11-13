@@ -218,6 +218,8 @@ export interface PhotoFaces {
   w: number
   h: number
   faces: StoredFace[]
+  /** Wahrnehmungs-Hash für die Dublettenprüfung (`phashFromGray`, 16 Hex-Zeichen). */
+  phash?: string
 }
 
 /** Gesicht, wie es Show und Einstellungen sehen (ohne Merkmalsvektor). */

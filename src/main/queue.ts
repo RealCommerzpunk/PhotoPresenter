@@ -21,7 +21,10 @@ export class QueueStore {
   apply(op: QueueOp): void {
     if (op.op === 'add') {
       if (!op.name || this.items.length >= MAX_ITEMS) return
-      this.items.push({ id: `q${Date.now().toString(36)}${(this.seq++).toString(36)}`, name: op.name })
+      this.items.push({
+        id: `q${Date.now().toString(36)}${(this.seq++).toString(36)}`,
+        name: op.name
+      })
     } else if (op.op === 'remove') {
       this.items = this.items.filter((i) => i.id !== op.id)
     } else if (op.op === 'move') {

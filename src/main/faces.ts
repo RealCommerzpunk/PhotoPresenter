@@ -12,8 +12,17 @@ import {
   type MatchResult,
   type PhotoFaces
 } from '@shared/faces'
-import type { EmbedRequest, EmbedResult, FaceListItem, FaceModel, RelBox } from '@shared/ipc'
+import type {
+  DuplicateInfo,
+  EmbedRequest,
+  EmbedResult,
+  FaceJob,
+  FaceListItem,
+  FaceModel,
+  RelBox
+} from '@shared/ipc'
 import type { FaceSample, Person, Settings } from '@shared/settings'
+import { findDuplicates, type DuplicateGroup } from '@shared/dupes'
 import { fileFingerprint, parseIndex, sameFile, serializeIndex } from './faceIndexFile'
 import { listPhotos } from './photos'
 import { loadSettings, photoFolder } from './settings'
@@ -38,6 +47,11 @@ const MODEL_FILES: Record<FaceModel, string> = {
 export class FaceStore {
   private index = new Map<string, Entry>()
   private queue: string[] = []
+  /** Schon analysierte Fotos, denen nur noch der Hash für die Dublettenprüfung fehlt. */
+  private hashQueue: string[] = []
+  /** Fotos des letzten Einlesens (relativ), für die Dublettenprüfung. */
+  private files = new Set<string>()
+  private dupeCache: DuplicateGroup[] | null = null
   private total = 0
   /** Ordner des letzten Einlesens; Ergebnisse der Analyse gehören zu ihm. */
   private scanFolder = ''
@@ -96,7 +110,10 @@ export class FaceStore {
     this.scanFolder = list.folder
     this.total = list.files.length
     const pending: string[] = []
+    const hashes: string[] = []
     let changed = false
+    this.files = new Set(list.files)
+    this.dupeCache = null
     for (const name of list.files) {
       const abs = resolve(list.folder, name)
       const entry = this.index.get(abs)
@@ -112,6 +129,7 @@ export class FaceStore {
             entry.hash = await fileFingerprint(abs)
             changed = true
           }
+          if (!entry.phash) hashes.push(name)
         } else if (
           entry.hash &&
           entry.size === st.size &&
@@ -120,6 +138,7 @@ export class FaceStore {
           // Gleicher Inhalt, nur neue Änderungszeit (git clone, entpackte ZIP): nicht neu analysieren.
           entry.mtime = st.mtimeMs
           changed = true
+          if (!entry.phash) hashes.push(name)
         } else pending.push(name)
       } catch {
         // Datei verschwunden: beim nächsten Einlesen fällt sie aus der Liste.
@@ -127,8 +146,9 @@ export class FaceStore {
     }
     if (changed) this.scheduleSave()
     this.queue = pending
+    this.hashQueue = hashes
     this.emitStatus()
-    if (pending.length) this.wakeIndexer()
+    if (pending.length || hashes.length) this.wakeIndexer()
   }
 
   /** Alle Fotos neu analysieren; von Hand markierte Gesichter bleiben erhalten. */
@@ -139,13 +159,62 @@ export class FaceStore {
     this.wakeIndexer()
   }
 
-  /** Nächster Auftrag für das Analyse-Fenster; während der Show gedrosselt. */
-  async nextJob(): Promise<{ name: string } | null> {
+  /**
+   * Nächster Auftrag für das Analyse-Fenster; während der Show gedrosselt. Fehlende Hashes
+   * zuerst (schnell, damit die Dublettenprüfung bald vollständig ist), dann Gesichter.
+   */
+  async nextJob(): Promise<FaceJob | null> {
     if (this.scanning) await this.scanning
-    if (this.showRunning()) await new Promise((r) => setTimeout(r, 1500))
+    if (this.showRunning())
+      await new Promise((r) => setTimeout(r, this.hashQueue.length ? 300 : 1500))
+    const hash = this.hashQueue.shift()
+    if (hash) return { name: hash, kind: 'hash' }
     const name = this.queue.shift()
     this.emitStatus()
-    return name ? { name } : null
+    return name ? { name, kind: 'faces' } : null
+  }
+
+  /** Nur der Hash eines schon analysierten Fotos. */
+  storeHash(name: string, phash: string | null, w: number, h: number): void {
+    const entry = this.index.get(resolve(this.scanFolder, name))
+    if (!entry || !phash) return
+    entry.phash = phash
+    if (!entry.w || !entry.h) {
+      entry.w = w
+      entry.h = h
+    }
+    this.dupeCache = null
+    this.scheduleSave()
+    this.emitStatus()
+  }
+
+  /** Gruppen doppelter Fotos im aktuellen Ordner (nur Fotos des letzten Einlesens). */
+  duplicates(): DuplicateGroup[] {
+    if (this.dupeCache) return this.dupeCache
+    const photos = this.entriesInFolder()
+      .map(([abs, e]) => ({
+        name: this.relative(abs),
+        phash: e.phash ?? '',
+        w: e.w,
+        h: e.h,
+        size: e.size
+      }))
+      .filter((p) => p.phash && this.files.has(p.name))
+    this.dupeCache = findDuplicates(photos)
+    return this.dupeCache
+  }
+
+  /** Stand der Dublettenprüfung für die Einstellungen. */
+  duplicateInfo(): DuplicateInfo {
+    const checked = this.entriesInFolder().filter(
+      ([abs, e]) => e.phash && this.files.has(this.relative(abs))
+    ).length
+    return { groups: this.duplicates(), checked, total: this.files.size }
+  }
+
+  /** Die schwächeren Fassungen aller Gruppen (relativ zum Fotoordner). */
+  duplicateNames(): string[] {
+    return this.duplicates().flatMap((g) => g.others.map((p) => p.name))
   }
 
   async storeResult(name: string, result: PhotoFaces | null, error?: string): Promise<void> {
@@ -160,10 +229,12 @@ export class FaceStore {
       const manual = unchanged ? old.faces.filter((f) => f.manual) : []
       // Auch bei Fehlern eintragen (ohne Gesichter), damit das Foto nicht endlos wiederkommt.
       const base = result ?? { w: old?.w ?? 0, h: old?.h ?? 0, faces: [] }
+      this.dupeCache = null
       this.index.set(abs, {
         mtime: st.mtimeMs,
         size: st.size,
         hash,
+        phash: result?.phash ?? (unchanged ? old?.phash : undefined),
         w: base.w,
         h: base.h,
         faces: [...base.faces, ...manual]

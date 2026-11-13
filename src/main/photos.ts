@@ -2,6 +2,7 @@ import { readdir } from 'node:fs/promises'
 import { extname, isAbsolute, join, normalize, relative, resolve } from 'node:path'
 import { pathToFileURL } from 'node:url'
 import { net, protocol } from 'electron'
+import { DUPLICATES_DIR } from '@shared/dupes'
 import { PHOTO_SCHEME, type PhotoList } from '@shared/ipc'
 import { relativeToBase } from './paths'
 import { loadSettings, photoFolder as resolvedPhotoFolder, programDir } from './settings'
@@ -28,6 +29,8 @@ export async function listPhotos(): Promise<PhotoList> {
     const files = entries
       .filter((e) => e.isFile() && IMAGE_EXTENSIONS.has(extname(e.name).toLowerCase()))
       .map((e) => relative(photoFolder, join(e.parentPath, e.name)))
+      // Aussortierte Dubletten liegen im Unterordner „Duplicates“ und gehören nicht zur Show.
+      .filter((rel) => rel.split(/[\\/]/)[0].toLowerCase() !== DUPLICATES_DIR.toLowerCase())
       .sort()
     return { ...info, files }
   } catch (err) {

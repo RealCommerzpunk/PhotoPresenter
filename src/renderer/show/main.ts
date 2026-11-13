@@ -864,7 +864,8 @@ async function main(): Promise<void> {
   window.api.onSettingsChanged((next) => {
     const folderChanged =
       next.photoFolder !== settings.photoFolder ||
-      next.includeSubfolders !== settings.includeSubfolders
+      next.includeSubfolders !== settings.includeSubfolders ||
+      next.dupesSkip !== settings.dupesSkip
     settings = next
     sequencer.setTexts(settings.texts, settings.textFillerEvery)
     void refreshFocusPhotos()
@@ -873,6 +874,9 @@ async function main(): Promise<void> {
       void reloadPhotos().then(() => prefetch())
     }
   })
+
+  // Doppelte Fotos wurden verschoben oder gelöscht.
+  window.api.onPhotosChanged(() => void reloadPhotos())
 
   // Während die Analyse noch läuft, kommen neue Treffer hinzu.
   window.setInterval(() => void refreshFocusPhotos(), 60_000)

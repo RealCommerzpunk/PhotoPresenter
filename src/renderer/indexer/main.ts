@@ -14,6 +14,7 @@ import {
   type StoredFace,
   type YunetOutputs
 } from '@shared/faces'
+import { grayFromRgba, HASH_SIZE, phashFromGray } from '@shared/dupes'
 import { photoUrl, type EmbedResult, type RelBox } from '@shared/ipc'
 
 /**
@@ -120,6 +121,24 @@ function toStored(d: Detection, w: number, h: number, emb: string): StoredFace {
   }
 }
 
+// Wahrnehmungs-Hash für die Dublettenprüfung: erst auf höchstens 128 px (gute Filterung),
+// dann auf 32 × 32 Graustufen.
+const hashStep = new OffscreenCanvas(1, 1)
+const hashStepCtx = hashStep.getContext('2d')!
+const hashSmall = new OffscreenCanvas(HASH_SIZE, HASH_SIZE)
+const hashSmallCtx = hashSmall.getContext('2d', { willReadFrequently: true })!
+
+function phashOf(bitmap: ImageBitmap): string {
+  const scale = Math.min(1, 128 / Math.max(bitmap.width, bitmap.height))
+  hashStep.width = Math.max(1, Math.round(bitmap.width * scale))
+  hashStep.height = Math.max(1, Math.round(bitmap.height * scale))
+  hashStepCtx.imageSmoothingQuality = 'high'
+  hashStepCtx.drawImage(bitmap, 0, 0, hashStep.width, hashStep.height)
+  hashSmallCtx.imageSmoothingQuality = 'medium'
+  hashSmallCtx.drawImage(hashStep, 0, 0, HASH_SIZE, HASH_SIZE)
+  return phashFromGray(grayFromRgba(hashSmallCtx.getImageData(0, 0, HASH_SIZE, HASH_SIZE).data))
+}
+
 async function analyze(m: Models, name: string): Promise<PhotoFaces> {
   const bitmap = await loadBitmap(name)
   try {
@@ -127,7 +146,17 @@ async function analyze(m: Models, name: string): Promise<PhotoFaces> {
     for (const d of await detect(m, bitmap)) {
       faces.push(toStored(d, bitmap.width, bitmap.height, await embed(m, bitmap, d.kps)))
     }
-    return { w: bitmap.width, h: bitmap.height, faces }
+    return { w: bitmap.width, h: bitmap.height, faces, phash: phashOf(bitmap) }
+  } finally {
+    bitmap.close()
+  }
+}
+
+/** Nur den Hash (für schon analysierte Fotos). */
+async function hashOnly(name: string): Promise<{ phash: string; w: number; h: number }> {
+  const bitmap = await loadBitmap(name)
+  try {
+    return { phash: phashOf(bitmap), w: bitmap.width, h: bitmap.height }
   } finally {
     bitmap.close()
   }
@@ -248,6 +277,15 @@ async function main(): Promise<void> {
       continue
     }
     const started = performance.now()
+    if (job.kind === 'hash') {
+      try {
+        const r = await serial(() => hashOnly(job.name))
+        await window.api.hashResult(job.name, r.phash, r.w, r.h)
+      } catch {
+        await window.api.hashResult(job.name, null, 0, 0)
+      }
+      continue
+    }
     try {
       const result = await serial(() => analyze(models, job.name))
       await window.api.faceResult(job.name, result)

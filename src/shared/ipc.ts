@@ -1,3 +1,4 @@
+import type { DuplicateGroup } from './dupes'
 import type { FaceIndexStatus, FaceInfo, PhotoFaces, StoredFace } from './faces'
 import type { PhotoQueue, RemoteInfo, ShowCommand, ShowNotice, ShowStatus } from './remote'
 import type { Settings } from './settings'
@@ -16,6 +17,10 @@ export const IPC = {
   faceJob: 'faces:job',
   faceResult: 'faces:result',
   faceWake: 'faces:wake',
+  hashResult: 'faces:hashResult',
+  photosChanged: 'photos:changed',
+  getDuplicates: 'dupes:get',
+  cleanDuplicates: 'dupes:clean',
   faceStatus: 'faces:status',
   faceStatusChanged: 'faces:statusChanged',
   getFaces: 'faces:get',
@@ -122,6 +127,29 @@ export interface PhotoList {
   /** Pfade relativ zum Fotoordner. */
   files: string[]
   error?: string
+  /** Doppelte Fotos (nicht die beste Fassung); die Show überspringt sie bei `dupesSkip`. */
+  duplicates?: string[]
+}
+
+/** Auftrag für das Analyse-Fenster: Gesichter (mit Hash) oder nur der Hash. */
+export interface FaceJob {
+  name: string
+  kind: 'faces' | 'hash'
+}
+
+/** Stand der Dublettenprüfung. */
+export interface DuplicateInfo {
+  groups: DuplicateGroup[]
+  /** Fotos im Ordner mit Hash bzw. insgesamt. */
+  checked: number
+  total: number
+}
+
+export interface CleanResult {
+  done: number
+  failed: string[]
+  /** Zielordner beim Verschieben. */
+  folder?: string
 }
 
 export interface ShowOptions {
@@ -180,7 +208,14 @@ export interface PhotoPresenterApi {
 
   // Gesichtserkennung: Analyse-Fenster
   faceModel(model: FaceModel): Promise<Uint8Array>
-  faceJob(): Promise<{ name: string } | null>
+  faceJob(): Promise<FaceJob | null>
+  hashResult(name: string, phash: string | null, w: number, h: number): Promise<void>
+  /** Gruppen doppelter Fotos im aktuellen Ordner. */
+  getDuplicates(): Promise<DuplicateInfo>
+  /** Doppelte (nicht die beste Fassung) verschieben (Unterordner „Duplicates“) oder in den Papierkorb legen. */
+  cleanDuplicates(mode: 'move' | 'trash'): Promise<CleanResult>
+  /** Fotos wurden verschoben oder gelöscht: Liste neu einlesen. */
+  onPhotosChanged(callback: () => void): () => void
   faceResult(name: string, result: PhotoFaces | null, error?: string): Promise<void>
   onFaceWake(callback: () => void): () => void
   onEmbedRequest(callback: (request: EmbedRequest) => void): () => void

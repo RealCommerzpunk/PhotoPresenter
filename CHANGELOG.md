@@ -2,6 +2,13 @@
 
 Alle Änderungen je Version. Format: neueste Version oben, Datum im Format JJJJ-MM-TT.
 
+## 0.13.0 – 2026-11-13
+
+- **Doppelte Fotos erkennen** (Allgemein → Doppelte Fotos): Vergleich des Bildinhalts per Wahrnehmungs-Hash, nicht nur nach Name oder Größe – auch verkleinerte, neu gespeicherte, umbenannte oder in anderes Format umgewandelte Kopien werden gefunden. Ähnliche Serienbilder gelten nicht als doppelt. Je Gruppe bleibt die Fassung mit der höchsten Auflösung (bei Gleichstand die größere Datei, dann der Name, der nicht nach Kopie aussieht)
+- **Doppelte in der Show überspringen** (Schalter): Show und Galerie der Fernbedienung zeigen nur die beste Fassung
+- **Aufräumen**: Dubletten in den Unterordner „Duplicates“ verschieben (wird nicht mehr eingelesen) oder in den Papierkorb legen
+- Schon analysierte Fotos bekommen den Hash in einem schnellen Zusatzdurchlauf (ohne neue Gesichtserkennung)
+
 ## 0.12.5 – 2026-11-13
 
 - **Gesichtsindex erkennt Fotos am Inhalt**: Ein Fingerabdruck (Größe + Anfang und Ende der Datei) verhindert, dass nach `git clone`, dem Entpacken einer ZIP oder dem Kopieren in eine andere Zeitzone alle Fotos neu analysiert werden. Ältere Indizes bekommen den Fingerabdruck beim nächsten Start nachgetragen

@@ -1,7 +1,7 @@
 {
   "name": "photopresenter",
   "productName": "PhotoPresenter",
-  "version": "0.12.5",
+  "version": "0.13.0",
   "description": "Zufällige Vollbild-Foto-Diashow mit Kamerafahrten, Übergängen, Gesichtsfokus und animierten Texten",
   "main": "./out/main/index.js",
   "author": "RealCommerzpunk",

@@ -223,7 +223,20 @@ export const SHOW_AREA_LABELS: Record<ShowArea, string> = {
 }
 
 /** Vorgabe für die Emoji-Knöpfe der Fernbedienung. */
-export const DEFAULT_EMOJIS = ['❤️', '😂', '🎉', '👏', '😍', '🥳', '🔥', '⭐', '🥂', '😮', '🙈', '👍']
+export const DEFAULT_EMOJIS = [
+  '❤️',
+  '😂',
+  '🎉',
+  '👏',
+  '😍',
+  '🥳',
+  '🔥',
+  '⭐',
+  '🥂',
+  '😮',
+  '🙈',
+  '👍'
+]
 
 export const PAN_OTHERS = {
   off: 'nie',
@@ -336,6 +349,8 @@ export const settingsSchema = z.object({
   worldFormations: field(weightedSchema(WORLD_FORMATIONS), defaultWorldFormations),
   /** Fernbedienung per Handy (Webserver im lokalen Netz, ohne Passwort). */
   /** Bildschirm der Show (Electron-Display-ID); leer = wo gerade die Maus ist. */
+  /** Doppelte Fotos überspringen: nur die hochauflösendste Fassung zeigen. */
+  dupesSkip: field(z.boolean(), false),
   showDisplay: field(z.string(), ''),
   /** Bereich dieses Bildschirms, den die Show füllt. */
   showArea: field(z.enum(SHOW_AREAS), 'full'),

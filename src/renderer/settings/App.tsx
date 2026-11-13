@@ -11,6 +11,7 @@ import type { PhotoList } from '@shared/ipc'
 import { Card, Field, RangeInput, Toggle, WeightedList } from './controls'
 import { EffectsPage } from './EffectsPage'
 import { PersonsPage } from './PersonsPage'
+import { DuplicatesCard } from './DuplicatesCard'
 import { PortableCard } from './PortableCard'
 import { RemoteCard } from './RemoteCard'
 import { ScreenCard } from './ScreenCard'
@@ -192,6 +193,7 @@ function General({ s, update }: { s: Settings; update: Update }): React.JSX.Elem
           />
         </Field>
       </Card>
+      <DuplicatesCard s={s} update={update} />
       <RemoteCard s={s} update={update} />
       <PortableCard />
       <Card title="Zurücksetzen">

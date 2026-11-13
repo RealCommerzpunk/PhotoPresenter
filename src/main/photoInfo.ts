@@ -56,7 +56,10 @@ export function formatExif(tags: Record<string, unknown>): [string, string][] {
   const focal = n('FocalLength')
   const focal35 = n('FocalLengthIn35mmFormat')
   if (focal !== undefined) {
-    add('Brennweite', `${num(focal)} mm` + (focal35 && focal35 !== Math.round(focal) ? ` (KB ${focal35} mm)` : ''))
+    add(
+      'Brennweite',
+      `${num(focal)} mm` + (focal35 && focal35 !== Math.round(focal) ? ` (KB ${focal35} mm)` : '')
+    )
   }
   const flash = str('Flash')
   if (flash) add('Blitz', /did not fire|no flash|off/i.test(flash) ? 'nein' : 'ja')

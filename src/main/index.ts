@@ -18,6 +18,7 @@ import {
   type EmbedResult,
   type ExportResult,
   type FaceModel,
+  type PhotoList,
   type RelBox,
   type ShowOptions
 } from '@shared/ipc'
@@ -35,6 +36,7 @@ import { photoInfo } from './photoInfo'
 import { handlePhotoProtocol, listPhotos, registerPhotoScheme } from './photos'
 import { QueueStore } from './queue'
 import { exportPackage } from './exportPackage'
+import { cleanDuplicates } from './dupesClean'
 import { dataLocation, setupDataLocation } from './portable'
 import { RemoteServer } from './remote'
 import { iconPath, iconPng } from './resources'
@@ -112,11 +114,20 @@ const thumbs = new ThumbCache(
   }
 )
 
+/** Fotoliste für Show und Galerie: bei „Doppelte überspringen“ ohne die schwächeren Fassungen. */
+async function showPhotos(): Promise<PhotoList> {
+  const list = await listPhotos()
+  const duplicates = faceStore?.duplicateNames() ?? []
+  if (!loadSettings().dupesSkip || !duplicates.length) return { ...list, duplicates }
+  const skip = new Set(duplicates)
+  return { ...list, files: list.files.filter((f) => !skip.has(f)), duplicates }
+}
+
 const remote = new RemoteServer({
   state: remoteState,
   applySettings: (patch) => setSettings(patch),
   command: showCommand,
-  photos: async () => (await listPhotos()).files,
+  photos: async () => (await showPhotos()).files,
   thumb: (name) => thumbs.get(name),
   queue: applyQueueOp,
   icon: iconPng
@@ -172,6 +183,19 @@ function createSettingsWindow(): void {
   const page = !app.isPackaged ? (process.env['PP_SETTINGS_PAGE'] ?? '') : ''
   loadPage(settingsWindow, 'settings', page)
   captureForTests(settingsWindow, 'settings')
+  // Für Tests in der Entwicklung: PP_SETTINGS_SCROLL=<Kartentitel> scrollt zu dieser Karte.
+  const scrollTo = !app.isPackaged ? process.env['PP_SETTINGS_SCROLL'] : undefined
+  if (scrollTo) {
+    const win = settingsWindow
+    setInterval(() => {
+      if (win.isDestroyed()) return
+      void win.webContents
+        .executeJavaScript(
+          `[...document.querySelectorAll('h3, h2')].find(h => h.textContent.trim().toLowerCase() === ${JSON.stringify(scrollTo.toLowerCase())})?.scrollIntoView({ block: 'start' })`
+        )
+        .catch(() => undefined)
+    }, 1500)
+  }
 }
 
 function startShow(options: ShowOptions = {}): void {
@@ -510,7 +534,22 @@ app.whenReady().then(() => {
   ipcMain.handle(IPC.getSettings, () => loadSettings())
   ipcMain.handle(IPC.setSettings, (_e, patch: Partial<Settings>) => setSettings(patch))
   ipcMain.handle(IPC.pickFolder, () => pickFolder())
-  ipcMain.handle(IPC.listPhotos, () => listPhotos())
+  ipcMain.handle(IPC.listPhotos, (e) =>
+    // Die Show bekommt die bereinigte Liste, das Einstellungsfenster alle Fotos.
+    e.sender === showWindow?.webContents ? showPhotos() : listPhotos()
+  )
+  ipcMain.handle(IPC.getDuplicates, () => faceStore.duplicateInfo())
+  ipcMain.handle(IPC.cleanDuplicates, async (_e, mode: 'move' | 'trash') => {
+    const result = await cleanDuplicates(
+      photoFolder(),
+      faceStore.duplicateNames(),
+      mode === 'trash' ? 'trash' : 'move',
+      (path) => shell.trashItem(path)
+    )
+    await faceStore.rescan()
+    broadcast(IPC.photosChanged, null)
+    return result
+  })
   ipcMain.on(IPC.showStatus, (_e, status: ShowStatus) => {
     showStatus = { ...status, running: showWindow !== null }
     remote.broadcast()
@@ -543,6 +582,9 @@ app.whenReady().then(() => {
   ipcMain.handle(IPC.faceJob, () => faceStore.nextJob())
   ipcMain.handle(IPC.faceResult, (_e, name: string, result: PhotoFaces | null, error?: string) =>
     faceStore.storeResult(name, result, error)
+  )
+  ipcMain.handle(IPC.hashResult, (_e, name: string, phash: string | null, w: number, h: number) =>
+    faceStore.storeHash(name, phash, w, h)
   )
   ipcMain.handle(IPC.faceStatus, () => faceStore.status())
   ipcMain.handle(IPC.getFaces, (_e, name: string) => faceStore.getFaces(name))
