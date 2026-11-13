@@ -9,6 +9,8 @@
 Zufällige Vollbild-Foto-Diashow für Windows und Linux.
 
 **Loslegen mit einem Weitergabe-Ordner:** [Quickstart.md](Quickstart.md) (auch als [PDF](Quickstart.pdf)).
+**Linux (Vorabversion):** AppImage, `.deb` und Demo-Archiv im [Linux-Release](https://github.com/RealCommerzpunk/PhotoPresenter/releases/tag/v0.13.0-linux).
+
 **Demo zum Herunterladen:** `PhotoPresenter-Demo-x.y.z.zip` aus dem [neuesten Release](https://github.com/RealCommerzpunk/PhotoPresenter/releases/latest) laden, entpacken, die `.exe` doppelklicken – mit 163 Demo-Fotos und fertigen Einstellungen, ohne Installation. Dort gibt es auch das Programm allein und einen Installer.
 
 - Fotos aus einem Ordner in zufälliger Reihenfolge, möglichst bildschirmfüllend.

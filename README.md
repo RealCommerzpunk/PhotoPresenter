@@ -43,6 +43,8 @@ portable program alone and an installer.
 Windows SmartScreen warns because the build is not signed ("More info" → "Run anyway").
 A step-by-step guide (German) is in [Quickstart.md](Quickstart.md) / [Quickstart.pdf](Quickstart.pdf).
 
+**Linux (pre-release):** AppImage, `.deb` and a demo archive are on the [Linux release](https://github.com/RealCommerzpunk/PhotoPresenter/releases/tag/v0.13.0-linux), built by a GitHub workflow.
+
 **From source** – requires Node.js ≥ 22.12:
 
 ```bash
