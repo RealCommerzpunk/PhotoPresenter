@@ -3,6 +3,9 @@ import { t } from '@shared/i18n'
 import { alignLyrics, parseLyrics, parseRows, serializeRows, type LyricRow } from '@shared/lyrics'
 import { Card } from './controls'
 
+/** So lange (ms) spielt das Probehören nach einem Schritt. */
+const AUDITION_MS = 450
+
 /** Reaktionszeit beim Klicken: die Marke wird so viel früher gesetzt (Sekunden). */
 const DEFAULT_LEAD = 0.15
 
@@ -52,6 +55,10 @@ export function SongSync({
   const audio = useRef<HTMLAudioElement | null>(null)
   const listRef = useRef<HTMLDivElement | null>(null)
   const flashTimer = useRef<number | undefined>(undefined)
+  /** Probehören nach einem Schritt: Ausgangsstelle (sonst null) und Zeitgeber. */
+  const auditionFrom = useRef<number | null>(null)
+  const auditionTimer = useRef<number | undefined>(undefined)
+  const [snippet, setSnippet] = useState(true)
 
   const flashRow = useCallback((row: number, kind: 'start' | 'end'): void => {
     setFlash({ row, kind })
@@ -115,12 +122,57 @@ export function SongSync({
     setTime(el.currentTime)
   }, [])
 
+  /** Kurzes Probehören nach einem Schritt ist zu Ende (oder wird abgebrochen): zurück zur Stelle. */
+  const endAudition = useCallback((): void => {
+    window.clearTimeout(auditionTimer.current)
+    const el = audio.current
+    if (!el || auditionFrom.current === null) return
+    el.pause()
+    el.currentTime = auditionFrom.current
+    setTime(el.currentTime)
+    auditionFrom.current = null
+  }, [])
+
   const togglePlay = useCallback((): void => {
     const el = audio.current
     if (!el) return
+    if (auditionFrom.current !== null) endAudition()
     if (el.paused) void el.play()
     else el.pause()
-  }, [])
+  }, [endAudition])
+
+  /**
+   * Um `delta` Sekunden springen. Steht das Lied still, hört man ab der neuen Stelle kurz hinein
+   * (und die Position bleibt dort), so findet man Anfang und Ende genau.
+   */
+  const step = useCallback(
+    (delta: number): void => {
+      const el = audio.current
+      if (!el) return
+      const base = auditionFrom.current ?? el.currentTime
+      endAudition()
+      const to = Math.max(0, Math.min(base + delta, el.duration || base + delta))
+      el.currentTime = to
+      setTime(to)
+      if (el.paused && snippet) {
+        auditionFrom.current = to
+        void el.play()
+        auditionTimer.current = window.setTimeout(endAudition, AUDITION_MS)
+      }
+    },
+    [endAudition, snippet]
+  )
+
+  /**
+   * Zeitpunkt für eine Marke: steht das Lied still (auch beim Probehören), genau die Stelle;
+   * läuft es, die Stelle minus Reaktionszeit.
+   */
+  const markTime = useCallback((): number => {
+    const el = audio.current
+    if (!el) return 0
+    const exact = auditionFrom.current ?? (el.paused ? el.currentTime : null)
+    return round2(Math.max(0, exact ?? el.currentTime - lead))
+  }, [lead])
 
   const nextLineAfter = useCallback(
     (from: number): number => {
@@ -133,7 +185,7 @@ export function SongSync({
   /** Zeile unter dem Cursor beginnt jetzt. */
   const stamp = useCallback((): void => {
     if (!rows || cursor < 0 || rows[cursor]?.type !== 'line') return
-    const at = round2(Math.max(0, (audio.current?.currentTime ?? 0) - lead))
+    const at = markTime()
     change((r) =>
       r.map((row, i) => {
         if (i !== cursor || row.type !== 'line') return row
@@ -143,12 +195,12 @@ export function SongSync({
     )
     flashRow(cursor, 'start')
     setCursor(nextLineAfter(cursor))
-  }, [rows, cursor, lead, change, nextLineAfter, flashRow])
+  }, [rows, cursor, markTime, change, nextLineAfter, flashRow])
 
   /** Die zuletzt gesetzte Zeile vor dem Cursor hört jetzt auf (Pause, reine Musik). */
   const stampEnd = useCallback((): void => {
     if (!rows) return
-    const at = round2(Math.max(0, (audio.current?.currentTime ?? 0) - lead))
+    const at = markTime()
     let target = -1
     for (const i of lineIdx) {
       if (cursor >= 0 && i >= cursor) break
@@ -161,7 +213,7 @@ export function SongSync({
       r.map((row, i) => (i === target && row.type === 'line' ? { ...row, end: at } : row))
     )
     flashRow(target, 'end')
-  }, [rows, cursor, lead, lineIdx, change, flashRow])
+  }, [rows, cursor, markTime, lineIdx, change, flashRow])
 
   const clearLine = useCallback(
     (index: number): void =>
@@ -247,14 +299,14 @@ export function SongSync({
       if (e.ctrlKey || e.metaKey || e.altKey) return
       const key = e.key
       if (key === ' ') togglePlay()
-      else if (key === 'Enter') stamp()
-      else if (key === 'e' || key === 'E') stampEnd()
-      else if (key === 'ArrowDown') moveCursor(1)
-      else if (key === 'ArrowUp') moveCursor(-1)
-      else if (key === 'ArrowLeft')
-        seekTo((audio.current?.currentTime ?? 0) - (e.shiftKey ? 0.5 : 2))
-      else if (key === 'ArrowRight')
-        seekTo((audio.current?.currentTime ?? 0) + (e.shiftKey ? 0.5 : 2))
+      else if (key === 'ArrowUp' || key === 'Enter')
+        stamp() // Anfang der Zeile
+      else if (key === 'ArrowDown' || key === 'e' || key === 'E')
+        stampEnd() // Ende der Zeile
+      else if (key === 'ArrowLeft') step(e.shiftKey ? -2 : -0.5)
+      else if (key === 'ArrowRight') step(e.shiftKey ? 2 : 0.5)
+      else if (key === 'PageDown') moveCursor(1)
+      else if (key === 'PageUp') moveCursor(-1)
       else if ((key === 'Backspace' || key === 'Delete') && cursor >= 0) clearLine(cursor)
       else return
       e.preventDefault()
@@ -270,7 +322,7 @@ export function SongSync({
       window.removeEventListener('keydown', onKey)
       window.removeEventListener('click', unfocus)
     }
-  }, [togglePlay, stamp, stampEnd, moveCursor, seekTo, clearLine, cursor])
+  }, [togglePlay, stamp, stampEnd, moveCursor, step, clearLine, cursor])
 
   // Cursorzeile im Blick halten
   useEffect(() => {
@@ -324,11 +376,11 @@ export function SongSync({
         <button className={btn} onClick={togglePlay} disabled={!duration}>
           {playing ? '⏸ ' + t('ui.sync.pause') : '▶ ' + t('ui.sync.play')}
         </button>
-        <button className={btn} onClick={() => seekTo(time - 2)} disabled={!duration}>
-          −2 s
+        <button className={btn} onClick={() => step(-0.5)} disabled={!duration}>
+          ← 0,5 s
         </button>
-        <button className={btn} onClick={() => seekTo(time + 2)} disabled={!duration}>
-          +2 s
+        <button className={btn} onClick={() => step(0.5)} disabled={!duration}>
+          0,5 s →
         </button>
         <button
           className={btn + ' border-indigo-400/60 bg-indigo-500/20'}
@@ -340,7 +392,19 @@ export function SongSync({
         <button className={btn} onClick={stampEnd} title={t('ui.sync.endTitle')}>
           {t('ui.sync.end')}
         </button>
-        <label className="ml-auto flex items-center gap-2 text-xs text-white/60">
+        <label
+          className="ml-auto flex items-center gap-2 text-xs text-white/60"
+          title={t('ui.sync.snippetTitle')}
+        >
+          <input
+            type="checkbox"
+            checked={snippet}
+            onChange={(e) => setSnippet(e.target.checked)}
+            className="accent-indigo-500"
+          />
+          {t('ui.sync.snippet')}
+        </label>
+        <label className="flex items-center gap-2 text-xs text-white/60">
           {t('ui.sync.speed')}
           <select
             value={rate}

@@ -671,6 +671,8 @@ export const fr: Record<MessageKey, string> = {
   'ui.songs.colorNext': 'Lignes à venir',
   'ui.songs.colorPast': 'Lignes passées',
   'ui.songs.colorReset': 'Couleurs par défaut',
+  'ui.sync.snippet': 'Écouter un extrait en avançant',
+  'ui.sync.snippetTitle': 'À l’arrêt, chaque pas joue brièvement depuis la nouvelle position',
   'ui.sync.preview': 'Aperçu comme dans le diaporama',
   'ui.sync.timeline': 'Ligne de temps',
   'ui.sync.legend':
@@ -725,11 +727,11 @@ export const fr: Record<MessageKey, string> = {
     'Écoutez la chanson une fois et réglez le minutage de chaque ligne par clic (repères karaoké dans le TXT)',
   'ui.sync.title': 'Régler le minutage : {title}',
   'ui.sync.help':
-    'Mode d’emploi : lancez la chanson et appuyez sur Entrée au moment précis où chaque ligne commence (ou cliquez sur « Marquer la ligne »). Sautez simplement les parties instrumentales et les pauses : « Fin/pause » (E) indique où la ligne précédente s’arrête. Avec ↑ ↓ ou un clic, choisissez une autre ligne et « Écouter à partir d’ici » pour y aller : vous pouvez ainsi refaire un seul passage. Seul « Enregistrer » écrit le minutage dans le TXT (l’original reste à côté en .bak).',
+    'Mode d’emploi : démarrez et arrêtez la chanson avec la barre d’espace. À l’arrêt, avancez ou reculez avec ← → par pas de 0,5 s et marquez avec ↑ le début de la ligne choisie et avec ↓ sa fin (pause, passage instrumental) ; chaque pas joue un court extrait. Pendant la lecture, les repères sont décalés de l’avance. Avec « Écouter à partir d’ici » ou un clic sur une ligne, vous refaites un seul passage. Seul « Enregistrer » écrit le minutage dans le TXT (l’original reste à côté en .bak).',
   'ui.sync.play': 'Lire',
   'ui.sync.pause': 'Pause',
-  'ui.sync.stamp': 'Marquer la ligne (Entrée)',
-  'ui.sync.end': 'Fin/pause (E)',
+  'ui.sync.stamp': 'Marquer le début (↑)',
+  'ui.sync.end': 'Marquer la fin (↓)',
   'ui.sync.endTitle':
     'La dernière ligne marquée s’arrête maintenant (une pause ou un passage instrumental suit)',
   'ui.sync.speed': 'Vitesse',
@@ -755,5 +757,5 @@ export const fr: Record<MessageKey, string> = {
   'ui.sync.loading': 'Chargement de la chanson …',
   'ui.sync.loadFailed': 'Impossible de charger la chanson.',
   'ui.sync.keys':
-    'Touches : Espace pause/reprise · Entrée marquer la ligne · E fin/pause · ↑ ↓ choisir la ligne · ← → ±2 s (avec Maj ±0,5 s) · Suppr effacer le temps'
+    'Touches : Espace démarrer/arrêter · ← → ±0,5 s (avec Maj ±2 s) · ↑ début de la ligne · ↓ fin de la ligne · Pg↑ Pg↓ choisir la ligne · Suppr effacer le temps'
 }

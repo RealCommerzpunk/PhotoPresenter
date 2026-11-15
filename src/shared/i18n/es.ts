@@ -663,6 +663,9 @@ export const es: Record<MessageKey, string> = {
   'ui.songs.colorNext': 'Líneas siguientes',
   'ui.songs.colorPast': 'Líneas pasadas',
   'ui.songs.colorReset': 'Colores predeterminados',
+  'ui.sync.snippet': 'Escuchar un instante al saltar',
+  'ui.sync.snippetTitle':
+    'Con la canción detenida, cada paso suena brevemente desde la nueva posición',
   'ui.sync.preview': 'Así se verá en la presentación',
   'ui.sync.timeline': 'Línea de tiempo',
   'ui.sync.legend':
@@ -714,11 +717,11 @@ export const es: Record<MessageKey, string> = {
     'Escucha la canción una vez y marca con clics el momento de cada línea (marcas de karaoke en el TXT)',
   'ui.sync.title': 'Ajustar tiempos: {title}',
   'ui.sync.help':
-    'Cómo funciona: reproduce la canción y pulsa Intro justo cuando empieza cada línea (o haz clic en «Marcar línea»). Salta sin más las partes instrumentales y las pausas: «Fin/pausa» (E) marca dónde termina la línea anterior. Con ↑ ↓ o un clic eliges otra línea y con «Escuchar desde aquí» saltas a ella, así puedes rehacer solo un tramo. Solo «Guardar» escribe los tiempos en el TXT (el original se conserva como .bak).',
+    'Cómo funciona: inicia y detén la canción con la barra espaciadora. Con la canción detenida, avanza o retrocede con ← → de 0,5 s en 0,5 s y marca con ↑ el inicio de la línea elegida y con ↓ su fin (pausa o parte instrumental); cada paso suena un instante. Con la canción en marcha, las marcas se colocan antes según el adelanto. Con «Escuchar desde aquí» o un clic en una línea puedes rehacer solo un tramo. Solo «Guardar» escribe los tiempos en el TXT (el original se conserva como .bak).',
   'ui.sync.play': 'Reproducir',
   'ui.sync.pause': 'Pausa',
-  'ui.sync.stamp': 'Marcar línea (Intro)',
-  'ui.sync.end': 'Fin/pausa (E)',
+  'ui.sync.stamp': 'Marcar inicio (↑)',
+  'ui.sync.end': 'Marcar fin (↓)',
   'ui.sync.endTitle':
     'La última línea marcada termina ahora (sigue una pausa o una parte instrumental)',
   'ui.sync.speed': 'Velocidad',
@@ -744,5 +747,5 @@ export const es: Record<MessageKey, string> = {
   'ui.sync.loading': 'Cargando canción …',
   'ui.sync.loadFailed': 'No se puede cargar la canción.',
   'ui.sync.keys':
-    'Teclas: Espacio pausa/continuar · Intro marcar línea · E fin/pausa · ↑ ↓ elegir línea · ← → ±2 s (con Mayús ±0,5 s) · Supr borrar tiempo'
+    'Teclas: Espacio inicio/parada · ← → ±0,5 s (con Mayús ±2 s) · ↑ inicio de la línea · ↓ fin de la línea · RePág AvPág elegir línea · Supr borrar tiempo'
 }

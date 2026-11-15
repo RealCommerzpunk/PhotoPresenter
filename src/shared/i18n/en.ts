@@ -657,6 +657,9 @@ export const en: Record<MessageKey, string> = {
   'ui.songs.colorNext': 'Upcoming lines',
   'ui.songs.colorPast': 'Past lines',
   'ui.songs.colorReset': 'Default colors',
+  'ui.sync.snippet': 'Play a snippet when stepping',
+  'ui.sync.snippetTitle':
+    'While the song is stopped, each step briefly plays from the new position',
   'ui.sync.preview': 'This is how it looks in the show',
   'ui.sync.timeline': 'Timeline',
   'ui.sync.legend':
@@ -707,11 +710,11 @@ export const en: Record<MessageKey, string> = {
     'Listen to the song once and set the timing of each line by clicking (karaoke timestamps in the TXT)',
   'ui.sync.title': 'Set timing: {title}',
   'ui.sync.help':
-    'How it works: play the song and press Enter at the exact moment each line starts (or click “Set line”). Just skip instrumental parts and pauses: “End/pause” (E) marks where the previous line stops. Use ↑ ↓ or a click to pick another line and “Listen from here” to jump there, so you can redo just one section. Only “Save” writes the timing into the TXT (the original stays next to it as .bak).',
+    'How it works: start and stop the song with the space bar. While it is stopped, step with ← → in 0.5 s and mark the start of the chosen line with ↑ and its end (pause, instrumental part after it) with ↓; each step plays a short snippet. While it is playing, marks are placed earlier by the lead. “Listen from here” or a click on a line lets you redo just one section. Only “Save” writes the timing into the TXT (the original stays next to it as .bak).',
   'ui.sync.play': 'Play',
   'ui.sync.pause': 'Pause',
-  'ui.sync.stamp': 'Set line (Enter)',
-  'ui.sync.end': 'End/pause (E)',
+  'ui.sync.stamp': 'Set start (↑)',
+  'ui.sync.end': 'Set end (↓)',
   'ui.sync.endTitle': 'The last set line stops now (a pause or instrumental part follows)',
   'ui.sync.speed': 'Speed',
   'ui.sync.lead': 'Lead',
@@ -736,5 +739,5 @@ export const en: Record<MessageKey, string> = {
   'ui.sync.loading': 'Loading song …',
   'ui.sync.loadFailed': 'The song cannot be loaded.',
   'ui.sync.keys':
-    'Keys: Space pause/resume · Enter set line · E end/pause · ↑ ↓ choose line · ← → ±2 s (with Shift ±0.5 s) · Del clear time'
+    'Keys: Space start/stop · ← → ±0.5 s (with Shift ±2 s) · ↑ start of line · ↓ end of line · PgUp PgDn choose line · Del clear time'
 }

@@ -662,6 +662,8 @@ export const de = {
   'ui.songs.colorNext': 'Kommende Zeilen',
   'ui.songs.colorPast': 'Vergangene Zeilen',
   'ui.songs.colorReset': 'Standardfarben',
+  'ui.sync.snippet': 'Beim Springen kurz anhören',
+  'ui.sync.snippetTitle': 'Steht das Lied still, spielt jeder Schritt kurz ab der neuen Stelle',
   'ui.sync.preview': 'So sieht es in der Show aus',
   'ui.sync.timeline': 'Zeitleiste',
   'ui.sync.legend':
@@ -712,11 +714,11 @@ export const de = {
     'Lied einmal hören und die Zeilen per Klick zeitlich festlegen (Karaoke-Zeiten in der TXT)',
   'ui.sync.title': 'Zeiten setzen: {title}',
   'ui.sync.help':
-    'So geht es: Lied abspielen und bei jeder Zeile genau dann Enter drücken (oder „Zeile setzen“), wenn sie anfängt. Reine Musik und Pausen einfach überspringen: Mit „Ende/Pause“ (E) markierst du, wo die Zeile davor aufhört. Mit ↑ ↓ oder einem Klick wählst du eine andere Zeile, mit „Ab hier hören“ springst du dorthin – so machst du auch nur ein einzelnes Stück neu. Erst „Speichern“ schreibt die Zeiten in die TXT (die ursprüngliche Fassung bleibt als .bak liegen).',
+    'So geht es: Lied mit der Leertaste starten und stoppen. Steht das Lied still, springst du mit ← → in 0,5-s-Schritten (du hörst jedes Mal kurz hinein) und markierst mit ↑ den Anfang der gewählten Zeile und mit ↓ das Ende (Pause, reine Musik danach). Läuft das Lied, gelten die Marken minus Vorhalt. Mit „Ab hier hören“ oder einem Klick auf eine Zeile machst du auch nur ein einzelnes Stück neu. Erst „Speichern“ schreibt die Zeiten in die TXT (die ursprüngliche Fassung bleibt als .bak liegen).',
   'ui.sync.play': 'Abspielen',
   'ui.sync.pause': 'Pause',
-  'ui.sync.stamp': 'Zeile setzen (Enter)',
-  'ui.sync.end': 'Ende/Pause (E)',
+  'ui.sync.stamp': 'Anfang setzen (↑)',
+  'ui.sync.end': 'Ende setzen (↓)',
   'ui.sync.endTitle':
     'Die zuletzt gesetzte Zeile hört jetzt auf (danach folgt Pause oder reine Musik)',
   'ui.sync.speed': 'Tempo',
@@ -742,7 +744,7 @@ export const de = {
   'ui.sync.loading': 'Lade Lied …',
   'ui.sync.loadFailed': 'Das Lied lässt sich nicht laden.',
   'ui.sync.keys':
-    'Tasten: Leertaste Pause/Weiter · Enter Zeile setzen · E Ende/Pause · ↑ ↓ Zeile wählen · ← → ±2 s (mit Umschalt ±0,5 s) · Entf Zeit löschen'
+    'Tasten: Leertaste Start/Stopp · ← → ±0,5 s (mit Umschalt ±2 s) · ↑ Anfang der Zeile · ↓ Ende der Zeile · Bild↑ Bild↓ Zeile wählen · Entf Zeit löschen'
 } as const
 
 export type MessageKey = keyof typeof de
