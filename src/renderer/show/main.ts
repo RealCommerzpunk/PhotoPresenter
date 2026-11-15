@@ -746,7 +746,12 @@ async function main(): Promise<void> {
       timing: settings.songTiming[chosen.name],
       fontScale: settings.songFontScale,
       linesBefore: settings.songLinesBefore,
-      linesAfter: settings.songLinesAfter
+      linesAfter: settings.songLinesAfter,
+      colors: {
+        now: settings.songColorNow,
+        next: settings.songColorNext,
+        past: settings.songColorPast
+      }
     })
     if (!ok) {
       notice(t('show.songFailed', { name: chosen.title }), 'warn')

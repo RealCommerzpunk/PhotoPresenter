@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { t } from '@shared/i18n'
-import { parseRows, serializeRows, type LyricRow } from '@shared/lyrics'
+import { alignLyrics, parseLyrics, parseRows, serializeRows, type LyricRow } from '@shared/lyrics'
 import { Card } from './controls'
 
 /** Reaktionszeit beim Klicken: die Marke wird so viel früher gesetzt (Sekunden). */
@@ -47,8 +47,17 @@ export function SongSync({
   const [playing, setPlaying] = useState(false)
   const [rate, setRate] = useState(1)
   const [lead, setLead] = useState(DEFAULT_LEAD)
+  /** Zuletzt gesetzte Marke: die Zeile leuchtet kurz auf (grün = Anfang, gelb = Ende). */
+  const [flash, setFlash] = useState<{ row: number; kind: 'start' | 'end' } | null>(null)
   const audio = useRef<HTMLAudioElement | null>(null)
   const listRef = useRef<HTMLDivElement | null>(null)
+  const flashTimer = useRef<number | undefined>(undefined)
+
+  const flashRow = useCallback((row: number, kind: 'start' | 'end'): void => {
+    setFlash({ row, kind })
+    window.clearTimeout(flashTimer.current)
+    flashTimer.current = window.setTimeout(() => setFlash(null), 700)
+  }, [])
 
   // Lied laden
   useEffect(() => {
@@ -132,8 +141,9 @@ export function SongSync({
         return { ...row, time: at, end }
       })
     )
+    flashRow(cursor, 'start')
     setCursor(nextLineAfter(cursor))
-  }, [rows, cursor, lead, change, nextLineAfter])
+  }, [rows, cursor, lead, change, nextLineAfter, flashRow])
 
   /** Die zuletzt gesetzte Zeile vor dem Cursor hört jetzt auf (Pause, reine Musik). */
   const stampEnd = useCallback((): void => {
@@ -150,7 +160,8 @@ export function SongSync({
     change((r) =>
       r.map((row, i) => (i === target && row.type === 'line' ? { ...row, end: at } : row))
     )
-  }, [rows, cursor, lead, lineIdx, change])
+    flashRow(target, 'end')
+  }, [rows, cursor, lead, lineIdx, change, flashRow])
 
   const clearLine = useCallback(
     (index: number): void =>
@@ -281,6 +292,17 @@ export function SongSync({
     }
   }
 
+  // Wie die Show den Text zeitlich legt (gesetzte Marken fest, der Rest geschätzt dazwischen).
+  const aligned = useMemo(
+    () =>
+      rows ? alignLyrics(parseLyrics(serializeRows(rows)), { start: 0, end: duration || 1 }) : [],
+    [rows, duration]
+  )
+  const alignedOf = (rowIndex: number): (typeof aligned)[number] | undefined =>
+    aligned.length === lineIdx.length ? aligned[lineIdx.indexOf(rowIndex)] : undefined
+  const k =
+    aligned.length === lineIdx.length ? aligned.filter((l) => l.start <= time).length - 1 : -1
+
   const sectionRange = (index: number): [number, number] => {
     const all = rows ?? []
     let to = all.length - 1
@@ -364,6 +386,83 @@ export function SongSync({
         <span className="w-14 text-right tabular-nums text-white/40">{clock(duration)}</span>
       </div>
 
+      {rows && aligned.length > 0 && aligned.length === lineIdx.length && (
+        <div className="mb-3 rounded-lg border border-white/10 bg-black/40 p-3">
+          <div className="mb-1 text-[11px] uppercase tracking-wide text-white/40">
+            {t('ui.sync.preview')}
+          </div>
+          <div className="space-y-0.5 text-center">
+            <div className="truncate text-xs text-white/35">{aligned[k - 1]?.text ?? ' '}</div>
+            {k >= 0 && time <= aligned[k].end + 1 ? (
+              <div
+                className="truncate text-xl font-bold"
+                style={{
+                  backgroundImage: `linear-gradient(90deg, #ffd54a ${(
+                    Math.min(
+                      1,
+                      Math.max(
+                        0,
+                        (time - aligned[k].start) / Math.max(0.1, aligned[k].end - aligned[k].start)
+                      )
+                    ) * 100
+                  ).toFixed(1)}%, #ffffff 0)`,
+                  WebkitBackgroundClip: 'text',
+                  backgroundClip: 'text',
+                  color: 'transparent'
+                }}
+              >
+                {aligned[k].text}
+              </div>
+            ) : (
+              <div className="text-xl font-bold text-white/40">{k >= 0 ? '♪ ♪ ♪' : ' '}</div>
+            )}
+            <div className="truncate text-sm text-white/60">{aligned[k + 1]?.text ?? ' '}</div>
+          </div>
+          <div className="mt-3">
+            <div className="mb-1 flex justify-between text-[11px] text-white/40">
+              <span>{t('ui.sync.timeline')}</span>
+              <span>{t('ui.sync.legend')}</span>
+            </div>
+            <div
+              className="relative h-9 cursor-pointer overflow-hidden rounded bg-white/5"
+              onClick={(e) => {
+                const box = e.currentTarget.getBoundingClientRect()
+                seekTo(((e.clientX - box.left) / box.width) * (duration || 0))
+              }}
+            >
+              {duration > 0 &&
+                aligned.map((l, n) => {
+                  const row = rows[lineIdx[n]] as Lines
+                  const set = row.time !== undefined
+                  return (
+                    <div
+                      key={n}
+                      title={`${clock(l.start)} – ${clock(l.end)}  ${l.text}`}
+                      className={`absolute top-1 bottom-1 rounded-sm ${
+                        set
+                          ? row.end !== undefined
+                            ? 'border-r-2 border-amber-300 bg-emerald-500/70'
+                            : 'bg-emerald-500/70'
+                          : 'border border-dashed border-white/30 bg-white/10'
+                      } ${lineIdx[n] === cursor ? 'ring-2 ring-indigo-300' : ''} ${
+                        n === k && playing ? 'brightness-150' : ''
+                      }`}
+                      style={{
+                        left: `${(l.start / duration) * 100}%`,
+                        width: `${Math.max(0.25, ((l.end - l.start) / duration) * 100)}%`
+                      }}
+                    />
+                  )
+                })}
+              <div
+                className="pointer-events-none absolute top-0 bottom-0 w-0.5 bg-white"
+                style={{ left: `${duration ? (time / duration) * 100 : 0}%` }}
+              />
+            </div>
+          </div>
+        </div>
+      )}
+
       {error && <div className="mb-2 text-sm text-red-300">{error}</div>}
       {rows && !hasText && <div className="mb-2 text-sm text-amber-300">{t('ui.sync.noText')}</div>}
 
@@ -403,12 +502,16 @@ export function SongSync({
               key={i}
               data-row={i}
               onClick={() => setCursor(i)}
-              className={`group flex cursor-pointer items-center gap-2 rounded-md px-2 py-1 text-sm ${
-                i === cursor
-                  ? 'bg-indigo-500/25 ring-1 ring-indigo-400/60'
-                  : i === playingRow && playing
-                    ? 'bg-emerald-500/15'
-                    : 'hover:bg-white/5'
+              className={`group relative flex cursor-pointer items-center gap-2 rounded-md px-2 py-1 text-sm transition-colors duration-300 ${
+                flash?.row === i
+                  ? flash.kind === 'start'
+                    ? 'bg-emerald-400/45'
+                    : 'bg-amber-300/45'
+                  : i === cursor
+                    ? 'bg-indigo-500/25 ring-1 ring-indigo-400/60'
+                    : i === playingRow && playing
+                      ? 'bg-emerald-500/15'
+                      : 'hover:bg-white/5'
               }`}
             >
               <button
@@ -433,10 +536,32 @@ export function SongSync({
               >
                 {row.text}
               </span>
-              {row.end !== undefined && (
+              {row.end !== undefined ? (
                 <span className="shrink-0 text-[11px] text-amber-200/80">
                   {t('ui.sync.endAt', { time: clock(row.end) })}
                 </span>
+              ) : (
+                row.time !== undefined &&
+                alignedOf(i) && (
+                  <span className="shrink-0 text-[11px] italic text-white/30">
+                    {t('ui.sync.endAuto', { time: clock(alignedOf(i)!.end) })}
+                  </span>
+                )
+              )}
+              {row.time !== undefined && alignedOf(i) && i === playingRow && (
+                <span
+                  className="pointer-events-none absolute bottom-0 left-2 h-0.5 rounded bg-emerald-400"
+                  style={{
+                    width: `calc((100% - 1rem) * ${Math.min(
+                      1,
+                      Math.max(
+                        0,
+                        (time - alignedOf(i)!.start) /
+                          Math.max(0.1, alignedOf(i)!.end - alignedOf(i)!.start)
+                      )
+                    ).toFixed(3)})`
+                  }}
+                />
               )}
               <span className="hidden shrink-0 items-center gap-1 group-hover:flex">
                 {row.time !== undefined && (

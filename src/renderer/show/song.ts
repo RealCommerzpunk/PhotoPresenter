@@ -27,6 +27,8 @@ export interface SongOptions {
   /** Zeilen vor und nach der laufenden Zeile. */
   linesBefore: number
   linesAfter: number
+  /** Farben: gesungener Teil der laufenden Zeile, kommende und vergangene Zeilen. */
+  colors: { now: string; next: string; past: string }
 }
 
 /** Eine Zeile der Spalte: Überschrift, gesungene Zeile oder Musikpause. */
@@ -47,6 +49,14 @@ interface RowState {
   op: number
   scale: number
   p: number
+  /** Vergangene Zeilen tragen die Farbe „past“, alle anderen „next“. */
+  past: boolean
+}
+
+/** Eine umgebrochene Textzeile innerhalb einer Liedzeile; jede füllt sich für sich. */
+interface Visual {
+  el: HTMLElement
+  width: number
 }
 
 const smooth = (x: number): number => x * x * x * (x * (x * 6 - 15) + 10)
@@ -78,6 +88,8 @@ export class SongPlayer {
   private readonly track: HTMLElement
   private rows: HTMLElement[] = []
   private states: RowState[] = []
+  /** Pro Liedzeile ihre umgebrochenen Teilzeilen (nach dem Ausmessen). */
+  private visuals: Visual[][] = []
   private before = 1
   private after = 2
   /** Mitte jeder Zeile in der Spalte (px) und Lage der laufenden Zeile im Fenster. */
@@ -138,6 +150,9 @@ export class SongPlayer {
     this.source = source
     this.box.dataset.pos = options.position
     this.box.style.setProperty('--s', String(options.fontScale))
+    this.box.style.setProperty('--c-now', options.colors.now)
+    this.box.style.setProperty('--c-next', options.colors.next)
+    this.box.style.setProperty('--c-past', options.colors.past)
     this.before = options.linesBefore
     this.after = options.linesAfter
     this.build()
@@ -230,8 +245,41 @@ export class SongPlayer {
       this.track.append(row)
       return row
     })
-    this.states = this.rows.map(() => ({ op: 0, scale: 1, p: 0 }))
+    // st.p = -1 erzwingt das erste Setzen der Füllung.
+    this.states = this.rows.map(() => ({ op: 0, scale: 1, p: -1, past: false }))
     this.measure()
+  }
+
+  /**
+   * Zeile in ihre sichtbaren Teilzeilen zerlegen (Umbruch bei der Breite der Spalte), damit sich
+   * jede Teilzeile für sich von links nach rechts füllt statt alle zugleich.
+   */
+  private splitRow(row: HTMLElement, text: string): Visual[] {
+    row.replaceChildren()
+    const words = text.split(' ').filter(Boolean)
+    const spans = words.map((w, i) => {
+      const s = document.createElement('span')
+      s.textContent = w
+      row.append(s, i < words.length - 1 ? ' ' : '')
+      return s
+    })
+    const groups: HTMLElement[][] = []
+    let top = Number.NaN
+    for (const s of spans) {
+      if (s.offsetTop !== top) {
+        top = s.offsetTop
+        groups.push([])
+      }
+      groups[groups.length - 1].push(s)
+    }
+    row.replaceChildren()
+    return groups.map((g) => {
+      const el = document.createElement('span')
+      el.className = 'ly-vl'
+      el.textContent = g.map((s) => s.textContent).join(' ')
+      row.append(el)
+      return { el, width: 0 }
+    })
   }
 
   /**
@@ -241,6 +289,13 @@ export class SongPlayer {
   private measure(): void {
     const rows = this.rows
     if (!rows.length) return
+    // Erst umbrechen (nur bei Zeilen mit Füllung), dann messen.
+    this.visuals = rows.map((row, i) => {
+      const v = this.splitRow(row, this.items[i].text)
+      for (const part of v) part.width = part.el.offsetWidth
+      return v
+    })
+    for (const st of this.states) st.p = -1
     const tops = rows.map((r) => r.offsetTop)
     const heights = rows.map((r) => r.offsetHeight)
     this.centers = rows.map((_, i) => tops[i] + heights[i] / 2)
@@ -269,6 +324,17 @@ export class SongPlayer {
     const g = glides[lo]
     if (!g || t <= g.from) return lo
     return lo + smooth((t - g.from) / (g.to - g.from))
+  }
+
+  /** Füllung p (0–1) nach Textbreite auf die Teilzeilen verteilen: erst die erste, dann die zweite. */
+  private fill(parts: Visual[], p: number): void {
+    const total = parts.reduce((sum, v) => sum + v.width, 0) || 1
+    let done = p * total
+    for (const v of parts) {
+      const share = clamp01(done / (v.width || 1))
+      v.el.style.setProperty('--p', `${(share * 100).toFixed(1)}%`)
+      done -= v.width
+    }
   }
 
   /** Einmal pro Frame: Spalte gleiten lassen, Größe, Helligkeit und Füllung nachziehen. */
@@ -321,18 +387,20 @@ export class SongPlayer {
         st.scale = scale
         row.style.transform = `scale(${scale.toFixed(3)})`
       }
-      // Füllung: gesungene Zeilen ganz gelb, laufende anteilig, kommende weiß.
-      const item = this.items[r]
-      let p = 0
-      if (item.kind === 'line') {
-        if (r < cur) p = 1
-        else if (r === cur) {
-          p = Math.min(1, Math.max(0, (t - item.start) / Math.max(0.1, item.end - item.start)))
-        }
+      // Farbe: vergangene Zeilen in „past“, alle übrigen in „next“; nur die laufende füllt sich.
+      const past = r < cur
+      if (past !== st.past) {
+        st.past = past
+        row.classList.toggle('ly-past', past)
       }
+      const item = this.items[r]
+      const p =
+        item.kind === 'line' && r === cur
+          ? clamp01((t - item.start) / Math.max(0.1, item.end - item.start))
+          : 0
       if (Math.abs(p - st.p) > 0.002) {
         st.p = p
-        row.style.setProperty('--p', `${(p * 100).toFixed(1)}%`)
+        this.fill(this.visuals[r], p)
       }
     }
   }

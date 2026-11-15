@@ -206,6 +206,9 @@ export const PAN_OTHERS: Record<PanOthers, string> = labelMap('panOthers', PAN_O
 const sampleSchema = z.object({ photo: z.string(), face: z.number().int().min(0), emb: z.string() })
 export type FaceSample = z.infer<typeof sampleSchema>
 
+/** Farbe als „#rrggbb“. */
+const hexColor = z.string().regex(/^#[0-9a-fA-F]{6}$/)
+
 export const personSchema = z.object({
   id: z.string().min(1),
   name: z.string(),
@@ -323,6 +326,10 @@ export const settingsSchema = z.object({
   /** Wie viele Zeilen vor und nach der laufenden Zeile zu sehen sind. */
   songLinesBefore: field(z.number().int().min(0).max(6), 1),
   songLinesAfter: field(z.number().int().min(0).max(8), 2),
+  /** Farben des Liedtextes: gesungener Teil der laufenden Zeile, kommende und vergangene Zeilen. */
+  songColorNow: field(hexColor, '#ffd54a'),
+  songColorNext: field(hexColor, '#ffffff'),
+  songColorPast: field(hexColor, '#ffffff'),
   /** Hintergrund während des Liedes. */
   songBackground: field(z.enum(SONG_BACKGROUNDS), 'slideshow'),
   /** Stärke der Abdunklung bei „dim“ und „photo“ (0 = keine, 1 = schwarz). */

@@ -328,6 +328,39 @@ export function SongsPage({ s, update }: { s: Settings; update: Update }): React
             onChange={(v) => update({ songLinesAfter: v })}
           />
         </Field>
+        <Field label={t('ui.songs.colors')}>
+          <div className="flex flex-wrap items-center gap-x-5 gap-y-2 text-sm text-white/70">
+            {(
+              [
+                ['songColorNow', 'ui.songs.colorNow'],
+                ['songColorNext', 'ui.songs.colorNext'],
+                ['songColorPast', 'ui.songs.colorPast']
+              ] as const
+            ).map(([key, label]) => (
+              <label key={key} className="flex items-center gap-2">
+                <input
+                  type="color"
+                  value={s[key]}
+                  onChange={(e) => update({ [key]: e.target.value })}
+                  className="h-7 w-10 cursor-pointer rounded border border-white/15 bg-transparent"
+                />
+                {t(label)}
+              </label>
+            ))}
+            <button
+              onClick={() =>
+                update({
+                  songColorNow: '#ffd54a',
+                  songColorNext: '#ffffff',
+                  songColorPast: '#ffffff'
+                })
+              }
+              className="rounded-md border border-white/15 bg-white/5 px-3 py-1 text-xs hover:bg-white/10"
+            >
+              {t('ui.songs.colorReset')}
+            </button>
+          </div>
+        </Field>
       </Card>
       <Card title={t('ui.songs.background')}>
         <p className="mb-2 text-xs leading-relaxed text-white/50">{t('ui.songs.backgroundHint')}</p>

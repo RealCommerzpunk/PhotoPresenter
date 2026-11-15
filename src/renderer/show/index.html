@@ -172,8 +172,13 @@
         top: 0;
         will-change: transform;
       }
+      #lyrics {
+        --c-now: #ffd54a; /* gesungener Teil der laufenden Zeile */
+        --c-next: #fff; /* kommende Zeilen (und der noch nicht gesungene Teil) */
+        --c-past: #fff; /* vergangene Zeilen */
+      }
       #lyrics .ly-row {
-        --p: 0%;
+        --base: var(--c-next);
         box-sizing: border-box;
         width: fit-content; /* damit die Füllung genau über den Text läuft */
         max-width: 62%;
@@ -181,16 +186,27 @@
         padding: 0.45em 0;
         font-size: calc(3.6vh * var(--s));
         line-height: 1.3;
-        color: transparent;
-        background: linear-gradient(90deg, #ffd54a var(--p), #ffffff var(--p));
-        -webkit-background-clip: text;
-        background-clip: text;
         will-change: transform, opacity;
       }
-      #lyrics .ly-title,
-      #lyrics .ly-rest {
+      #lyrics .ly-row.ly-past {
+        --base: var(--c-past);
+      }
+      /* Jede umgebrochene Teilzeile füllt sich für sich von links nach rechts. */
+      #lyrics .ly-vl {
+        --p: 0%;
+        display: block;
+        width: fit-content;
+        margin: 0 auto;
+        white-space: nowrap;
+        color: transparent;
+        background: linear-gradient(90deg, var(--c-now) var(--p), var(--base) var(--p));
+        -webkit-background-clip: text;
+        background-clip: text;
+      }
+      #lyrics .ly-title .ly-vl,
+      #lyrics .ly-rest .ly-vl {
         background: none;
-        color: #fff;
+        color: var(--base);
         letter-spacing: 0.08em;
       }
       /* Hintergrund während des Liedes: Foto bildfüllend, abgedunkelt */
