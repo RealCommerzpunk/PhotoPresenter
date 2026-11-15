@@ -22,7 +22,8 @@ Zufällige Vollbild-Foto-Diashow für Windows und Linux.
   optional mit einem Schwenk über die anderen Gesichter.
 - **Texte**: Fülltexte zwischen den Fotos und an Fotos gebundene Texte (vor, nach oder über dem Bild),
   mit frei wählbaren oder zufälligen Stilen und Animationen. Texte und Emojis verdecken keine Gesichter.
-- **3D-Fotowelt**, Partikel-Effekte, **Handy-Fernbedienung** per QR-Code und eine **portable Version** zum Mitnehmen.
+- **3D-Fotowelt**, Partikel-Effekte, **Handy-Fernbedienung** per QR-Code (dazu eine **Kinder-Fernbedienung**: je Foto ein Emoji und ein Text) und eine **portable Version** zum Mitnehmen.
+- **Songs mit Karaoke-Text:** MP3 und gleichnamige TXT in den Ordner `Songs` legen, der Text gleitet passend zur Musik mit. Die Zeiten passt ein Mitsing-Editor ein (Taste halten, solange eine Zeile gesungen wird, danach auf der Wellenform nachziehen).
 
 > Status: in Entwicklung. Der Fahrplan steht unten.
 

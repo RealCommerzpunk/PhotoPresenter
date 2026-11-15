@@ -30,7 +30,10 @@
 - **3D photo world:** an occasional interlude where the photos form a sphere, helix, tunnel, wobbly jelly cube …
   and the camera dives into the next photo.
 - **Phone remote control** via QR code (local network, no app needed): pause, skip, freeze a photo, trigger
-  emojis, texts, effects and the 3D world, pick the next photos from a gallery.
+  emojis, texts, effects and the 3D world, pick the next photos from a gallery. A **kids remote** allows exactly
+  one emoji and one text per photo.
+- **Songs with karaoke lyrics:** put an MP3 and a TXT with the same name into `Songs/`; the lyrics glide along
+  with the music. A sing-along editor (hold a key while each line is sung, then drag on the waveform) sets the timing.
 - **Portable:** the portable build keeps all settings next to the program; one click creates a hand-over
   folder with program, photos, settings and face index for another computer.
 

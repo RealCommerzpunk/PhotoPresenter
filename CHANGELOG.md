@@ -4,21 +4,20 @@ Alle Änderungen je Version. Format: neueste Version oben, Datum im Format JJJJ-
 
 ## 0.14.0 – 2026-11-15
 
-- **Songs mit Karaoke-Text** (neue Rubrik „Songs“ in den Einstellungen, Taste **S** in der Show): Im Ordner `Songs` neben dem Programm liegt je Lied eine MP3 und eine TXT mit demselben Namen. Gibt es ein Lied, startet es sofort; bei mehreren fragt die Show vorher auf dem Bildschirm (Zahl oder ↑ ↓ + Enter). Der Text erscheint als Karaoke: laufende Zeile füllt sich von links nach rechts, davor und danach die Nachbarzeilen, vorab die Überschrift. Abschnittsmarken wie `[Verse 1]` werden nicht mitgesungen. Ohne Zeitmarken verteilt das Programm die Zeilen nach Silben auf die Zeit des Gesangs (Beginn und Ende werden geschätzt und lassen sich je Lied in Sekunden einstellen); Zeitmarken im LRC-Stil (`[01:23.50] Zeile`) werden genau übernommen. Während des Liedes ruhen Fülltexte und 3D-Welt. Auch von Handy und Einstellungen aus startbar; Lautstärke und Textposition (unten/Mitte/oben) einstellbar
-- **Karaoke-Zeiten selbst einpassen** (Songs → „Zeiten setzen“), in zwei Schritten: **Mitsingen** – das Lied läuft, und solange eine Zeile gesungen wird, hält man eine große Fläche (oder die Leertaste) gedrückt; Drücken ist der Anfang, Loslassen das Ende, danach ist die nächste Zeile dran, „Letzte Zeile nochmal“ springt kurz davor zurück. **Feinschliff** – auf der Wellenform des Liedes ist jede Zeile ein Block, dessen Ränder man mit der Maus zieht (Block anklicken = Zeile anhören, Übersicht des ganzen Liedes darunter). Die Zeiten landen als `[mm:ss.xx]` in der TXT (Ende als Marke ohne Text danach, die erste Fassung bleibt als `.bak`); nicht eingepasste Zeilen werden zwischen den eingepassten verteilt, so geht es auch Stück für Stück
-- **Karaoke einstellbar**: Schriftgröße (50–200 %), Zeilen davor (0–6) und danach (0–8) sowie der Hintergrund während des Liedes: Diashow läuft weiter, aktuelles Foto bildfüllend stehen lassen und abdunkeln (Stärke einstellbar) oder ein festes Foto aus den Einstellungen (ebenfalls abgedunkelt)
-- **Karaoke gleitet**: Der Text läuft als durchgehende Spalte sanft weiter (kein Springen mehr); gesungene Zeilen bleiben gelb, bei langen Pausen steht „♪ ♪ ♪“ in der Spalte. Beginnt ein Lied, enden laufende Texte, Effekte und Emojis, und währenddessen starten keine neuen automatischen Effekte oder Texte
-- **Karaoke-Farben und Umbruch**: Farben für die laufende Zeile (gesungener Teil), kommende und vergangene Zeilen einstellbar; vergangene Zeilen bleiben nicht mehr gelb. Umgebrochene Zeilen füllen sich Teilzeile für Teilzeile statt alle zugleich
-- **3D-Fotowelt dichter**: neuer Regler „Dichte“ (Einstellungen → Effekte → 3D-Fotowelt) von locker (bisheriger Abstand) bis dicht (Fotos fast Kante an Kante); die Kamera rückt passend näher. Standard ist die Mitte, die Kugel wirkt so nicht mehr leer
+Songs mit Karaoke, Kinder-Fernbedienung, dichtere 3D-Welt.
+
+- **Songs mit Karaoke-Text** (neue Rubrik „Songs“ in den Einstellungen, Taste **S** in der Show): Im Ordner `Songs` neben dem Programm liegt je Lied eine MP3 und eine TXT mit demselben Namen. Gibt es nur ein Lied, startet es sofort, bei mehreren fragt die Show vorher auf dem Bildschirm. Der Text läuft als sanft gleitende Spalte, die laufende Zeile füllt sich von links nach rechts (umgebrochene Zeilen Teilzeile für Teilzeile). Abschnittsmarken wie `[Verse 1]` werden nicht mitgesungen, bei langen Musikpausen steht „♪ ♪ ♪“ da. Ohne Zeitmarken verteilt das Programm die Zeilen nach Silben auf die geschätzte Zeit des Gesangs; Zeitmarken im LRC-Stil (`[01:23.50] Zeile`) werden genau übernommen. Auch per Handy und aus den Einstellungen startbar
+- **Karaoke-Darstellung einstellbar**: Lautstärke, Position (unten, Mitte, oben), Schriftgröße, Zahl der Zeilen davor und danach sowie die Farben der laufenden, kommenden und vergangenen Zeilen. Hintergrund während des Liedes: Diashow läuft weiter, das aktuelle Foto bleibt bildfüllend stehen oder ein festes Foto erscheint – beides mit einstellbarer Abdunklung. Beim Liedstart enden laufende Texte, Effekte und Emojis; solange das Lied läuft, ruhen Fülltexte, automatische Effekte und die 3D-Welt
+- **Karaoke-Zeiten selbst einpassen** (Songs → „Zeiten setzen“), in zwei Schritten: **Mitsingen** – das Lied läuft, und solange eine Zeile gesungen wird, hält man eine große Fläche (oder die Leertaste) gedrückt; Drücken ist der Anfang, Loslassen das Ende, danach ist die nächste Zeile dran, „Letzte Zeile nochmal“ springt kurz davor zurück. **Feinschliff** – auf der Wellenform des Liedes ist jede Zeile ein Block, dessen Ränder man mit der Maus zieht; ein Klick auf den Block spielt die Zeile. Die Zeiten landen als `[mm:ss.xx]` in der TXT (die erste Fassung bleibt als `.bak`). Nicht eingepasste Zeilen werden zwischen den eingepassten verteilt, so geht es auch Stück für Stück
+- **Kinder-Fernbedienung** (Taste **K**, am Handy unter `/kids` oder über „Live“): nur zwei Dinge, nämlich je Foto genau ein Emoji und genau ein Text; danach sind die Knöpfe gesperrt, bis das nächste Foto kommt
 - **QR-Codes**: Taste **q** (klein) zeigt den QR-Code der Kinder-Fernbedienung, **Q** (groß) den der normalen Fernbedienung
-- **Kinder-Fernbedienung** (Taste **K**, am Handy unter `/kids` oder über „Live“): nur zwei Dinge, nämlich je Foto genau ein Emoji und genau ein Text; danach sind die Tasten gesperrt, bis das nächste Foto kommt
-- **Fernbedienung vervollständigt**: Bewegungsarten, Hintergrund-Füllung, Fokus-Arten, Gesichtsgröße, Text-Hintergründe, Foto-Anzahl und Kamera-Tempo der 3D-Welt sowie der neue Reiter „Songs“
-- Tests starten wieder unter neueren Node-Versionen (`vitest` mit `vmThreads`)
+- **Fernbedienung vervollständigt**: Bewegungsarten, Randfüllung, Fokus-Arten, Gesichtsgröße, Text-Hintergründe, Zahl der Fotos und Kameratempo der 3D-Welt sowie der neue Reiter „Songs“
+- **3D-Fotowelt dichter**: neuer Regler „Dichte“ (Effekte → 3D-Fotowelt) von locker (bisheriger Abstand) bis dicht (Fotos fast Kante an Kante); die Kamera rückt passend näher. Standard ist die Mitte, die Kugel wirkt so nicht mehr leer
+- Entwicklung: Die Tests laufen wieder unter neueren Node-Versionen (Vitest mit `vmThreads`)
 
 ## 0.13.0 – 2026-11-13
 
 - **Oberfläche in Deutsch, Englisch, Spanisch und Französisch** (Allgemein → Sprache; „Automatisch“ folgt der Systemsprache). Gilt für Einstellungen, Show-Meldungen, Info-Tafel (Taste I, Zahlen- und Datumsformat inklusive), die Handy-Fernbedienung und die README im Weitergabe-Paket. Weitere Sprachen lassen sich per Pull Request ergänzen: eine Datei je Sprache, Anleitung in `TRANSLATING.md`; Tests prüfen, dass kein Text und kein Platzhalter fehlt
-
 - **Linux-Pakete** (AppImage, deb, tar.gz, Demo-Paket) baut ein von Hand startbarer GitHub-Workflow auf Ubuntu, inklusive Tests und Rauchtest
 - **Schlankeres Programm**: Die Programmdatei ist rund 250 MB kleiner, weil nur noch wirklich gebrauchte Pakete mitgeliefert werden (der Fenster-Code ist schon gebündelt). Das Demo-Paket und der Linux-Download schrumpfen entsprechend
 - **Doppelte Fotos erkennen** (Allgemein → Doppelte Fotos): Vergleich des Bildinhalts per Wahrnehmungs-Hash, nicht nur nach Name oder Größe – auch verkleinerte, neu gespeicherte, umbenannte oder in anderes Format umgewandelte Kopien werden gefunden. Ähnliche Serienbilder gelten nicht als doppelt. Je Gruppe bleibt die Fassung mit der höchsten Auflösung (bei Gleichstand die größere Datei, dann der Name, der nicht nach Kopie aussieht)
@@ -123,9 +122,9 @@ Effekte.
 
 Fernbedienung, Fokus-Partner, Zoomgrenze, relativer Fotopfad.
 
-- **Fernbedienung per Handy**: Der Presenter öffnet eine Webseite im lokalen Netz (Port 8765, ohne Passwort). Dort lassen sich Anzeige-, Überblend- und Textdauer, Bewegung, höchste Vergrößerung, Übergänge, Fokus (Person, Partner, gemeinsam, Schwelle, Häufigkeit, andere Gesichter) und Texte (an/aus, neuer Fülltext, Abstand) während der Show ändern; Show starten/beenden, Pause, vor/zurück. Mehrere Handys gleichzeitig, Live-Aktualisierung. Das Hotspot-Netz des iPhones wird bevorzugt.
+- **Fernbedienung per Handy**: Der Presenter öffnet eine Webseite im lokalen Netz (Port 8765, ohne Passwort). Dort lassen sich Anzeige-, Überblend- und Textdauer, Bewegung, höchste Vergrößerung, Übergänge, Fokus (Person, Partner, gemeinsam, Schwelle, Häufigkeit, andere Gesichter) und Texte (an/aus, neuer Fülltext, Abstand) während der Show ändern; Show starten/beenden, Pause, vor/zurück. Mehrere Handys gleichzeitig, Live-Aktualisierung. Das Hotspot-Netz des iPhones wird bevorzugt
 - QR-Code mit Adresse in den Einstellungen (Allgemein → Fernbedienung); in der Show blendet die Taste **Q** ihn 30 Sekunden lang ein (auch per Fernbedienung)
-- **Fokus-Partner** (♥): Mit „Gemeinsam fokussieren“ fährt die Kamera bei Fotos mit beiden erst den Partner, dann die Fokus-Person an. Die Fokus-Karte zeigt, für wen sie gilt.
+- **Fokus-Partner** (♥): Mit „Gemeinsam fokussieren“ fährt die Kamera bei Fotos mit beiden erst den Partner, dann die Fokus-Person an. Die Fokus-Karte zeigt, für wen sie gilt
 - **Höchste Vergrößerung** (Standard 125 %): Zoom wird nach Original- und Bildschirmauflösung begrenzt, damit nichts pixelig wird; gilt für alle Bewegungen und den Fokus
 - **Fotoordner relativ** zum Programmordner möglich (z. B. „Fotos“ neben dem Programm); unter Windows auch „/Fotos“. Zusätzlich gibt es eine portable Windows-Version (einzelne .exe, ideal für einen USB-Stick)
 - Sitzungsprotokolle unter `docs/sessions/`
@@ -134,7 +133,7 @@ Fernbedienung, Fokus-Partner, Zoomgrenze, relativer Fotopfad.
 
 Ruckeln und Zucken vor dem Übergang behoben.
 
-- Behoben: Kurz vor jedem Übergang zeigte die Show einen Frame lang ein veraltetes Bild (Zucken/Blitzen). Der erste Übergangs-Frame wird jetzt sofort gezeichnet.
+- Behoben: Kurz vor jedem Übergang zeigte die Show einen Frame lang ein veraltetes Bild (Zucken/Blitzen). Der erste Übergangs-Frame wird jetzt sofort gezeichnet
 - Fotos werden in einem eigenen Thread (Web Worker) geladen und vorbereitet; der Canvas dort rechnet auf dem Prozessor, damit er nicht mit der Grafikkarte konkurriert
 - Das nächste Foto wird erst nach dem Übergang vorbereitet, nicht währenddessen
 - Fotos werden in Streifen vorab auf die Grafikkarte geladen, ein Streifen pro Frame; keine Mipmaps mehr
