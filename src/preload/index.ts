@@ -69,6 +69,10 @@ const api: PhotoPresenterApi = {
   exportPackage: () => ipcRenderer.invoke(IPC.exportPackage),
   onExportProgress: (callback) => subscribe<ExportProgress>(IPC.exportProgress, callback),
   openPath: (path) => ipcRenderer.invoke(IPC.openPath, path),
+  listSongs: () => ipcRenderer.invoke(IPC.listSongs),
+  readSong: (name) => ipcRenderer.invoke(IPC.readSong, name),
+  saveLyrics: (name, text) => ipcRenderer.invoke(IPC.saveLyrics, name, text),
+  openKids: () => ipcRenderer.invoke(IPC.openKids),
   listDisplays: () => ipcRenderer.invoke(IPC.listDisplays),
   identifyDisplays: () => ipcRenderer.invoke(IPC.identifyDisplays),
 

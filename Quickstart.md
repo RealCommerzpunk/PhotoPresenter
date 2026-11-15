@@ -51,6 +51,8 @@ Die Gesichtserkennung ist schon fertig trainiert. Die Fotos werden nicht neu ana
 | **I** | Info zum Foto (Datum, Kamera, Auflösung …) |
 | **Q** | QR-Code für die Handy-Fernbedienung einblenden |
 | **R** | Fernbedienung als Fenster am PC |
+| **K** | Kinder-Fernbedienung als Fenster (je Foto ein Emoji und ein Text) |
+| **S** | Song abspielen mit Karaoke-Text (Ordner `Songs`: MP3 + TXT mit gleichem Namen; Zeiten per Klick setzen unter Einstellungen → Songs → „Zeiten setzen“) |
 | **D** | Bildrate anzeigen |
 
 ## 5. Handy als Fernbedienung

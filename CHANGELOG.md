@@ -2,6 +2,14 @@
 
 Alle Änderungen je Version. Format: neueste Version oben, Datum im Format JJJJ-MM-TT.
 
+## 0.14.0 – 2026-11-15
+
+- **Songs mit Karaoke-Text** (neue Rubrik „Songs“ in den Einstellungen, Taste **S** in der Show): Im Ordner `Songs` neben dem Programm liegt je Lied eine MP3 und eine TXT mit demselben Namen. Gibt es ein Lied, startet es sofort; bei mehreren fragt die Show vorher auf dem Bildschirm (Zahl oder ↑ ↓ + Enter). Der Text erscheint als Karaoke: laufende Zeile füllt sich von links nach rechts, davor und danach die Nachbarzeilen, vorab die Überschrift. Abschnittsmarken wie `[Verse 1]` werden nicht mitgesungen. Ohne Zeitmarken verteilt das Programm die Zeilen nach Silben auf die Zeit des Gesangs (Beginn und Ende werden geschätzt und lassen sich je Lied in Sekunden einstellen); Zeitmarken im LRC-Stil (`[01:23.50] Zeile`) werden genau übernommen. Während des Liedes ruhen Fülltexte und 3D-Welt. Auch von Handy und Einstellungen aus startbar; Lautstärke und Textposition (unten/Mitte/oben) einstellbar
+- **Karaoke-Zeiten selbst setzen** (Songs → „Zeiten setzen“): Lied hören und bei jeder Zeile Enter drücken; die Marken landen als `[mm:ss.xx]` in der TXT (die erste Fassung bleibt als `.bak`). Gedacht für Arbeit Stück für Stück: Zeilen ohne Marke werden zwischen den gesetzten verteilt, Zeilen anklicken und „Ab hier hören“, „Ab hier löschen“, Feinschliff ±0,1 s je Zeile, ganze Abschnitte um ±0,5 s verschieben. Pausen und reine Musik: „Ende/Pause“ (E) markiert, wo die Zeile davor aufhört; in der Show erscheint dann ♪ ♪ ♪, bis es weitergeht. Einstellbar: Tempo (0,5×/0,75×/1×) und Vorhalt für die Reaktionszeit
+- **Kinder-Fernbedienung** (Taste **K**, am Handy unter `/kids` oder über „Live“): nur zwei Dinge, nämlich je Foto genau ein Emoji und genau ein Text; danach sind die Tasten gesperrt, bis das nächste Foto kommt
+- **Fernbedienung vervollständigt**: Bewegungsarten, Hintergrund-Füllung, Fokus-Arten, Gesichtsgröße, Text-Hintergründe, Foto-Anzahl und Kamera-Tempo der 3D-Welt sowie der neue Reiter „Songs“
+- Tests starten wieder unter neueren Node-Versionen (`vitest` mit `vmThreads`)
+
 ## 0.13.0 – 2026-11-13
 
 - **Oberfläche in Deutsch, Englisch, Spanisch und Französisch** (Allgemein → Sprache; „Automatisch“ folgt der Systemsprache). Gilt für Einstellungen, Show-Meldungen, Info-Tafel (Taste I, Zahlen- und Datumsformat inklusive), die Handy-Fernbedienung und die README im Weitergabe-Paket. Weitere Sprachen lassen sich per Pull Request ergänzen: eine Datei je Sprache, Anleitung in `TRANSLATING.md`; Tests prüfen, dass kein Text und kein Platzhalter fehlt

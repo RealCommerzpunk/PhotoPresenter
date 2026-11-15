@@ -4,7 +4,7 @@ import 'pixi.js/unsafe-eval'
 import { Application, Container, RenderTexture, Sprite, type Texture } from 'pixi.js'
 import { gsap } from 'gsap'
 import { pick, pickWeighted } from '@shared/random'
-import type { PhotoDetails } from '@shared/ipc'
+import type { PhotoDetails, SongInfo } from '@shared/ipc'
 import type { FaceInfo } from '@shared/faces'
 import type { PhotoQueue, QueueItem, ShowNotice } from '@shared/remote'
 import {
@@ -21,6 +21,7 @@ import { TextOverlay } from '../text/overlay'
 import { OverlayTrack } from './scene'
 import type { TextStyle } from '@shared/text'
 import { loadFont } from '../text/fonts'
+import { SongPlayer } from './song'
 import { resolveStyle } from '../text/resolve'
 import { loadPhoto, loadSoft, loadThumb, type LoadedPhoto } from './loader'
 import { faceZoom, fitImage, zoomLimit, type FaceBox, type Size } from './motion'
@@ -47,6 +48,8 @@ const statusEl = document.getElementById('status')!
 const textHost = document.getElementById('texts')!
 const qrEl = document.getElementById('qr')!
 const emojiHost = document.getElementById('emojis')!
+const lyricsEl = document.getElementById('lyrics')!
+const songPickEl = document.getElementById('songPick')!
 
 /** Rückmeldung an die Fernbedienung (erscheint dort als kurzer Hinweis). */
 /** Sprache der Show aus den Einstellungen (bzw. der Systemsprache); feste Texte der Seite übersetzen. */
@@ -339,7 +342,7 @@ async function main(): Promise<void> {
   let worldFinalQueued = false
 
   function worldDue(): boolean {
-    if (thumbs.size < WORLD_MIN_TILES) return false
+    if (thumbs.size < WORLD_MIN_TILES || song.active) return false
     if (worldForced) return true
     return settings.worldEnabled && photosSinceWorld >= worldAt
   }
@@ -503,6 +506,7 @@ async function main(): Promise<void> {
     // Per Hand ausgelöste Texte und Effekte gehören zum bisherigen Bild.
     if (current) endManualExtras()
     incoming = createScene(ready, fade)
+    reportStatus()
     maybeStartEffect()
     ready = null
     slideLayer.removeChildren()
@@ -560,6 +564,15 @@ async function main(): Promise<void> {
   // Zoom und Fortschritt ändern sich laufend.
   window.setInterval(() => showInfo && updateInfo(), 250)
 
+  // ---------- Kinder-Fernbedienung: höchstens ein Emoji und ein Text je Foto ----------
+  let kidEmojiUsed = false
+  let kidTextUsed = false
+
+  // Lieder (Taste S): Karaoke, Funktionen weiter unten
+  const song = new SongPlayer(lyricsEl)
+  let picking: SongInfo[] | null = null
+  let pickAt = 0
+
   /** Zustand an den Main-Prozess melden (für die Fernbedienung). */
   function reportStatus(): void {
     const scene = incoming ?? current
@@ -568,7 +581,14 @@ async function main(): Promise<void> {
       paused,
       label: scene?.label ?? '',
       frozen: current instanceof Slide && current.frozen,
-      photo: scene?.photoName
+      photo: scene?.photoName,
+      kidEmojiUsed,
+      kidTextUsed,
+      song: song.active
+        ? { title: song.title }
+        : picking
+          ? { title: '', choosing: true }
+          : undefined
     })
   }
 
@@ -577,6 +597,8 @@ async function main(): Promise<void> {
     // Textanimationen laufen über GSAP und werden mit angehalten.
     if (paused) gsap.globalTimeline.pause()
     else gsap.globalTimeline.resume()
+    if (paused) song.pause()
+    else song.resume()
     flashStatus(paused ? t('show.pause') : t('show.resume'))
     reportStatus()
   }
@@ -630,7 +652,127 @@ async function main(): Promise<void> {
       emojis.show(arg, slide ? slide.upcomingFaces(6) : [])
       notice(t('show.emojiShown', { emoji: arg }))
     } else if (cmd === 'freeze') setFrozen(arg === 'on' ? true : arg === 'off' ? false : undefined)
+    else if (cmd === 'song') void startSong(arg)
+    else if (cmd === 'songStop') stopSong()
+    else if (cmd === 'kidEmoji' && arg) {
+      if (kidEmojiUsed) notice(t('show.kidEmojiUsed'), 'warn')
+      else {
+        kidEmojiUsed = true
+        const slide = photoOnScreen()
+        emojis.show(arg, slide ? slide.upcomingFaces(6) : [])
+        notice(t('show.emojiShown', { emoji: arg }))
+        reportStatus()
+      }
+    } else if (cmd === 'kidText') {
+      const item = settings.texts.find((x) => x.id === arg)
+      if (kidTextUsed) notice(t('show.kidTextUsed'), 'warn')
+      else if (item) {
+        kidTextUsed = true
+        void showTextNow(item.text, item.style)
+        notice(t('show.textShown'))
+        reportStatus()
+      } else notice(t('show.textMissing'), 'warn')
+    }
   })
+
+  /** Texte aus dem Ablauf ruhen, solange ein Lied läuft (der Liedtext steht im Vordergrund). */
+  function applyTexts(): void {
+    sequencer.setTexts(song.active ? [] : settings.texts, settings.textFillerEvery)
+  }
+
+  function closePicker(): void {
+    picking = null
+    songPickEl.style.display = 'none'
+    songPickEl.style.opacity = '0'
+    reportStatus()
+  }
+
+  function renderPicker(): void {
+    if (!picking) return
+    songPickEl.innerHTML =
+      '<div class="pick-box"><div class="pick-title">' +
+      t('show.songPick') +
+      '</div>' +
+      picking
+        .slice(0, 9)
+        .map(
+          (x, i) =>
+            '<div class="pick-item' +
+            (i === pickAt ? ' on' : '') +
+            '">' +
+            (i + 1) +
+            '  ·  ' +
+            x.title.replace(/[&<>]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' })[c]!) +
+            '</div>'
+        )
+        .join('') +
+      '<div class="pick-hint">' +
+      t('show.songPickHint') +
+      '</div></div>'
+    songPickEl.style.display = 'flex'
+    songPickEl.style.opacity = '1'
+  }
+
+  async function startSong(name?: string): Promise<void> {
+    const list = (await window.api.listSongs()).songs
+    if (!list.length) {
+      notice(t('show.songNone'), 'warn')
+      flashStatus(t('show.songNone'))
+      return
+    }
+    let chosen = name ? list.find((x) => x.name === name) : undefined
+    if (!chosen && name) {
+      notice(t('show.songMissing'), 'warn')
+      return
+    }
+    if (!chosen && list.length === 1) chosen = list[0]
+    if (!chosen) {
+      picking = list
+      pickAt = 0
+      renderPicker()
+      reportStatus()
+      return
+    }
+    closePicker()
+    const ok = await song.play(chosen.name, {
+      volume: settings.songVolume,
+      position: settings.songLyricsPosition,
+      timing: settings.songTiming[chosen.name]
+    })
+    if (!ok) {
+      notice(t('show.songFailed', { name: chosen.title }), 'warn')
+      return
+    }
+    applyTexts()
+    notice(t('show.songPlaying', { name: song.title }))
+    reportStatus()
+  }
+
+  function stopSong(): void {
+    if (!song.active) return
+    song.stop()
+    applyTexts()
+    notice(t('show.songStopped'))
+    reportStatus()
+  }
+  song.onEnded = () => {
+    applyTexts()
+    reportStatus()
+  }
+
+  /** Tasten, solange die Liedauswahl offen ist. `true`, wenn die Taste verbraucht wurde. */
+  function pickerKey(key: string): boolean {
+    if (!picking) return false
+    const n = Math.min(9, picking.length)
+    if (key === 'Escape') closePicker()
+    else if (key === 'ArrowDown') pickAt = (pickAt + 1) % n
+    else if (key === 'ArrowUp') pickAt = (pickAt + n - 1) % n
+    else if (key === 'Enter' || key === ' ') void startSong(picking[pickAt].name)
+    else if (/^[1-9]$/.test(key) && Number(key) <= n) void startSong(picking[Number(key) - 1].name)
+    else return true
+    renderPicker()
+    return true
+  }
 
   // ---------- Einfrieren (Fernbedienung) ----------
   /** Einfrieren kam während eines Übergangs: gilt dann für das neue Foto. */
@@ -695,6 +837,8 @@ async function main(): Promise<void> {
 
   /** Sofort-Texte und Hand-Effekte ausblenden (beim Übergang zum nächsten Bild). */
   function endManualExtras(): void {
+    kidEmojiUsed = false
+    kidTextUsed = false
     effects.endManual()
     emojis.clear()
     for (const t of instantTexts) {
@@ -786,6 +930,7 @@ async function main(): Promise<void> {
       measure('Streifen hochladen', () => uploadNow(upload.texture))
       upload.done()
     }
+    song.update()
     if (paused) return
     const dt = Math.min(0.1, ticker.deltaMS / 1000)
     const s = screen()
@@ -835,6 +980,7 @@ async function main(): Promise<void> {
 
   window.addEventListener('keydown', (e) => {
     mark(`Taste ${e.key}`)
+    if (pickerKey(e.key)) return
     switch (e.key) {
       case 'Escape':
         void window.api.stopShow()
@@ -863,6 +1009,17 @@ async function main(): Promise<void> {
           if (!r.ok && r.error) flashStatus(r.error)
         })
         break
+      case 's':
+      case 'S':
+        if (song.active) stopSong()
+        else void startSong()
+        break
+      case 'k':
+      case 'K':
+        void window.api.openKids().then((r) => {
+          if (!r.ok && r.error) flashStatus(r.error)
+        })
+        break
       case 'd':
       case 'D':
         showFps = !showFps
@@ -879,7 +1036,7 @@ async function main(): Promise<void> {
       next.dupesSkip !== settings.dupesSkip
     settings = next
     applyLanguage(settings)
-    sequencer.setTexts(settings.texts, settings.textFillerEvery)
+    applyTexts()
     void refreshFocusPhotos()
     if (folderChanged) {
       discardReady()

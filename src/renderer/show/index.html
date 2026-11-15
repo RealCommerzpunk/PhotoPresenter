@@ -128,6 +128,101 @@
         color: rgba(255, 255, 255, 0.75);
         word-break: break-all;
       }
+      #lyrics {
+        position: fixed;
+        left: 0;
+        right: 0;
+        text-align: center;
+        padding: 3vh 6vw;
+        pointer-events: none;
+        opacity: 0;
+        transition: opacity 0.6s ease;
+        z-index: 3;
+        font-weight: 700;
+        color: #fff;
+        filter: drop-shadow(0 0.3vh 0.8vh rgba(0, 0, 0, 0.9));
+      }
+      #lyrics[data-pos='bottom'] {
+        bottom: 0;
+        background: linear-gradient(to top, rgba(0, 0, 0, 0.55), rgba(0, 0, 0, 0));
+        padding-top: 9vh;
+      }
+      #lyrics[data-pos='top'] {
+        top: 0;
+        background: linear-gradient(to bottom, rgba(0, 0, 0, 0.55), rgba(0, 0, 0, 0));
+        padding-bottom: 9vh;
+      }
+      #lyrics[data-pos='center'] {
+        top: 50%;
+        transform: translateY(-50%);
+        background: radial-gradient(ellipse at center, rgba(0, 0, 0, 0.5), rgba(0, 0, 0, 0) 70%);
+      }
+      #lyrics .ly-head {
+        font-size: 2.2vh;
+        font-weight: 500;
+        letter-spacing: 0.08em;
+        color: rgba(255, 255, 255, 0.8);
+        margin-bottom: 1vh;
+      }
+      #lyrics .ly-row {
+        min-height: 1.3em;
+        line-height: 1.3;
+        font-size: 3vh;
+        color: rgba(255, 255, 255, 0.5);
+      }
+      #lyrics .ly-prev {
+        font-size: 2.6vh;
+        color: rgba(255, 255, 255, 0.4);
+      }
+      #lyrics .ly-now {
+        font-size: 6vh;
+        --p: 0%;
+        color: transparent;
+        background: linear-gradient(90deg, #ffd54a var(--p), #ffffff var(--p));
+        -webkit-background-clip: text;
+        background-clip: text;
+        margin: 0.4vh 0;
+      }
+      #lyrics .ly-next {
+        font-size: 3.6vh;
+        color: rgba(255, 255, 255, 0.85);
+      }
+      #songPick {
+        inset: 0;
+        display: none;
+        align-items: center;
+        justify-content: center;
+        background: rgba(0, 0, 0, 0.6);
+        z-index: 6;
+      }
+      #songPick .pick-box {
+        min-width: 40vw;
+        max-width: 80vw;
+        padding: 3vh 4vw;
+        border-radius: 18px;
+        background: rgba(12, 14, 20, 0.92);
+        color: #fff;
+      }
+      #songPick .pick-title {
+        font-size: 4vh;
+        font-weight: 600;
+        margin-bottom: 2vh;
+      }
+      #songPick .pick-item {
+        font-size: 3.4vh;
+        padding: 0.8vh 1vw;
+        border-radius: 10px;
+        color: rgba(255, 255, 255, 0.8);
+      }
+      #songPick .pick-item.on {
+        background: rgba(255, 213, 74, 0.2);
+        color: #fff;
+      }
+      #songPick .pick-hint {
+        margin-top: 2vh;
+        font-size: 2.2vh;
+        color: rgba(255, 255, 255, 0.5);
+      }
       #status {
         right: 24px;
         top: 20px;
@@ -144,6 +239,8 @@
     <div id="emojis"></div>
     <div id="message" class="overlay" style="opacity: 1">Lade Fotos …</div>
     <div id="info" class="overlay"></div>
+    <div id="lyrics" data-pos="bottom"></div>
+    <div id="songPick" class="overlay"></div>
     <div id="status" class="overlay"></div>
     <div id="qr" class="overlay">
       <div class="qr-code"></div>

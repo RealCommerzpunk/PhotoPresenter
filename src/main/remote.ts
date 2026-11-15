@@ -128,7 +128,7 @@ export class RemoteServer {
     const url = new URL(request.url)
     const { method } = request
     try {
-      if (method === 'GET' && url.pathname === '/') {
+      if (method === 'GET' && (url.pathname === '/' || url.pathname === '/kids')) {
         return text(200, pageHtml, 'text/html; charset=utf-8')
       }
       if (

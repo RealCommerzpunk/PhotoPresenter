@@ -49,8 +49,34 @@ export const IPC = {
   dataInfo: 'data:info',
   exportPackage: 'data:export',
   exportProgress: 'data:exportProgress',
-  openPath: 'data:openPath'
+  openPath: 'data:openPath',
+  listSongs: 'songs:list',
+  readSong: 'songs:read',
+  saveLyrics: 'songs:saveLyrics',
+  openKids: 'remote:openKids'
 } as const
+
+/** Ein Lied im Song-Ordner: MP3 mit gleichnamiger TXT. */
+export interface SongInfo {
+  /** Dateiname ohne Endung (verbindet MP3 und TXT). */
+  name: string
+  /** Überschrift aus der TXT, sonst der Name. */
+  title: string
+  lyrics: boolean
+}
+
+export interface SongList {
+  folder: string
+  songs: SongInfo[]
+}
+
+/** Inhalt eines Liedes zum Abspielen. */
+export interface SongData {
+  name: string
+  audio: Uint8Array
+  /** Text der TXT (leer, wenn es keine gibt). */
+  lyrics: string
+}
 
 /** Wo die Daten liegen (für die Karte „Mitnehmen“). */
 export interface DataInfo {
@@ -267,6 +293,14 @@ export interface PhotoPresenterApi {
   onExportProgress(callback: (p: ExportProgress) => void): () => void
   /** Ordner im Explorer öffnen. */
   openPath(path: string): Promise<void>
+
+  // Lieder (Karaoke)
+  listSongs(): Promise<SongList>
+  readSong(name: string): Promise<SongData | null>
+  /** Text (TXT) eines Liedes speichern; die erste Fassung bleibt als .bak erhalten. */
+  saveLyrics(name: string, text: string): Promise<boolean>
+  /** Kinder-Fernbedienung als eigenes Fenster öffnen (Taste K). */
+  openKids(): Promise<{ ok: boolean; error?: string }>
 
   // Bildschirme
   listDisplays(): Promise<DisplayInfo[]>

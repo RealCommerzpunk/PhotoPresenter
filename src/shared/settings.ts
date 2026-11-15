@@ -164,6 +164,13 @@ const defaultFocusModes: WeightedOption<FocusMode>[] = [
 ]
 
 /** Teil des Bildschirms, den die Show füllt (für zusammengeschaltete Monitore). */
+export const SONG_POSITIONS = ['bottom', 'center', 'top'] as const
+export type SongPosition = (typeof SONG_POSITIONS)[number]
+export const SONG_POSITION_LABELS: Record<SongPosition, string> = labelMap(
+  'songPos',
+  SONG_POSITIONS
+)
+
 export const SHOW_AREAS = ['full', 'left', 'center', 'right', 'leftHalf', 'rightHalf'] as const
 export type ShowArea = (typeof SHOW_AREAS)[number]
 export const SHOW_AREA_LABELS: Record<ShowArea, string> = labelMap('area', SHOW_AREAS)
@@ -298,6 +305,19 @@ export const settingsSchema = z.object({
   showDisplay: field(z.string(), ''),
   /** Bereich dieses Bildschirms, den die Show füllt. */
   showArea: field(z.enum(SHOW_AREAS), 'full'),
+  /** Ordner mit Liedern (MP3 + gleichnamige TXT); leer = Ordner „Songs“ neben dem Programm. */
+  songsFolder: field(z.string(), ''),
+  songVolume: field(z.number().min(0).max(1), 0.9),
+  /** Wo der Liedtext im Karaoke-Modus steht. */
+  songLyricsPosition: field(z.enum(SONG_POSITIONS), 'bottom'),
+  /** Zeiten des Gesangs je Lied (Sekunden), wenn die Schätzung nicht passt. */
+  songTiming: field(
+    z.record(
+      z.string(),
+      z.object({ start: z.number().min(0).max(7200), end: z.number().min(0).max(7200) })
+    ),
+    {}
+  ),
   /** Emojis, die die Fernbedienung über dem aktuellen Foto einblenden kann. */
   emojis: field(z.array(z.string().min(1).max(16)).max(48), DEFAULT_EMOJIS),
   remoteEnabled: field(z.boolean(), true),

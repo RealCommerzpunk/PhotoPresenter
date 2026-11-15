@@ -15,11 +15,17 @@ export type ShowCommand =
   | 'say'
   | 'emoji'
   | 'freeze'
+  | 'song'
+  | 'songStop'
+  | 'kidEmoji'
+  | 'kidText'
 
 /**
  * Befehl mit optionalem Zusatz: bei 'effect' die Effekt-ID, bei 'world' die Formation,
  * bei 'text' die Text-ID, bei 'say' ein freier Text zum sofortigen Einblenden,
- * bei 'emoji' das Emoji, bei 'freeze' 'on' oder 'off' (ohne Zusatz: umschalten).
+ * bei 'emoji' das Emoji, bei 'freeze' 'on' oder 'off' (ohne Zusatz: umschalten), bei 'song' der
+ * Liedname (ohne Zusatz: das einzige Lied bzw. Auswahl auf dem Bildschirm). 'kidEmoji' und
+ * 'kidText' wie 'emoji' und 'text', aber höchstens einmal je Foto (Kinder-Fernbedienung).
  */
 export interface ShowCommandMessage {
   cmd: ShowCommand
@@ -36,6 +42,11 @@ export interface ShowStatus {
   frozen?: boolean
   /** Name des aktuellen Fotos (relativ zum Fotoordner), falls ein Foto zu sehen ist. */
   photo?: string
+  /** Für das Foto ist schon ein Emoji bzw. ein Text von der Kinder-Fernbedienung da. */
+  kidEmojiUsed?: boolean
+  kidTextUsed?: boolean
+  /** Ein Lied läuft (Titel) bzw. die Auswahl ist offen. */
+  song?: { title: string; choosing?: boolean }
 }
 
 /** Rückmeldung der Show auf einen Befehl (erscheint auf der Fernbedienung als Hinweis). */
@@ -90,7 +101,15 @@ export const REMOTE_KEYS = [
   'worldEvery',
   'worldDuration',
   'worldFormations',
-  'emojis'
+  'emojis',
+  'motionKinds',
+  'fillModes',
+  'focusModes',
+  'focusFaceSize',
+  'textBackgrounds',
+  'worldTiles',
+  'worldCameraSpeed',
+  'songVolume'
 ] as const satisfies readonly (keyof Settings)[]
 
 export type RemoteSettings = Pick<Settings, (typeof REMOTE_KEYS)[number]>
@@ -104,11 +123,17 @@ export interface RemoteState {
   queue: PhotoQueue
   settings: RemoteSettings
   persons: { id: string; name: string }[]
+  /** Lieder im Ordner „Songs“ (Name ohne Endung und Titel). */
+  songs: { name: string; title: string; lyrics: boolean }[]
   labels: {
     transitions: Record<string, string>
     panOthers: Record<string, string>
     effects: Record<string, string>
     formations: Record<string, string>
+    motionKinds: Record<string, string>
+    fillModes: Record<string, string>
+    focusModes: Record<string, string>
+    textBackgrounds: Record<string, string>
   }
 }
 

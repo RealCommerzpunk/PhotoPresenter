@@ -264,6 +264,39 @@
       .text-item button {
         flex: none;
       }
+      .kids-mode .controls,
+      .kids-mode .tabs {
+        display: none;
+      }
+      .kids-mode .emoji-grid {
+        grid-template-columns: repeat(auto-fill, minmax(76px, 1fr));
+      }
+      .kids-mode .emoji-grid button {
+        font-size: 44px;
+        padding: 14px 0;
+      }
+      .kids-mode .quick button {
+        font-size: 18px;
+        padding: 14px;
+      }
+      .kids-done {
+        display: none;
+        margin: 8px 0;
+        padding: 10px 12px;
+        border-radius: 10px;
+        background: rgba(60, 40, 10, 0.5);
+        border: 1px solid #f59e0b;
+        font-size: 15px;
+      }
+      button:disabled {
+        opacity: 0.35;
+      }
+      .songs button {
+        display: block;
+        width: 100%;
+        text-align: left;
+        margin-bottom: 8px;
+      }
       .chips {
         display: flex;
         flex-wrap: wrap;
@@ -460,6 +493,7 @@
         <button data-tab="texte">Texte</button>
         <button data-tab="effekte">Effekte</button>
         <button data-tab="3d">3D</button>
+        <button data-tab="songs">Songs</button>
       </nav>
     </header>
 
@@ -496,6 +530,13 @@
       <h2>3D-Fotowelt <button class="small" data-cmd="world">🧊 Zufall</button></h2>
       <div class="triggers" id="worldTriggers"></div>
     </section>
+    <section data-page="live">
+      <h2>Kinder-Fernbedienung</h2>
+      <div class="hint">Eine zweite Seite mit nur zwei Dingen: ein Emoji und ein Text je Foto.</div>
+      <div style="margin-top: 8px">
+        <a href="/kids"><button class="small">Kinder-Fernbedienung öffnen</button></a>
+      </div>
+    </section>
 
     <section data-page="fotos">
       <h2>
@@ -529,8 +570,16 @@
       </div>
     </section>
     <section data-page="ablauf">
+      <div class="label">Bewegungsarten</div>
+      <div class="chips" id="motionKinds"></div>
+    </section>
+    <section data-page="ablauf">
       <h2>Übergänge</h2>
       <div class="chips" id="transitions"></div>
+    </section>
+    <section data-page="ablauf">
+      <div class="label">Hintergrund-Füllung</div>
+      <div class="chips" id="fillModes"></div>
     </section>
 
     <section data-page="fokus">
@@ -561,12 +610,19 @@
         <label>Erkennungsschwelle <span class="value" id="focusThresholdValue"></span></label>
         <input type="range" id="focusThreshold" min="20" max="70" step="1" />
       </div>
+      <div id="focusFaceSize"></div>
+      <div class="label" style="margin-top: 12px">Fokus-Arten</div>
+      <div class="chips" id="focusModes"></div>
     </section>
 
     <section data-page="texte">
       <h2>Texte</h2>
       <div class="hint">🔀 im Ablauf: erscheint von selbst · 📱 nur auf Abruf: nur über „Live“</div>
       <div id="texts"></div>
+    </section>
+    <section data-page="texte">
+      <div class="label">Text-Hintergründe</div>
+      <div class="chips" id="textBackgrounds"></div>
     </section>
     <section data-page="texte">
       <div id="textFillerEvery"></div>
@@ -595,8 +651,40 @@
       <div class="switch">Zwischenspiel im Ablauf <input type="checkbox" id="worldEnabled" /></div>
       <div id="worldEvery"></div>
       <div id="worldDuration"></div>
+      <div id="worldTiles"></div>
+      <div id="worldCameraSpeed"></div>
       <div class="label" style="margin-top: 12px">Beim Zufall dabei</div>
       <div class="chips" id="formations"></div>
+    </section>
+
+    <section data-page="songs" class="songs">
+      <h2>Song abspielen</h2>
+      <div id="songList"></div>
+      <button class="small" id="songStop">⏹ Song beenden</button>
+      <div class="row">
+        <label>Lautstärke <span class="value" id="songVolumeValue"></span></label>
+        <input type="range" id="songVolume" min="0" max="100" step="5" />
+      </div>
+      <div class="hint">
+        Der Text läuft als Karaoke mit. Taste S am PC startet ebenfalls einen Song.
+      </div>
+    </section>
+
+    <section data-page="kids">
+      <h2>Ein Emoji für dieses Bild</h2>
+      <div class="emoji-grid" id="kidEmojis"></div>
+      <div class="kids-done" id="kidEmojiDone">
+        Das Emoji ist schon da – beim nächsten Bild geht es wieder!
+      </div>
+    </section>
+    <section data-page="kids">
+      <h2>Ein Text für dieses Bild</h2>
+      <div class="quick" id="kidTexts"></div>
+      <div class="kids-done" id="kidTextDone">
+        Der Text ist schon da – beim nächsten Bild geht es wieder!
+      </div>
+      <div class="hint" id="kidNoText" style="display: none">Noch keine Texte vorbereitet.</div>
+      <div class="hint" id="kidOff" style="display: none">Die Show läuft noch nicht.</div>
     </section>
 
     <div id="toasts"></div>
@@ -641,6 +729,8 @@
       }
 
       ;('use strict')
+      /** Kinder-Modus: Adresse /kids zeigt nur Emoji und Text (je einmal pro Foto). */
+      const KIDS = location.pathname.startsWith('/kids')
       let state = null
       let built = false
       const $ = (id) => document.getElementById(id)
@@ -788,6 +878,14 @@
         rangeControl('effectIntensity', t('remote.effectIntensity'), '%', 5, 100, 5, 100)
         rangeControl('worldEvery', t('remote.worldEvery'), photosUnit, 2, 100, 1)
         rangeControl('worldDuration', t('remote.worldDuration'), 's', 8, 90, 1)
+        rangeControl('worldTiles', t('remote.worldTiles'), photosUnit, 8, 120, 1)
+        rangeControl('worldCameraSpeed', t('remote.worldCameraSpeed'), '×', 0.3, 3, 0.1)
+        rangeControl('focusFaceSize', t('remote.focusFaceSize'), '%', 10, 80, 1, 100)
+        $('songVolume').oninput = (e) => {
+          $('songVolumeValue').textContent = e.target.value + ' %'
+          debounced('songVolume', () => patch({ songVolume: Number(e.target.value) / 100 }))
+        }
+        $('songStop').onclick = () => command('songStop')
         $('worldEnabled').onchange = (e) => patch({ worldEnabled: e.target.checked })
         $('effectsEnabled').onchange = (e) => patch({ effectsEnabled: e.target.checked })
 
@@ -891,6 +989,11 @@
         built = true
         // #fotos, #texte … in der Adresse öffnet direkt diesen Reiter (z. B. als Lesezeichen),
         // sonst der zuletzt benutzte.
+        if (KIDS) {
+          document.body.classList.add('kids-mode')
+          showTab('kids', true)
+          return
+        }
         let start = location.hash.slice(1)
         if (!document.querySelector('[data-tab="' + start + '"]')) {
           try {
@@ -902,7 +1005,7 @@
         showTab(document.querySelector('[data-tab="' + start + '"]') ? start : 'live')
       }
 
-      function showTab(tab) {
+      function showTab(tab, noStore) {
         document
           .querySelectorAll('[data-tab]')
           .forEach((t) => t.classList.toggle('active', t.dataset.tab === tab))
@@ -913,6 +1016,7 @@
         if (active) active.scrollIntoView({ block: 'nearest', inline: 'nearest' })
         window.scrollTo(0, 0)
         if (tab === 'fotos') loadGallery()
+        if (noStore) return
         try {
           localStorage.setItem('pp-tab', tab)
         } catch {
@@ -991,6 +1095,16 @@
             .forEach((b) => (b.onclick = () => command('emoji', s.emojis[Number(b.dataset.i)])))
         }
 
+        for (const key of ['worldTiles', 'worldCameraSpeed', 'focusFaceSize']) $(key).update(s[key])
+        if (document.activeElement !== $('songVolume'))
+          $('songVolume').value = Math.round(s.songVolume * 100)
+        $('songVolumeValue').textContent = Math.round(s.songVolume * 100) + ' %'
+        chips('motionKinds', s.motionKinds, state.labels.motionKinds, 'motionKinds')
+        chips('fillModes', s.fillModes, state.labels.fillModes, 'fillModes')
+        chips('focusModes', s.focusModes, state.labels.focusModes, 'focusModes')
+        chips('textBackgrounds', s.textBackgrounds, state.labels.textBackgrounds, 'textBackgrounds')
+        renderSongs()
+        renderKids()
         $('worldEnabled').checked = s.worldEnabled
         chips('formations', s.worldFormations, state.labels.formations, 'worldFormations')
         $('effectsEnabled').checked = s.effectsEnabled
@@ -1061,6 +1175,86 @@
 
         renderQueue()
         markGallery()
+      }
+
+      /** Lieder: Knopf je Lied; läuft eins, ist es markiert. */
+      function renderSongs() {
+        const songs = state.songs || []
+        const playing = state.show.song
+        const html =
+          songs
+            .map(
+              (x) =>
+                '<button class="small' +
+                (playing && playing.title === x.title ? ' primary' : '') +
+                '" data-song="' +
+                escapeHtml(x.name) +
+                '">▶ ' +
+                escapeHtml(x.title) +
+                '</button>'
+            )
+            .join('') || '<div class="hint">' + t('remote.songNone') + '</div>'
+        const key = html + (playing ? '1' : '0')
+        if ($('songList').dataset.html !== key) {
+          $('songList').dataset.html = key
+          $('songList').innerHTML = html
+          $('songList')
+            .querySelectorAll('[data-song]')
+            .forEach((b) => (b.onclick = () => command('song', b.dataset.song)))
+        }
+        $('songStop').style.display = playing ? '' : 'none'
+      }
+
+      /** Kinder-Modus: Emojis und Texte, jeweils nur einmal je Foto. */
+      function renderKids() {
+        const s = state.settings
+        const show = state.show
+        const emojiKey = s.emojis.join('\u0001') + (show.kidEmojiUsed ? '1' : '0')
+        if ($('kidEmojis').dataset.key !== emojiKey) {
+          $('kidEmojis').dataset.key = emojiKey
+          $('kidEmojis').innerHTML = s.emojis
+            .map(
+              (e, i) =>
+                '<button data-i="' +
+                i +
+                '"' +
+                (show.kidEmojiUsed ? ' disabled' : '') +
+                '>' +
+                escapeHtml(e) +
+                '</button>'
+            )
+            .join('')
+          $('kidEmojis')
+            .querySelectorAll('button')
+            .forEach((b) => (b.onclick = () => command('kidEmoji', s.emojis[Number(b.dataset.i)])))
+        }
+        $('kidEmojiDone').style.display = show.kidEmojiUsed ? 'block' : 'none'
+        const usable = s.texts.filter((x) => x.enabled && x.text.trim())
+        const adhoc = usable.filter((x) => x.adhoc)
+        const list = adhoc.length ? adhoc : usable
+        const textKey =
+          list.map((x) => x.id + x.text).join('\u0001') + (show.kidTextUsed ? '1' : '0')
+        if ($('kidTexts').dataset.key !== textKey) {
+          $('kidTexts').dataset.key = textKey
+          $('kidTexts').innerHTML = list
+            .map(
+              (x) =>
+                '<button class="small" data-text="' +
+                escapeHtml(x.id) +
+                '"' +
+                (show.kidTextUsed ? ' disabled' : '') +
+                '>' +
+                escapeHtml(x.text.split('\n')[0]) +
+                '</button>'
+            )
+            .join('')
+          $('kidTexts')
+            .querySelectorAll('[data-text]')
+            .forEach((b) => (b.onclick = () => command('kidText', b.dataset.text)))
+        }
+        $('kidTextDone').style.display = show.kidTextUsed ? 'block' : 'none'
+        $('kidNoText').style.display = list.length ? 'none' : 'block'
+        $('kidOff').style.display = show.running ? 'none' : 'block'
       }
 
       /** Auswahl-Chips für gewichtete Listen (an/aus). */

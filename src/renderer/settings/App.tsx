@@ -24,6 +24,7 @@ import { DuplicatesCard } from './DuplicatesCard'
 import { PortableCard } from './PortableCard'
 import { RemoteCard } from './RemoteCard'
 import { ScreenCard } from './ScreenCard'
+import { SongsPage } from './SongsPage'
 import { StylesPage } from './StylesPage'
 import { TextsPage } from './TextsPage'
 import { useSettings } from './useSettings'
@@ -35,13 +36,15 @@ const sections = [
   'persons',
   'texts',
   'styles',
-  'effects'
+  'effects',
+  'songs'
 ] as const
 type Section = (typeof sections)[number]
 
 /** Seite aus dem URL-Anker: Kennung (#texts) oder Seitenname in einer der Sprachen (#Texte). */
 function sectionFromHash(hash: string): Section {
-  const wanted = hash.toLowerCase()
+  // „Songs/sync“ (nur zum Testen) öffnet die Seite „Songs“ und gleich das Zeiten-Setzen.
+  const wanted = hash.toLowerCase().split('/')[0]
   return (
     sections.find(
       (s) =>
@@ -400,6 +403,8 @@ export function App(): React.JSX.Element {
             <TextsPage s={settings} update={update} />
           ) : active === 'effects' ? (
             <EffectsPage s={settings} update={update} />
+          ) : active === 'songs' ? (
+            <SongsPage s={settings} update={update} />
           ) : (
             <StylesPage s={settings} update={update} />
           )}

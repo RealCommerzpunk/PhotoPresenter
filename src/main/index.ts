@@ -27,7 +27,11 @@ import type { QueueOp, RemoteState, ShowCommand, ShowNotice, ShowStatus } from '
 import { REMOTE_KEYS } from '@shared/remote'
 import {
   EFFECT_LABELS,
+  FILL_LABELS,
+  FOCUS_LABELS,
+  MOTION_LABELS,
   PAN_OTHERS,
+  TEXT_BACKGROUND_LABELS,
   TRANSITION_LABELS,
   WORLD_FORMATION_LABELS,
   type Settings
@@ -36,6 +40,7 @@ import { FaceStore } from './faces'
 import { photoInfo } from './photoInfo'
 import { handlePhotoProtocol, listPhotos, registerPhotoScheme } from './photos'
 import { QueueStore } from './queue'
+import { listSongs, readSong, saveLyrics } from './songs'
 import { exportPackage } from './exportPackage'
 import { cleanDuplicates } from './dupesClean'
 import { dataLocation, setupDataLocation } from './portable'
@@ -54,6 +59,9 @@ let settingsWindow: BrowserWindow | null = null
 let showWindow: BrowserWindow | null = null
 let indexerWindow: BrowserWindow | null = null
 let remoteWindow: BrowserWindow | null = null
+let kidsWindow: BrowserWindow | null = null
+/** Lieder im Song-Ordner (für die Fernbedienung; wird bei Bedarf neu gelesen). */
+let songCache: RemoteState['songs'] = []
 let powerBlockId: number | null = null
 let faceStore: FaceStore
 let showStatus: ShowStatus = { running: false, paused: false, label: '' }
@@ -81,11 +89,16 @@ function remoteState(): RemoteState {
     queue: queue.get(),
     settings,
     persons: s.persons.map((p) => ({ id: p.id, name: p.name })),
+    songs: songCache,
     labels: {
       transitions: TRANSITION_LABELS,
       panOthers: PAN_OTHERS,
       effects: EFFECT_LABELS,
-      formations: WORLD_FORMATION_LABELS
+      formations: WORLD_FORMATION_LABELS,
+      motionKinds: MOTION_LABELS,
+      fillModes: FILL_LABELS,
+      focusModes: FOCUS_LABELS,
+      textBackgrounds: TEXT_BACKGROUND_LABELS
     }
   }
 }
@@ -95,6 +108,15 @@ function showCommand(cmd: ShowCommand, arg?: string): void {
   else if (cmd === 'stop') stopShow()
   else if (showWindow) showWindow.webContents.send(IPC.showCommand, { cmd, arg })
   else if (cmd !== 'qr') notify({ text: t('main.showNotRunning'), kind: 'warn' })
+}
+
+/** Song-Ordner neu lesen und die Fernbedienungen informieren. */
+async function refreshSongs(): Promise<void> {
+  const { songs } = await listSongs()
+  const next = songs.map((x) => ({ name: x.name, title: x.title, lyrics: x.lyrics }))
+  if (JSON.stringify(next) === JSON.stringify(songCache)) return
+  songCache = next
+  remote.broadcast()
 }
 
 /** Rückmeldung an die Fernbedienung. */
@@ -218,6 +240,7 @@ function startShow(options: ShowOptions = {}): void {
     showWindow.focus()
     return
   }
+  void refreshSongs()
   const { showArea } = loadSettings()
   const display = showDisplay()
   const area = areaBounds(display.bounds, showArea)
@@ -500,6 +523,39 @@ function toggleRemoteWindow(hash = ''): { ok: boolean; error?: string } {
   return { ok: true }
 }
 
+/**
+ * Kinder-Fernbedienung als Fenster (Taste K in der Show): nur ein Emoji und ein Text je Foto.
+ * Wie das R-Fenster ohne Netzwerk; erneut K schließt es.
+ */
+function toggleKidsWindow(): { ok: boolean; error?: string } {
+  if (kidsWindow && !kidsWindow.isDestroyed()) {
+    kidsWindow.close()
+    return { ok: true }
+  }
+  const showDisplay = showWindow
+    ? screen.getDisplayMatching(showWindow.getBounds())
+    : screen.getPrimaryDisplay()
+  const other = screen.getAllDisplays().find((d) => d.id !== showDisplay.id)
+  const area = (other ?? showDisplay).workArea
+  const width = 480
+  const height = Math.min(820, area.height - 40)
+  kidsWindow = new BrowserWindow({
+    icon: iconPath(),
+    x: Math.round(other ? area.x + (area.width - width) / 2 : area.x + area.width - width - 24),
+    y: area.y + 20,
+    width,
+    height,
+    title: t('main.kidsTitle'),
+    backgroundColor: '#0b0d12',
+    autoHideMenuBar: true,
+    alwaysOnTop: !other && !!showWindow,
+    webPreferences: { sandbox: true, contextIsolation: true, session: remoteWindowSession() }
+  })
+  kidsWindow.on('closed', () => (kidsWindow = null))
+  void kidsWindow.loadURL(`${REMOTE_HOST}/kids`)
+  return { ok: true }
+}
+
 /** Unsichtbares Fenster, das die Fotos im Hintergrund nach Gesichtern durchsucht. */
 function createIndexerWindow(): void {
   indexerWindow = new BrowserWindow({
@@ -543,6 +599,7 @@ function setSettings(patch: Partial<Settings>): Settings {
   if (next.remoteEnabled !== prev.remoteEnabled || next.remotePort !== prev.remotePort) {
     void (next.remoteEnabled ? remote.start(next.remotePort) : remote.stop())
   }
+  if (next.songsFolder !== prev.songsFolder) void refreshSongs()
   remote.broadcast()
   return next
 }
@@ -585,6 +642,18 @@ app.whenReady().then(() => {
   ipcMain.handle(IPC.openPath, (_e, path: string) => void shell.openPath(path))
   ipcMain.handle(IPC.identifyDisplays, () => identifyDisplays())
   ipcMain.handle(IPC.openRemote, () => toggleRemoteWindow())
+  ipcMain.handle(IPC.openKids, () => toggleKidsWindow())
+  ipcMain.handle(IPC.listSongs, async () => {
+    const list = await listSongs()
+    void refreshSongs()
+    return list
+  })
+  ipcMain.handle(IPC.readSong, (_e, name: string) => readSong(name))
+  ipcMain.handle(IPC.saveLyrics, async (_e, name: string, text: string) => {
+    const ok = await saveLyrics(name, text)
+    if (ok) void refreshSongs()
+    return ok
+  })
   ipcMain.handle(IPC.photoInfo, (_e, name: string) => photoInfo(name))
   ipcMain.handle(IPC.getQueue, () => queue.get())
   ipcMain.on(IPC.queuePlaying, (_e, id: string | null) => queue.setPlaying(id))
@@ -592,6 +661,7 @@ app.whenReady().then(() => {
     thumbs.handleResult(requestId, data)
   )
   if (loadSettings().remoteEnabled) void remote.start(loadSettings().remotePort)
+  void refreshSongs()
 
   faceStore = new FaceStore(
     (status) => broadcast(IPC.faceStatusChanged, status),
@@ -647,8 +717,9 @@ app.whenReady().then(() => {
     setTimeout(() => {
       // PP_REMOTE_PREVIEW=fotos (texte, ablauf …) öffnet direkt diesen Reiter
       const tab = process.env['PP_REMOTE_PREVIEW'] ?? ''
-      toggleRemoteWindow(['1', 'zoom'].includes(tab) ? '' : '#' + tab)
-      const phone = remoteWindow
+      if (tab === 'kids') toggleKidsWindow()
+      else toggleRemoteWindow(['1', 'zoom'].includes(tab) ? '' : '#' + tab)
+      const phone = tab === 'kids' ? kidsWindow : remoteWindow
       if (!phone) return
       phone.setAlwaysOnTop(false)
       // PP_REMOTE_PREVIEW=zoom zeigt die ganze Seite verkleinert (für Aufnahmen)
