@@ -324,7 +324,8 @@ async function main(): Promise<void> {
         tiles,
         formations,
         duration: pick(settings.worldDuration),
-        cameraSpeed: pick(settings.worldCameraSpeed)
+        cameraSpeed: pick(settings.worldCameraSpeed),
+        density: settings.worldDensity
       },
       app.renderer.resolution,
       1.6

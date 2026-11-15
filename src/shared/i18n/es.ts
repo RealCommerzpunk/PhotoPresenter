@@ -255,6 +255,11 @@ export const es: Record<MessageKey, string> = {
   'ui.world.tilesHint': 'Cuántas fotos participan como mosaicos.',
   'ui.world.speed': 'Velocidad de la cámara',
   'ui.world.speedHint': '100 % = normal.',
+  'ui.world.density': 'Densidad',
+  'ui.world.densityHint':
+    'Lo juntas que están las fotos en la esfera, la espiral, el cubo, etc.: sueltas con mucho espacio o densas, casi borde con borde. El cubo de gelatina siempre está cerrado.',
+  'ui.world.densityLoose': 'suelto',
+  'ui.world.densityTight': 'denso',
   'ui.world.formations': 'Figuras',
   'ui.world.formationsHint': 'Se elige una de las activas; el control define con qué frecuencia.',
   'ui.backgrounds.title': 'Fondos de las diapositivas de texto',

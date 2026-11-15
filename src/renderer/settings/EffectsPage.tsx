@@ -127,6 +127,24 @@ export function EffectsPage({ s, update }: { s: Settings; update: Update }): Rea
             factor={100}
           />
         </Field>
+        <Field label={t('ui.world.density')} hint={t('ui.world.densityHint')}>
+          <div className="flex items-center gap-3 text-sm text-white/70">
+            <span className="text-xs text-white/50">{t('ui.world.densityLoose')}</span>
+            <input
+              type="range"
+              min={0}
+              max={100}
+              step={5}
+              value={Math.round(s.worldDensity * 100)}
+              onChange={(e) => update({ worldDensity: Number(e.target.value) / 100 })}
+              className="w-56 accent-indigo-500"
+            />
+            <span className="text-xs text-white/50">{t('ui.world.densityTight')}</span>
+            <span className="w-12 text-right tabular-nums">
+              {Math.round(s.worldDensity * 100)} %
+            </span>
+          </div>
+        </Field>
         <Field label={t('ui.world.formations')} hint={t('ui.world.formationsHint')}>
           <WeightedList
             value={s.worldFormations}

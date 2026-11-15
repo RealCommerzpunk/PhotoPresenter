@@ -30,6 +30,29 @@ describe('Formationen', () => {
     expect(minGap).toBeGreaterThan(1.2)
   })
 
+  it('rückt die Fotos bei hoher Dichte zusammen, ohne dass sie sich überlagern', () => {
+    for (const n of [24, 48, 100]) {
+      const loose = Math.hypot(...placement('sphere', 0, n, 0, 0).pos)
+      const tight = Math.hypot(...placement('sphere', 0, n, 0, 1).pos)
+      expect(tight).toBeLessThan(loose * 0.75)
+      const ps = Array.from({ length: n }, (_, i) => placement('sphere', i, n, 0, 1).pos)
+      let minGap = Infinity
+      for (let a = 0; a < n; a++)
+        for (let b = a + 1; b < n; b++) minGap = Math.min(minGap, dist(ps[a], ps[b]))
+      expect(minGap).toBeGreaterThan(1.25)
+      expect(formationInfo('sphere', n, 1).distance).toBeLessThan(
+        formationInfo('sphere', n, 0).distance
+      )
+    }
+    // Wand: auch dicht noch mindestens eine Kachelhöhe Abstand zwischen den Zeilen
+    const n = 40
+    const ps = Array.from({ length: n }, (_, i) => placement('table', i, n, 0, 1).pos)
+    let minGap = Infinity
+    for (let a = 0; a < n; a++)
+      for (let b = a + 1; b < n; b++) minGap = Math.min(minGap, dist(ps[a], ps[b]))
+    expect(minGap).toBeGreaterThanOrEqual(1.2)
+  })
+
   it('legt die Wand flach und überlappungsfrei an', () => {
     const n = 40
     const ps = Array.from({ length: n }, (_, i) => placement('table', i, n, 0).pos)

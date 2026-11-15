@@ -256,6 +256,11 @@ export const fr: Record<MessageKey, string> = {
   'ui.world.tilesHint': 'Combien de photos participent sous forme de vignettes.',
   'ui.world.speed': 'Vitesse de la caméra',
   'ui.world.speedHint': '100 % = normal.',
+  'ui.world.density': 'Densité',
+  'ui.world.densityHint':
+    'À quel point les photos sont serrées dans la sphère, la spirale, le cube, etc. : espacées ou denses, presque bord à bord. Le cube en gelée est toujours fermé.',
+  'ui.world.densityLoose': 'espacé',
+  'ui.world.densityTight': 'dense',
   'ui.world.formations': 'Figures',
   'ui.world.formationsHint': 'Une des figures actives est choisie ; le curseur règle la fréquence.',
   'ui.backgrounds.title': 'Arrière-plans des diapositives de texte',

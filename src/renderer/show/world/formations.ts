@@ -39,12 +39,33 @@ export function hash01(i: number, salt = 0): number {
   return x - Math.floor(x)
 }
 
-/** Kachelpositionen einer Formation für Kachel i von n zur Zeit t (Sekunden, für Bewegtes). */
-export function placement(kind: WorldFormation, i: number, n: number, t: number): Placement {
+/** Zwischen locker (d = 0, bisheriger Abstand) und dicht (d = 1, fast lückenlos) mischen. */
+const mix = (loose: number, tight: number, d: number): number => loose + (tight - loose) * d
+
+/** Radius der Kugel: locker mit viel Luft, dicht fast geschlossen. */
+const sphereRadius = (n: number, d: number): number =>
+  mix(Math.max(5, Math.sqrt(n) * 1.15), Math.max(2.5, 1.75 * Math.sqrt(n / (4 * Math.PI))), d)
+
+/** Radius des Karussells. */
+const carouselRadius = (n: number, d: number): number =>
+  mix(Math.max(6, (n * 1.9) / (2 * Math.PI)), Math.max(4, (n * 1.7) / (2 * Math.PI)), d)
+
+/**
+ * Kachelpositionen einer Formation für Kachel i von n zur Zeit t (Sekunden, für Bewegtes).
+ * `density` 0 = locker (viel Abstand), 1 = dicht (Kacheln fast Kante an Kante).
+ */
+export function placement(
+  kind: WorldFormation,
+  i: number,
+  n: number,
+  t: number,
+  density = 0
+): Placement {
+  const d = Math.min(1, Math.max(0, density))
   switch (kind) {
     case 'sphere': {
       // Fibonacci-Kugel: gleichmäßig verteilt, Kacheln schauen nach außen
-      const r = Math.max(5, Math.sqrt(n) * 1.15)
+      const r = sphereRadius(n, d)
       const y = 1 - (2 * (i + 0.5)) / n
       const ring = Math.sqrt(1 - y * y)
       const phi = i * Math.PI * (3 - Math.sqrt(5))
@@ -54,8 +75,8 @@ export function placement(kind: WorldFormation, i: number, n: number, t: number)
     case 'helix': {
       // Spirale wie im Periodic-Table-Beispiel
       const r = 7
-      const phi = i * 0.38 + Math.PI
-      const y = (n / 2 - i) * 0.16
+      const phi = i * mix(0.38, 0.25, d) + Math.PI
+      const y = (n / 2 - i) * mix(0.16, 0.07, d)
       const pos: Vec3 = [Math.sin(phi) * r, y, Math.cos(phi) * r]
       return { pos, target: [pos[0] * 2, y, pos[2] * 2] }
     }
@@ -65,7 +86,11 @@ export function placement(kind: WorldFormation, i: number, n: number, t: number)
       const row = Math.floor(i / 5) % 5
       const layer = Math.floor(i / 25)
       const layers = Math.ceil(n / 25)
-      const pos: Vec3 = [(col - 2) * 2.3, (2 - row) * 1.9, (layer - (layers - 1) / 2) * -4]
+      const pos: Vec3 = [
+        (col - 2) * mix(2.3, 1.7, d),
+        (2 - row) * mix(1.9, 1.3, d),
+        (layer - (layers - 1) / 2) * -mix(4, 2.5, d)
+      ]
       return { pos, target: add(pos, [0, 0, 1]) }
     }
     case 'table': {
@@ -74,14 +99,18 @@ export function placement(kind: WorldFormation, i: number, n: number, t: number)
       const rows = Math.ceil(n / cols)
       const col = i % cols
       const row = Math.floor(i / cols)
-      const pos: Vec3 = [(col - (cols - 1) / 2) * 1.8, ((rows - 1) / 2 - row) * 1.4, 0]
+      const pos: Vec3 = [
+        (col - (cols - 1) / 2) * mix(1.8, 1.65, d),
+        ((rows - 1) / 2 - row) * mix(1.4, 1.25, d),
+        0
+      ]
       return { pos, target: add(pos, [0, 0, 1]) }
     }
     case 'frames': {
       // Schwebende Bilderrahmen locker im Raum, die Kamera fliegt hindurch
-      const x = (hash01(i, 1) - 0.5) * 16
-      const y = (hash01(i, 2) - 0.5) * 8 + Math.sin(t * 0.6 + i) * 0.25
-      const z = -(i / n) * 34 + 6
+      const x = (hash01(i, 1) - 0.5) * mix(16, 10, d)
+      const y = (hash01(i, 2) - 0.5) * mix(8, 5, d) + Math.sin(t * 0.6 + i) * 0.25
+      const z = -(i / n) * mix(34, 22, d) + 6
       const pos: Vec3 = [x, y, z]
       const turn = (hash01(i, 3) - 0.5) * 1.2
       return { pos, target: add(pos, [Math.sin(turn), 0, Math.cos(turn)]) }
@@ -92,9 +121,10 @@ export function placement(kind: WorldFormation, i: number, n: number, t: number)
       const g = Math.ceil(Math.sqrt(perFace))
       const face = Math.min(5, Math.floor(i / perFace))
       const k = i - face * perFace
-      const u = ((k % g) - (g - 1) / 2) * 1.75
-      const v = ((g - 1) / 2 - Math.floor(k / g)) * 1.35
-      const h = (g * 1.75) / 2 + 0.3
+      const su = mix(1.75, 1.62, d)
+      const u = ((k % g) - (g - 1) / 2) * su
+      const v = ((g - 1) / 2 - Math.floor(k / g)) * mix(1.35, 1.22, d)
+      const h = (g * su) / 2 + mix(0.3, 0.05, d)
       const local: [Vec3, Vec3][] = [
         [
           [u, v, h],
@@ -133,18 +163,18 @@ export function placement(kind: WorldFormation, i: number, n: number, t: number)
     }
     case 'carousel': {
       // Drehender Ring, Kacheln nach außen
-      const r = Math.max(6, (n * 1.9) / (2 * Math.PI))
+      const r = carouselRadius(n, d)
       const phi = (i / n) * Math.PI * 2 + t * 0.15
       const pos: Vec3 = [Math.sin(phi) * r, Math.sin(i * 1.7) * 0.4, Math.cos(phi) * r]
       return { pos, target: [pos[0] * 2, pos[1], pos[2] * 2] }
     }
     case 'tunnel': {
       // Röhre entlang der Blickrichtung, Kacheln nach innen
-      const perRing = 10
+      const perRing = Math.round(mix(10, 14, d))
       const ring = Math.floor(i / perRing)
       const phi = ((i % perRing) / perRing) * Math.PI * 2 + ring * 0.3
       const r = 4.2
-      const z = -ring * 2.4 + 4
+      const z = -ring * mix(2.4, 1.35, d) + 4
       const pos: Vec3 = [Math.cos(phi) * r, Math.sin(phi) * r, z]
       return { pos, target: [0, 0, z] }
     }
@@ -205,8 +235,8 @@ export function placement(kind: WorldFormation, i: number, n: number, t: number)
       const cols = Math.ceil(Math.sqrt(n * 1.6))
       const col = i % cols
       const row = Math.floor(i / cols)
-      const x = (col - (cols - 1) / 2) * 1.9
-      const z = -row * 1.6 + 3
+      const x = (col - (cols - 1) / 2) * mix(1.9, 1.65, d)
+      const z = -row * mix(1.6, 1.3, d) + 3
       const y = Math.sin(x * 0.45 + t * 0.9) * 0.8 + Math.cos(z * 0.5 + t * 0.7) * 0.5 - 2
       const pos: Vec3 = [x, y, z]
       return { pos, target: add(pos, [0, 1, 0.8]) }
@@ -214,40 +244,47 @@ export function placement(kind: WorldFormation, i: number, n: number, t: number)
   }
 }
 
-/** Kamera-Eigenschaften je Formation (abhängig von der Kachelzahl). */
-export function formationInfo(kind: WorldFormation, n: number): FormationInfo {
+/** Kamera-Eigenschaften je Formation (abhängig von Kachelzahl und Dichte). */
+export function formationInfo(kind: WorldFormation, n: number, density = 0): FormationInfo {
+  const d = Math.min(1, Math.max(0, density))
   switch (kind) {
     case 'sphere':
       return {
         camera: 'orbit',
-        distance: Math.max(5, Math.sqrt(n) * 1.15) * 2.6,
+        // Dichte Kugel: etwas näher heran, damit sie den Bildschirm füllt
+        distance: sphereRadius(n, d) * mix(2.6, 2.2, d),
         height: 2,
         travel: 0
       }
     case 'helix':
       return { camera: 'orbit', distance: 19, height: 0, travel: 0 }
     case 'grid':
-      return { camera: 'dolly', distance: 17, height: 1, travel: 5 }
+      return { camera: 'dolly', distance: mix(17, 13, d), height: 1, travel: 5 }
     case 'table':
       return {
         camera: 'dolly',
-        distance: Math.ceil(Math.sqrt(n * 1.7)) * 1.5,
+        distance: Math.ceil(Math.sqrt(n * 1.7)) * mix(1.5, 1.38, d),
         height: 0,
         travel: 4
       }
     case 'frames':
-      return { camera: 'flythrough', distance: 12, height: 0, travel: 30 }
+      return { camera: 'flythrough', distance: 12, height: 0, travel: mix(30, 19, d) }
     case 'cube':
-      return { camera: 'orbit', distance: 16, height: 5, travel: 0 }
+      return { camera: 'orbit', distance: mix(16, 14.5, d), height: 5, travel: 0 }
     case 'carousel':
       return {
         camera: 'orbit',
-        distance: Math.max(6, (n * 1.9) / (2 * Math.PI)) + 5,
+        distance: carouselRadius(n, d) + 5,
         height: 2,
         travel: 0
       }
     case 'tunnel':
-      return { camera: 'flythrough', distance: 8, height: 0, travel: Math.ceil(n / 10) * 2.4 }
+      return {
+        camera: 'flythrough',
+        distance: 8,
+        height: 0,
+        travel: Math.ceil(n / Math.round(mix(10, 14, d))) * mix(2.4, 1.35, d)
+      }
     case 'wave':
       return { camera: 'sweep', distance: 12, height: 6, travel: 10 }
     case 'jelly':

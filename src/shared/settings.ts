@@ -306,6 +306,8 @@ export const settingsSchema = z.object({
   worldTiles: field(rangeSchema, { min: 40, max: 60, mode: 'random' } satisfies Range),
   /** Tempo der Kamera (1 = normal). */
   worldCameraSpeed: field(rangeSchema, { min: 1, max: 1, mode: 'fixed' } satisfies Range),
+  /** Wie dicht die Fotos in den Formationen stehen: 0 = locker (wie bisher), 1 = fast lückenlos. */
+  worldDensity: field(z.number().min(0).max(1), 0.5),
   worldFormations: field(weightedSchema(WORLD_FORMATIONS), defaultWorldFormations),
   /** Fernbedienung per Handy (Webserver im lokalen Netz, ohne Passwort). */
   /** Bildschirm der Show (Electron-Display-ID); leer = wo gerade die Maus ist. */

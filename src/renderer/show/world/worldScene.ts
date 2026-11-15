@@ -67,6 +67,8 @@ export interface WorldPlan {
   formations: WorldFormation[]
   duration: number
   cameraSpeed: number
+  /** 0 = locker (viel Abstand zwischen den Fotos), 1 = dicht. */
+  density: number
 }
 
 interface Phase {
@@ -251,12 +253,14 @@ export class WorldScene extends TimedScene implements Scene {
   }
 
   private place(kind: WorldFormation | 'scatter', i: number, t: number): Placement {
-    return kind === 'scatter' ? scattered(i) : placement(kind, i, this.meshes.length, t)
+    return kind === 'scatter'
+      ? scattered(i)
+      : placement(kind, i, this.meshes.length, t, this.plan.density)
   }
 
   /** Kamera je Formation; u = Sekunden seit Beginn dieser Formation. */
   private cameraPose(kind: WorldFormation, u: number): { pos: Vec3; look: Vec3 } {
-    const info = formationInfo(kind, this.meshes.length)
+    const info = formationInfo(kind, this.meshes.length, this.plan.density)
     const s = this.plan.cameraSpeed
     switch (info.camera) {
       case 'orbit': {

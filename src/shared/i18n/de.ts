@@ -254,6 +254,11 @@ export const de = {
   'ui.world.tilesHint': 'Wie viele Fotos als Kacheln mitspielen.',
   'ui.world.speed': 'Kameratempo',
   'ui.world.speedHint': '100 % = normal.',
+  'ui.world.density': 'Dichte',
+  'ui.world.densityHint':
+    'Wie eng die Fotos in Kugel, Spirale, Würfel usw. stehen: locker mit viel Abstand oder dicht, fast Kante an Kante. Der Wackelpudding ist immer geschlossen.',
+  'ui.world.densityLoose': 'locker',
+  'ui.world.densityTight': 'dicht',
   'ui.world.formations': 'Formationen',
   'ui.world.formationsHint': 'Aus den aktiven wird gewählt; der Regler bestimmt, wie oft.',
   'ui.backgrounds.title': 'Hintergründe der Textfolien',

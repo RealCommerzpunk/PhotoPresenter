@@ -251,6 +251,11 @@ export const en: Record<MessageKey, string> = {
   'ui.world.tilesHint': 'How many photos take part as tiles.',
   'ui.world.speed': 'Camera speed',
   'ui.world.speedHint': '100 % = normal.',
+  'ui.world.density': 'Density',
+  'ui.world.densityHint':
+    'How closely the photos sit in the sphere, helix, cube and so on: loose with plenty of space or dense, almost edge to edge. The jelly cube is always closed.',
+  'ui.world.densityLoose': 'loose',
+  'ui.world.densityTight': 'dense',
   'ui.world.formations': 'Formations',
   'ui.world.formationsHint': 'One of the active ones is chosen; the slider sets how often.',
   'ui.backgrounds.title': 'Text slide backgrounds',
