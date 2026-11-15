@@ -607,6 +607,73 @@
           padding: 60px 0;
         }
       }
+      /* Einblend-Animationen dürfen keine waagrechte Scrollleiste erzeugen */
+      html,
+      body {
+        overflow-x: clip;
+      }
+      /* Karaoke-Nachbildung (keine Aufnahme: Lieder sind privat) */
+      .karaoke {
+        position: relative;
+        aspect-ratio: 16 / 9;
+        overflow: hidden;
+        border-radius: 14px;
+        background: radial-gradient(ellipse at 30% 30%, #3a2f52, #12101c 70%);
+        display: flex;
+        align-items: flex-end;
+        justify-content: center;
+        padding-bottom: 7%;
+      }
+      .karaoke .ly {
+        text-align: center;
+        font-weight: 700;
+        line-height: 1.35;
+        animation: ly-glide 9s ease-in-out infinite;
+      }
+      .karaoke .ly div {
+        color: rgba(255, 255, 255, 0.55);
+        font-size: clamp(11px, 1.6vw, 16px);
+        margin: 4px 0;
+      }
+      .karaoke .ly .now {
+        font-size: clamp(14px, 2.4vw, 24px);
+        white-space: nowrap;
+        color: transparent;
+        background: linear-gradient(90deg, #ffd54a 50%, #fff 50%) 100% 0 / 200% 100% no-repeat;
+        -webkit-background-clip: text;
+        background-clip: text;
+        animation: ly-fill 4.5s linear infinite;
+      }
+      @keyframes ly-fill {
+        from {
+          background-position: 100% 0;
+        }
+        to {
+          background-position: 0 0;
+        }
+      }
+      @keyframes ly-glide {
+        0%,
+        45% {
+          transform: translateY(0);
+        }
+        50%,
+        95% {
+          transform: translateY(-4px);
+        }
+        100% {
+          transform: translateY(0);
+        }
+      }
+      @media (prefers-reduced-motion: reduce) {
+        .karaoke .ly,
+        .karaoke .ly .now {
+          animation: none;
+        }
+        .karaoke .ly .now {
+          background-position: 30% 0;
+        }
+      }
       @media (max-width: 560px) {
         .wrap {
           padding: 0 16px;
@@ -624,6 +691,7 @@
         <a class="brand" href="#top"><img src="media/icon.png" alt="" />PhotoPresenter</a>
         <a class="link" href="#show">Diashow</a>
         <a class="link" href="#fokus">Gesichtsfokus</a>
+        <a class="link" href="#songs">Karaoke</a>
         <a class="link" href="#einstellungen">Einstellungen</a>
         <a class="link" href="#fernbedienung">Fernbedienung</a>
         <a class="btn" href="#loslegen">Loslegen</a>
@@ -636,7 +704,8 @@
         <h1>Deine Fotos.<br /><span class="grad">Lebendig erzählt.</span></h1>
         <p class="lead">
           PhotoPresenter macht aus einem einfachen Fotoordner eine Diashow, die sich wie ein Film anfühlt –
-          mit Kamerafahrten, Gesichtsfokus, Texten, Effekten, einer 3D-Fotowelt und einer Fernbedienung auf dem Handy.
+          mit Kamerafahrten, Gesichtsfokus, Texten, Effekten, einer 3D-Fotowelt, Karaoke-Liedern und einer Fernbedienung
+          auf dem Handy.
         </p>
         <div class="cta">
           <a class="btn" href="https://github.com/RealCommerzpunk/PhotoPresenter/releases/latest">Demo herunterladen</a>
@@ -651,6 +720,7 @@
           <span><b>8</b> Partikel-Effekte</span>
           <span><b>12</b> Textstile</span>
           <span><b>10</b> 3D-Formationen</span>
+          <span><b>4</b> Sprachen</span>
           <span><b>0</b> Cloud – alles bleibt auf deinem PC</span>
         </div>
       </div>
@@ -788,19 +858,63 @@
           <ul class="points">
             <li><span class="ico">🌐</span><span><b>10 Formationen</b>Zufällig oder gezielt per Fernbedienung.</span></li>
             <li><span class="ico">⏱️</span><span><b>Wann und wie lange</b>Alle 15–25 Fotos, 18–26 Sekunden – oder wie du willst.</span></li>
+            <li><span class="ico">🧩</span><span><b>Locker oder dicht</b>Mit viel Luft zwischen den Fotos oder fast Kante an Kante.</span></li>
           </ul>
         </div>
       </div>
     </section>
 
-    <section id="einstellungen">
+    <section id="songs">
+      <div class="wrap split">
+        <div class="reveal">
+          <span class="eyebrow">Songs &amp; Karaoke</span>
+          <h2>Das Geburtstagslied läuft – alle singen mit.</h2>
+          <p style="color: var(--muted)">
+            Lege ein Lied als MP3 und den Text als TXT mit demselben Namen in den Ordner <code>Songs</code>. In der Show
+            startet Taste <kbd>S</kbd> das Lied, und der Text gleitet als Karaoke über den Bildschirm – die laufende Zeile füllt
+            sich im Takt von links nach rechts.
+          </p>
+          <ul class="points">
+            <li>
+              <span class="ico">🎤</span
+              ><span><b>Mitsingen statt Zeiten tippen</b>Taste halten, solange eine Zeile gesungen wird – danach auf der
+                Wellenform mit der Maus nachziehen. Fertig ist die Karaoke.</span>
+            </li>
+            <li>
+              <span class="ico">🖼️</span
+              ><span><b>Nichts lenkt ab</b>Die Diashow läuft weiter, das aktuelle Foto bleibt abgedunkelt stehen oder ein
+                Lieblingsfoto erscheint. Effekte und Texte machen Pause.</span>
+            </li>
+            <li>
+              <span class="ico">🎨</span
+              ><span><b>Deine Darstellung</b>Schriftgröße, Farben, Position und wie viele Zeilen davor und danach zu sehen
+                sind.</span>
+            </li>
+          </ul>
+        </div>
+        <div class="media reveal">
+          <div class="karaoke" role="img" aria-label="Nachbildung der Karaoke-Anzeige mit gleitenden Liedzeilen">
+            <div class="ly">
+              <div>Heute ist ein ganz besonderer Tag,</div>
+              <div class="now">wir feiern dich, so wie man es mag,</div>
+              <div>die Kerzen brennen, alle sind da,</div>
+              <div style="opacity: 0.6">wir singen zusammen – hurra, hurra!</div>
+            </div>
+          </div>
+          <p class="caption" style="margin-top: 10px">Nachbildung mit Beispieltext</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="alt" id="einstellungen">
       <div class="wrap">
         <div class="head reveal">
           <span class="eyebrow">Einstellungen</span>
           <h2>Ruhiger Bilderrahmen oder Party-Show? Du entscheidest.</h2>
           <p>
             Fast jeder Wert ist ein Bereich „von … bis“ – fest oder bei jedem Foto neu gewürfelt. Änderungen wirken sofort, auch
-            in der laufenden Show.
+            in der laufenden Show. Die Oberfläche gibt es auf Deutsch, Englisch, Spanisch und Französisch, und doppelte Fotos
+            (auch verkleinerte oder umbenannte Kopien) werden erkannt und auf Wunsch übersprungen.
           </p>
         </div>
         <div class="reveal">
@@ -814,14 +928,15 @@
       </div>
     </section>
 
-    <section class="alt" id="fernbedienung">
+    <section id="fernbedienung">
       <div class="wrap">
         <div class="head center reveal">
           <span class="eyebrow">Fernbedienung</span>
           <h2>Das Handy wird zur Regie.</h2>
           <p>
             QR-Code scannen – fertig. Keine App, kein Konto, nur dein WLAN. Pausieren, weiterschalten, ein Foto einfrieren,
-            Emojis und Texte einspielen oder die nächsten Fotos aus der Galerie wählen.
+            Emojis und Texte einspielen, ein Lied starten oder die nächsten Fotos aus der Galerie wählen. Für die Kleinen gibt es
+            eine eigene <b>Kinder-Fernbedienung</b>: je Foto genau ein Emoji und ein Text – dann ist das nächste Foto dran.
           </p>
         </div>
         <div class="phones reveal">
@@ -861,13 +976,16 @@
           <div class="key"><kbd>← →</kbd>Foto zurück / vor</div>
           <div class="key"><kbd>I</kbd>Info zum Foto</div>
           <div class="key"><kbd>Q</kbd>QR-Code fürs Handy</div>
+          <div class="key"><kbd>q</kbd>QR-Code Kinder-Fernbedienung</div>
           <div class="key"><kbd>R</kbd>Fernbedienung am PC</div>
+          <div class="key"><kbd>K</kbd>Kinder-Fernbedienung am PC</div>
+          <div class="key"><kbd>S</kbd>Lied mit Karaoke</div>
           <div class="key"><kbd>Esc</kbd>Show beenden</div>
         </div>
       </div>
     </section>
 
-    <section id="mitnehmen">
+    <section class="alt" id="mitnehmen">
       <div class="wrap split">
         <div class="reveal">
           <span class="eyebrow">Zum Mitnehmen</span>
@@ -889,7 +1007,7 @@
       </div>
     </section>
 
-    <section class="alt" id="loslegen">
+    <section id="loslegen">
       <div class="wrap">
         <div class="head center reveal">
           <span class="eyebrow">Loslegen</span>
@@ -916,7 +1034,7 @@
             <p><b>▶ Diashow starten</b> – später eigenen Fotoordner wählen und mit dem Handy die Regie übernehmen.</p>
           </div>
         </div>
-        <div class="reveal" style="margin-top: 40px; display: grid; gap: 10px; max-width: 760px; margin-left: auto; margin-right: auto">
+        <div class="reveal" style="margin-top: 40px; display: grid; grid-template-columns: minmax(0, 1fr); gap: 10px; max-width: 760px; margin-left: auto; margin-right: auto">
           <p style="color: var(--muted); margin: 0">
             Lieber aus dem Quellcode, mit den Demo-Fotos und Demo-Einstellungen? (Node.js ≥ 22.12)
           </p>
