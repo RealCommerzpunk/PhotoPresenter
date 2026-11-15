@@ -18,6 +18,11 @@ export interface SongOptions {
   position: SongPosition
   /** Vom Nutzer eingestellter Gesang (Sekunden), sonst wird er geschätzt. */
   timing?: { start: number; end: number }
+  /** Schriftgröße als Faktor (1 = Standard). */
+  fontScale: number
+  /** Zeilen vor und nach der laufenden Zeile. */
+  linesBefore: number
+  linesAfter: number
 }
 
 /**
@@ -42,18 +47,36 @@ export class SongPlayer {
 
   private readonly box: HTMLElement
   private readonly head: HTMLElement
-  private readonly rows: HTMLElement[]
+  /** Zeilen von oben nach unten; `before` Zeilen davor, dann die laufende, dann der Rest. */
+  private rows: HTMLElement[] = []
+  private before = 1
 
   constructor(host: HTMLElement) {
     this.box = host
-    host.innerHTML =
-      '<div class="ly-head"></div>' +
-      '<div class="ly-row ly-prev"></div>' +
-      '<div class="ly-row ly-now"></div>' +
-      '<div class="ly-row ly-next"></div>' +
-      '<div class="ly-row ly-next2"></div>'
-    this.head = host.querySelector('.ly-head')!
-    this.rows = [...host.querySelectorAll<HTMLElement>('.ly-row')]
+    this.head = document.createElement('div')
+    this.head.className = 'ly-head'
+    host.append(this.head)
+    this.build(1, 2)
+  }
+
+  /** Zeilenfelder passend zur Einstellung aufbauen; je weiter weg, desto blasser und kleiner. */
+  private build(before: number, after: number): void {
+    for (const r of this.rows) r.remove()
+    this.before = before
+    this.rows = []
+    for (let r = 0; r < before + 1 + after; r++) {
+      const row = document.createElement('div')
+      const d = r - before
+      row.className = 'ly-row ' + (d < 0 ? 'ly-prev' : d === 0 ? 'ly-now' : 'ly-next')
+      if (d !== 0) {
+        const far = Math.abs(d) - 1
+        row.style.opacity = String(Math.max(0.25, (d < 0 ? 0.55 : 1) - far * 0.18))
+        row.style.setProperty('--f', String(Math.max(0.6, 1 - far * 0.1)))
+      }
+      this.box.append(row)
+      this.rows.push(row)
+    }
+    this.index = -2
   }
 
   get active(): boolean {
@@ -99,7 +122,8 @@ export class SongPlayer {
     this.ctx = ctx
     this.source = source
     this.box.dataset.pos = options.position
-    this.index = -2
+    this.box.style.setProperty('--s', String(options.fontScale))
+    this.build(options.linesBefore, options.linesAfter)
     this.startedAt = ctx.currentTime
     source.start()
     this.box.style.opacity = '1'
@@ -153,8 +177,7 @@ export class SongPlayer {
         this.head.textContent = '♪ ' + this.title
         this.head.style.display = ''
         for (const r of this.rows) r.textContent = ''
-      }
-      return
+      }      return
     }
     const i = lineIndexAt(lines, t)
     const done = t > this.lingerUntil
@@ -168,22 +191,19 @@ export class SongPlayer {
       this.head.style.display = i < 0 && !done ? '' : 'none'
       this.head.textContent = '♪ ' + this.title
       const at = (k: number): string => (!done && lines[k] ? lines[k].text : '')
-      this.rows[0].textContent = rest ? at(i) : at(i - 1)
-      this.rows[1].textContent = rest ? '♪ ♪ ♪' : at(i)
-      this.rows[2].textContent = at(i + 1)
-      this.rows[3].textContent = at(i + 2)
-      // Vor der ersten Zeile: die erste schon als „nächste“ in der Mitte anzeigen.
-      if (i < 0 && !done) {
-        this.rows[1].textContent = ''
-        this.rows[2].textContent = lines[0].text
-        this.rows[3].textContent = lines[1]?.text ?? ''
-      }
+      const now = this.before
+      this.rows.forEach((row, r) => {
+        const d = r - now
+        if (d === 0) row.textContent = rest ? '♪ ♪ ♪' : at(i)
+        else if (i < 0) row.textContent = d > 0 ? at(d - 1) : '' // vor der ersten Zeile
+        else row.textContent = at(rest && d < 0 ? i + 1 + d : i + d)
+      })
     }
     const p =
       line && !rest
         ? Math.min(1, Math.max(0, (t - line.start) / Math.max(0.1, line.end - line.start)))
         : 0
-    this.rows[1].style.setProperty('--p', `${(p * 100).toFixed(1)}%`)
+    this.rows[this.before]?.style.setProperty('--p', `${(p * 100).toFixed(1)}%`)
   }
 }
 

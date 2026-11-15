@@ -633,7 +633,9 @@ app.whenReady().then(() => {
     showStatus = { ...status, running: showWindow !== null }
     remote.broadcast()
   })
-  ipcMain.handle(IPC.remoteInfo, () => remote.info(loadSettings().remoteEnabled))
+  ipcMain.handle(IPC.remoteInfo, (_e, kids?: boolean) =>
+    remote.info(loadSettings().remoteEnabled, kids === true)
+  )
   ipcMain.handle(IPC.sendShowCommand, (_e, cmd: ShowCommand, arg?: string) => showCommand(cmd, arg))
   ipcMain.on(IPC.showNotice, (_e, notice: ShowNotice) => notify(notice))
   ipcMain.handle(IPC.listDisplays, () => listDisplays())

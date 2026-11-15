@@ -157,25 +157,27 @@
         transform: translateY(-50%);
         background: radial-gradient(ellipse at center, rgba(0, 0, 0, 0.5), rgba(0, 0, 0, 0) 70%);
       }
+      #lyrics {
+        --s: 1; /* Schriftgröße (Einstellung) */
+      }
       #lyrics .ly-head {
-        font-size: 2.2vh;
+        font-size: calc(2.2vh * var(--s));
         font-weight: 500;
         letter-spacing: 0.08em;
         color: rgba(255, 255, 255, 0.8);
         margin-bottom: 1vh;
       }
       #lyrics .ly-row {
+        --f: 1; /* je weiter von der laufenden Zeile, desto kleiner */
         min-height: 1.3em;
         line-height: 1.3;
-        font-size: 3vh;
-        color: rgba(255, 255, 255, 0.5);
+        color: #fff;
       }
       #lyrics .ly-prev {
-        font-size: 2.6vh;
-        color: rgba(255, 255, 255, 0.4);
+        font-size: calc(2.6vh * var(--s) * var(--f));
       }
       #lyrics .ly-now {
-        font-size: 6vh;
+        font-size: calc(6vh * var(--s));
         --p: 0%;
         color: transparent;
         background: linear-gradient(90deg, #ffd54a var(--p), #ffffff var(--p));
@@ -184,8 +186,36 @@
         margin: 0.4vh 0;
       }
       #lyrics .ly-next {
-        font-size: 3.6vh;
-        color: rgba(255, 255, 255, 0.85);
+        font-size: calc(3.6vh * var(--s) * var(--f));
+      }
+      /* Hintergrund während des Liedes: Foto bildfüllend, abgedunkelt */
+      #songBg {
+        position: fixed;
+        inset: 0;
+        overflow: hidden;
+        background: #000;
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity 1.2s ease;
+      }
+      #songBg .bg-fill {
+        position: absolute;
+        inset: -6%;
+        background-size: cover;
+        background-position: center;
+        filter: blur(36px) saturate(1.1);
+      }
+      #songBg img {
+        position: absolute;
+        inset: 0;
+        width: 100%;
+        height: 100%;
+        object-fit: contain;
+      }
+      #songBg .bg-dim {
+        position: absolute;
+        inset: 0;
+        background: #000;
       }
       #songPick {
         inset: 0;
@@ -235,6 +265,11 @@
   </head>
   <body>
     <div id="stage"></div>
+    <div id="songBg">
+      <div class="bg-fill"></div>
+      <img alt="" />
+      <div class="bg-dim"></div>
+    </div>
     <div id="texts"></div>
     <div id="emojis"></div>
     <div id="message" class="overlay" style="opacity: 1">Lade Fotos …</div>

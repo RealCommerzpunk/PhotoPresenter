@@ -1,8 +1,15 @@
 import { useEffect, useState } from 'react'
 import { t } from '@shared/i18n'
-import type { SongList } from '@shared/ipc'
-import { SONG_POSITION_LABELS, SONG_POSITIONS, type Settings } from '@shared/settings'
+import { photoUrl, type SongList } from '@shared/ipc'
+import {
+  SONG_BACKGROUND_LABELS,
+  SONG_BACKGROUNDS,
+  SONG_POSITION_LABELS,
+  SONG_POSITIONS,
+  type Settings
+} from '@shared/settings'
 import { Card, Field, Select } from './controls'
+import { PhotoBrowser, usePhotoList } from './PhotoBrowser'
 import { SongSync } from './SongSync'
 
 type Update = (patch: Partial<Settings>) => void
@@ -79,6 +86,87 @@ function TimingRow({
         {t('ui.songs.reset')}
       </button>
     </div>
+  )
+}
+
+function Slider({
+  min,
+  max,
+  step,
+  value,
+  onChange,
+  unit
+}: {
+  min: number
+  max: number
+  step: number
+  value: number
+  onChange: (v: number) => void
+  unit?: string
+}): React.JSX.Element {
+  return (
+    <div className="flex items-center gap-3 text-sm text-white/70">
+      <input
+        type="range"
+        min={min}
+        max={max}
+        step={step}
+        value={value}
+        onChange={(e) => onChange(Number(e.target.value))}
+        className="w-56 accent-indigo-500"
+      />
+      <span>
+        {value}
+        {unit ? ` ${unit}` : ''}
+      </span>
+    </div>
+  )
+}
+
+/** Festes Foto für den Liedhintergrund: Vorschau und Auswahl aus dem Fotoordner. */
+function PhotoChoice({ s, update }: { s: Settings; update: Update }): React.JSX.Element {
+  const files = usePhotoList(s.photoFolder, s.includeSubfolders)
+  const [open, setOpen] = useState(false)
+  return (
+    <Field label={t('ui.songs.photo')}>
+      <div className="flex flex-col gap-3">
+        <div className="flex items-center gap-3">
+          {s.songPhoto ? (
+            <img
+              src={photoUrl(s.songPhoto)}
+              alt=""
+              className="h-16 w-24 rounded-md border border-white/10 object-cover"
+            />
+          ) : (
+            <span className="text-xs text-white/40">{t('ui.songs.photoNone')}</span>
+          )}
+          <button
+            onClick={() => setOpen(!open)}
+            className="rounded-md border border-white/15 bg-white/5 px-3 py-1 text-xs hover:bg-white/10"
+          >
+            {open ? t('ui.songs.photoClose') : t('ui.songs.photoPick')}
+          </button>
+          {s.songPhoto && (
+            <button
+              onClick={() => update({ songPhoto: '' })}
+              className="rounded-md border border-white/15 bg-white/5 px-3 py-1 text-xs hover:bg-white/10"
+            >
+              {t('ui.songs.photoClear')}
+            </button>
+          )}
+        </div>
+        {open && (
+          <PhotoBrowser
+            files={files}
+            isSelected={(n) => n === s.songPhoto}
+            onPick={(n) => {
+              update({ songPhoto: n })
+              setOpen(false)
+            }}
+          />
+        )}
+      </div>
+    </Field>
   )
 }
 
@@ -212,6 +300,57 @@ export function SongsPage({ s, update }: { s: Settings; update: Update }): React
             options={SONG_POSITIONS.map((p) => ({ value: p, label: SONG_POSITION_LABELS[p] }))}
           />
         </Field>
+        <Field label={t('ui.songs.fontSize')}>
+          <Slider
+            min={50}
+            max={200}
+            step={5}
+            value={Math.round(s.songFontScale * 100)}
+            onChange={(v) => update({ songFontScale: v / 100 })}
+            unit="%"
+          />
+        </Field>
+        <Field label={t('ui.songs.linesBefore')}>
+          <Slider
+            min={0}
+            max={6}
+            step={1}
+            value={s.songLinesBefore}
+            onChange={(v) => update({ songLinesBefore: v })}
+          />
+        </Field>
+        <Field label={t('ui.songs.linesAfter')}>
+          <Slider
+            min={0}
+            max={8}
+            step={1}
+            value={s.songLinesAfter}
+            onChange={(v) => update({ songLinesAfter: v })}
+          />
+        </Field>
+      </Card>
+      <Card title={t('ui.songs.background')}>
+        <p className="mb-2 text-xs leading-relaxed text-white/50">{t('ui.songs.backgroundHint')}</p>
+        <Field label={t('ui.songs.background')}>
+          <Select
+            value={s.songBackground}
+            onChange={(v) => update({ songBackground: v as Settings['songBackground'] })}
+            options={SONG_BACKGROUNDS.map((b) => ({ value: b, label: SONG_BACKGROUND_LABELS[b] }))}
+          />
+        </Field>
+        {s.songBackground !== 'slideshow' && (
+          <Field label={t('ui.songs.dim')}>
+            <Slider
+              min={0}
+              max={95}
+              step={5}
+              value={Math.round(s.songDim * 100)}
+              onChange={(v) => update({ songDim: v / 100 })}
+              unit="%"
+            />
+          </Field>
+        )}
+        {s.songBackground === 'photo' && <PhotoChoice s={s} update={update} />}
       </Card>
       {list && list.songs.some((x) => x.lyrics) && (
         <Card title={t('ui.songs.timing')}>

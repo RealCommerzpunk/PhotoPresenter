@@ -69,6 +69,7 @@ also picks up `Photos/`. Choose your own folder in the settings window (**Allgem
 | ← / → | previous / next photo |
 | I | photo info (resolution, zoom, EXIF) |
 | Q | show the QR code for the phone remote |
+| q (lowercase) | show the QR code for the kids remote |
 | R | open the remote control as a window |
 | K | kids remote as a window (one emoji and one text per photo) |
 | S | play a song with karaoke lyrics (`Songs/` folder: MP3 + TXT with the same name) |

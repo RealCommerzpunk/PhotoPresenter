@@ -61,7 +61,7 @@ Tests, Typprüfung und Lint vor jedem Commit lokal ausführen: `npm run typechec
 
 ## Bedienung in der Show
 
-Esc beenden · Leertaste Pause · ←/→ blättern · I Info zum Foto (Auflösung, Zoom, EXIF) · R Fernbedienung als Fenster · K Kinder-Fernbedienung · S Song mit Karaoke-Text · Q QR-Code · D fps
+Esc beenden · Leertaste Pause · ←/→ blättern · I Info zum Foto (Auflösung, Zoom, EXIF) · R Fernbedienung als Fenster · K Kinder-Fernbedienung · S Song mit Karaoke-Text · Q QR-Code · q QR-Code der Kinder-Fernbedienung · D fps
 
 ## Mitnehmen
 

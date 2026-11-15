@@ -270,7 +270,8 @@ export interface PhotoPresenterApi {
   onShowCommand(callback: (cmd: ShowCommand, arg?: string) => void): () => void
   /** Show-Fenster: eigenen Zustand melden. */
   reportShowStatus(status: ShowStatus): void
-  remoteInfo(): Promise<RemoteInfo>
+  /** Adressen und QR-Code; `kids` = Kinder-Fernbedienung (`/kids`). */
+  remoteInfo(kids?: boolean): Promise<RemoteInfo>
   /** Einstellungsfenster: Befehl an die laufende Show senden (z. B. Effekt jetzt). */
   sendShowCommand(cmd: ShowCommand, arg?: string): Promise<void>
   /** Show-Fenster: Rückmeldung an die Fernbedienung. */

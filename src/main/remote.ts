@@ -102,8 +102,11 @@ export class RemoteServer {
   }
 
   /** Adressen und QR-Code für die Anzeige in den Einstellungen und in der Show. */
-  async info(enabled: boolean): Promise<RemoteInfo> {
-    const urls = this.server ? localAddresses().map((ip) => `http://${ip}:${this.port}/`) : []
+  async info(enabled: boolean, kids = false): Promise<RemoteInfo> {
+    const path = kids ? 'kids' : ''
+    const urls = this.server
+      ? localAddresses().map((ip) => `http://${ip}:${this.port}/${path}`)
+      : []
     const qrSvg = urls[0]
       ? await QRCode.toString(urls[0], { type: 'svg', margin: 1, errorCorrectionLevel: 'M' })
       : undefined

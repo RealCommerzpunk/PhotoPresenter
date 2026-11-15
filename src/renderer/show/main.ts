@@ -4,7 +4,7 @@ import 'pixi.js/unsafe-eval'
 import { Application, Container, RenderTexture, Sprite, type Texture } from 'pixi.js'
 import { gsap } from 'gsap'
 import { pick, pickWeighted } from '@shared/random'
-import type { PhotoDetails, SongInfo } from '@shared/ipc'
+import { photoUrl, type PhotoDetails, type SongInfo } from '@shared/ipc'
 import type { FaceInfo } from '@shared/faces'
 import type { PhotoQueue, QueueItem, ShowNotice } from '@shared/remote'
 import {
@@ -50,6 +50,7 @@ const qrEl = document.getElementById('qr')!
 const emojiHost = document.getElementById('emojis')!
 const lyricsEl = document.getElementById('lyrics')!
 const songPickEl = document.getElementById('songPick')!
+const songBgEl = document.getElementById('songBg')!
 
 /** Rückmeldung an die Fernbedienung (erscheint dort als kurzer Hinweis). */
 /** Sprache der Show aus den Einstellungen (bzw. der Systemsprache); feste Texte der Seite übersetzen. */
@@ -603,15 +604,20 @@ async function main(): Promise<void> {
     reportStatus()
   }
 
-  // QR-Code der Fernbedienung (Taste q): 30 Sekunden fest eingeblendet.
+  // QR-Code der Fernbedienung (Taste Q) bzw. der Kinder-Fernbedienung (Taste q):
+  // 30 Sekunden fest eingeblendet; dieselbe Taste blendet aus, die andere wechselt.
   let qrTimer: number | undefined
-  async function toggleQr(): Promise<void> {
-    if (qrEl.style.opacity === '1') {
+  let qrKids = false
+  async function toggleQr(kids = false): Promise<void> {
+    if (qrEl.style.opacity === '1' && qrKids === kids) {
       window.clearTimeout(qrTimer)
       qrEl.style.opacity = '0'
       return
     }
-    const info = await window.api.remoteInfo()
+    qrKids = kids
+    const info = await window.api.remoteInfo(kids)
+    const title = qrEl.querySelector('.qr-title')
+    if (title) title.textContent = kids ? t('show.remoteKids') : t('show.remote')
     const svg = qrEl.querySelector('.qr-code')!
     const text = qrEl.querySelector('.qr-text')!
     if (info.qrSvg && info.urls[0]) {
@@ -632,7 +638,7 @@ async function main(): Promise<void> {
     else if (cmd === 'prev') skip(-1)
     else if (cmd === 'pause') setPaused(true)
     else if (cmd === 'resume') setPaused(false)
-    else if (cmd === 'qr') void toggleQr()
+    else if (cmd === 'qr') void toggleQr(arg === 'kids')
     else if (cmd === 'effect') {
       const kind = startEffect(arg, true)
       if (kind) notice(t('show.effectRunning', { name: EFFECT_LABELS[kind] }))
@@ -737,25 +743,55 @@ async function main(): Promise<void> {
     const ok = await song.play(chosen.name, {
       volume: settings.songVolume,
       position: settings.songLyricsPosition,
-      timing: settings.songTiming[chosen.name]
+      timing: settings.songTiming[chosen.name],
+      fontScale: settings.songFontScale,
+      linesBefore: settings.songLinesBefore,
+      linesAfter: settings.songLinesAfter
     })
     if (!ok) {
       notice(t('show.songFailed', { name: chosen.title }), 'warn')
       return
     }
+    showSongBackground()
     applyTexts()
     notice(t('show.songPlaying', { name: song.title }))
     reportStatus()
   }
 
+  /**
+   * Hintergrund während des Liedes: Diashow läuft weiter (nichts zu tun), das gerade gezeigte
+   * Foto steht bildfüllend still oder ein festes Foto; beides abgedunkelt.
+   */
+  function showSongBackground(): void {
+    const mode = settings.songBackground
+    if (mode === 'slideshow') return
+    const name =
+      mode === 'photo' ? settings.songPhoto : (photoOnScreen()?.photoName ?? lastPhoto ?? '')
+    const url = name ? photoUrl(name) : ''
+    const img = songBgEl.querySelector('img')!
+    const fill = songBgEl.querySelector<HTMLElement>('.bg-fill')!
+    img.style.display = url ? '' : 'none'
+    if (url) img.src = url
+    else img.removeAttribute('src')
+    fill.style.backgroundImage = url ? `url("${url}")` : ''
+    songBgEl.querySelector<HTMLElement>('.bg-dim')!.style.opacity = String(settings.songDim)
+    songBgEl.style.opacity = '1'
+  }
+
+  function hideSongBackground(): void {
+    songBgEl.style.opacity = '0'
+  }
+
   function stopSong(): void {
     if (!song.active) return
     song.stop()
+    hideSongBackground()
     applyTexts()
     notice(t('show.songStopped'))
     reportStatus()
   }
   song.onEnded = () => {
+    hideSongBackground()
     applyTexts()
     reportStatus()
   }
@@ -988,9 +1024,11 @@ async function main(): Promise<void> {
       case ' ':
         setPaused(!paused)
         break
-      case 'q':
-      case 'Q':
-        void toggleQr()
+      case 'q': // klein: Kinder-Fernbedienung
+        void toggleQr(true)
+        break
+      case 'Q': // groß: normale Fernbedienung
+        void toggleQr(false)
         break
       case 'ArrowRight':
         skip(1)

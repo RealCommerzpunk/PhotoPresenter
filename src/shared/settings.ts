@@ -171,6 +171,14 @@ export const SONG_POSITION_LABELS: Record<SongPosition, string> = labelMap(
   SONG_POSITIONS
 )
 
+/** Was hinter dem Liedtext zu sehen ist: Diashow läuft weiter, aktuelles Foto abgedunkelt, festes Foto. */
+export const SONG_BACKGROUNDS = ['slideshow', 'dim', 'photo'] as const
+export type SongBackground = (typeof SONG_BACKGROUNDS)[number]
+export const SONG_BACKGROUND_LABELS: Record<SongBackground, string> = labelMap(
+  'songBg',
+  SONG_BACKGROUNDS
+)
+
 export const SHOW_AREAS = ['full', 'left', 'center', 'right', 'leftHalf', 'rightHalf'] as const
 export type ShowArea = (typeof SHOW_AREAS)[number]
 export const SHOW_AREA_LABELS: Record<ShowArea, string> = labelMap('area', SHOW_AREAS)
@@ -310,6 +318,17 @@ export const settingsSchema = z.object({
   songVolume: field(z.number().min(0).max(1), 0.9),
   /** Wo der Liedtext im Karaoke-Modus steht. */
   songLyricsPosition: field(z.enum(SONG_POSITIONS), 'bottom'),
+  /** Schriftgröße des Liedtextes als Faktor (1 = Standard). */
+  songFontScale: field(z.number().min(0.5).max(2), 1),
+  /** Wie viele Zeilen vor und nach der laufenden Zeile zu sehen sind. */
+  songLinesBefore: field(z.number().int().min(0).max(6), 1),
+  songLinesAfter: field(z.number().int().min(0).max(8), 2),
+  /** Hintergrund während des Liedes. */
+  songBackground: field(z.enum(SONG_BACKGROUNDS), 'slideshow'),
+  /** Stärke der Abdunklung bei „dim“ und „photo“ (0 = keine, 1 = schwarz). */
+  songDim: field(z.number().min(0).max(1), 0.6),
+  /** Festes Foto für „photo“ (relativer Pfad im Fotoordner). */
+  songPhoto: field(z.string(), ''),
   /** Zeiten des Gesangs je Lied (Sekunden), wenn die Schätzung nicht passt. */
   songTiming: field(
     z.record(
