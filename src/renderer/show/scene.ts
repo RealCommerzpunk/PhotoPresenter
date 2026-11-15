@@ -19,6 +19,8 @@ export interface Scene {
   update(dt: number, screen: Size): void
   /** Vorzeitig weiterschalten (Pfeiltasten): Texte ausblenden, kurze Überblendung. */
   hurry(fade: number): void
+  /** Texte auf der Folie ausblenden; noch nicht gezeigte kommen nicht mehr (Lied beginnt). */
+  leaveTexts?(): void
   destroy(): void
 }
 

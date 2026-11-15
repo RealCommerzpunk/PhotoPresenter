@@ -152,7 +152,7 @@ async function main(): Promise<void> {
 
   /** Nach „alle X–Y Fotos“ einen Effekt starten. */
   function maybeStartEffect(): void {
-    if (!settings.effectsEnabled) return
+    if (!settings.effectsEnabled || song.active) return // während eines Liedes keine Effekte
     if (++sinceEffect < effectAt) return
     sinceEffect = 0
     effectAt = Math.max(1, Math.round(pick(settings.effectEvery)))
@@ -752,6 +752,7 @@ async function main(): Promise<void> {
       notice(t('show.songFailed', { name: chosen.title }), 'warn')
       return
     }
+    clearDistractions()
     showSongBackground()
     applyTexts()
     notice(t('show.songPlaying', { name: song.title }))
@@ -883,6 +884,18 @@ async function main(): Promise<void> {
     }
   }
 
+  /** Beginnt ein Lied: Texte, Effekte und Emojis auf dem Bild beenden, damit nichts ablenkt. */
+  function clearDistractions(): void {
+    effects.fadeAll()
+    emojis.clear()
+    for (const t of instantTexts) {
+      t.track.leaveAll()
+      t.until = Math.min(t.until, t.elapsed + 1.6)
+    }
+    current?.leaveTexts?.()
+    incoming?.leaveTexts?.()
+  }
+
   function updateInstantTexts(dt: number): void {
     for (let i = instantTexts.length - 1; i >= 0; i--) {
       const t = instantTexts[i]
@@ -967,6 +980,11 @@ async function main(): Promise<void> {
       upload.done()
     }
     song.update()
+    // Schon vorbereitete Folien bringen noch eigene Texte mit: während des Liedes unterdrücken.
+    if (song.active) {
+      current?.leaveTexts?.()
+      incoming?.leaveTexts?.()
+    }
     if (paused) return
     const dt = Math.min(0.1, ticker.deltaMS / 1000)
     const s = screen()

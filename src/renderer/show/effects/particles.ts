@@ -436,6 +436,11 @@ export class EffectLayer {
     for (const e of this.effects) if (e.manual) e.fadeOut()
   }
 
+  /** Alle laufenden Effekte ausblenden (z. B. wenn ein Lied beginnt). */
+  fadeAll(): void {
+    for (const e of this.effects) e.fadeOut()
+  }
+
   update(dt: number, screen: Size): void {
     for (let i = this.effects.length - 1; i >= 0; i--) {
       const e = this.effects[i]

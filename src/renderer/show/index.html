@@ -160,33 +160,38 @@
       #lyrics {
         --s: 1; /* Schriftgröße (Einstellung) */
       }
-      #lyrics .ly-head {
-        font-size: calc(2.2vh * var(--s));
-        font-weight: 500;
-        letter-spacing: 0.08em;
-        color: rgba(255, 255, 255, 0.8);
-        margin-bottom: 1vh;
+      /* Alle Zeilen stehen in einer Spalte, die per Skript gleitet; die laufende Zeile wird
+         per scale() vergrößert (kein Neuumbruch, kein Ruckeln). */
+      #lyrics .ly-view {
+        position: relative;
+      }
+      #lyrics .ly-track {
+        position: absolute;
+        left: 0;
+        right: 0;
+        top: 0;
+        will-change: transform;
       }
       #lyrics .ly-row {
-        --f: 1; /* je weiter von der laufenden Zeile, desto kleiner */
-        min-height: 1.3em;
-        line-height: 1.3;
-        color: #fff;
-      }
-      #lyrics .ly-prev {
-        font-size: calc(2.6vh * var(--s) * var(--f));
-      }
-      #lyrics .ly-now {
-        font-size: calc(6vh * var(--s));
         --p: 0%;
+        box-sizing: border-box;
+        width: fit-content; /* damit die Füllung genau über den Text läuft */
+        max-width: 62%;
+        margin: 0 auto;
+        padding: 0.45em 0;
+        font-size: calc(3.6vh * var(--s));
+        line-height: 1.3;
         color: transparent;
         background: linear-gradient(90deg, #ffd54a var(--p), #ffffff var(--p));
         -webkit-background-clip: text;
         background-clip: text;
-        margin: 0.4vh 0;
+        will-change: transform, opacity;
       }
-      #lyrics .ly-next {
-        font-size: calc(3.6vh * var(--s) * var(--f));
+      #lyrics .ly-title,
+      #lyrics .ly-rest {
+        background: none;
+        color: #fff;
+        letter-spacing: 0.08em;
       }
       /* Hintergrund während des Liedes: Foto bildfüllend, abgedunkelt */
       #songBg {

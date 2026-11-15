@@ -1,7 +1,6 @@
 import {
   alignLyrics,
   estimateVocalWindow,
-  lineIndexAt,
   parseLyrics,
   type LyricLine,
   type ParsedLyrics
@@ -12,6 +11,11 @@ import type { SongPosition } from '@shared/settings'
 const ENVELOPE_STEP = 0.1
 /** So lange bleibt der Text nach der letzten Zeile stehen. */
 const LINGER = 3
+/** Ab dieser Lücke zwischen zwei Zeilen erscheint „♪ ♪ ♪“ (reine Musik). */
+const REST_GAP = 4
+/** Die laufende Zeile ist um diesen Faktor größer als die übrigen. */
+const NOW_SCALE = 1.6
+const REST_TEXT = '♪ ♪ ♪'
 
 export interface SongOptions {
   volume: number
@@ -25,58 +29,70 @@ export interface SongOptions {
   linesAfter: number
 }
 
+/** Eine Zeile der Spalte: Überschrift, gesungene Zeile oder Musikpause. */
+interface Item {
+  kind: 'title' | 'line' | 'rest'
+  text: string
+  start: number
+  end: number
+}
+
+/** Bewegung von Zeile k zur nächsten: von `from` bis `to` (Sekunden im Lied). */
+interface Glide {
+  from: number
+  to: number
+}
+
+interface RowState {
+  op: number
+  scale: number
+  p: number
+}
+
+const smooth = (x: number): number => x * x * x * (x * (x * 6 - 15) + 10)
+
 /**
- * Spielt ein Lied ab und zeigt den Text als Karaoke: vorige Zeile gedämpft, laufende Zeile
- * mit Füllung von links nach rechts, die nächsten Zeilen darunter. Ohne Text läuft nur Musik.
- * Der Ton kommt als Datei aus dem Hauptprozess und wird per Web Audio abgespielt, so lässt
- * sich das Lied zusammen mit der Show anhalten.
+ * Spielt ein Lied ab und zeigt den Text als Karaoke. Alle Zeilen stehen in einer Spalte, die
+ * Bild für Bild gleitet (kein Springen): Die laufende Zeile ist groß und füllt sich von links
+ * nach rechts, davor und danach folgen die Nachbarzeilen immer blasser. Der Ton kommt als Datei
+ * aus dem Hauptprozess und wird per Web Audio abgespielt, so lässt sich das Lied zusammen mit
+ * der Show anhalten.
  */
 export class SongPlayer {
   private ctx: AudioContext | null = null
   private source: AudioBufferSourceNode | null = null
-  private lines: LyricLine[] = []
   private parsed: ParsedLyrics | null = null
+  private items: Item[] = []
+  private glides: Glide[] = []
   private startedAt = 0
-  private index = -2
   private duration = 0
   private lingerUntil = 0
+  private finished = false
   title = ''
   /** Gesang laut Schätzung bzw. Einstellung (für die Einstellungen). */
   window = { start: 0, end: 0 }
   onEnded: (() => void) | null = null
 
   private readonly box: HTMLElement
-  private readonly head: HTMLElement
-  /** Zeilen von oben nach unten; `before` Zeilen davor, dann die laufende, dann der Rest. */
+  private readonly view: HTMLElement
+  private readonly track: HTMLElement
   private rows: HTMLElement[] = []
+  private states: RowState[] = []
   private before = 1
+  private after = 2
+  /** Mitte jeder Zeile in der Spalte (px) und Lage der laufenden Zeile im Fenster. */
+  private centers: number[] = []
+  private anchor = 0
+  private readonly onResize = (): void => this.measure()
 
   constructor(host: HTMLElement) {
     this.box = host
-    this.head = document.createElement('div')
-    this.head.className = 'ly-head'
-    host.append(this.head)
-    this.build(1, 2)
-  }
-
-  /** Zeilenfelder passend zur Einstellung aufbauen; je weiter weg, desto blasser und kleiner. */
-  private build(before: number, after: number): void {
-    for (const r of this.rows) r.remove()
-    this.before = before
-    this.rows = []
-    for (let r = 0; r < before + 1 + after; r++) {
-      const row = document.createElement('div')
-      const d = r - before
-      row.className = 'ly-row ' + (d < 0 ? 'ly-prev' : d === 0 ? 'ly-now' : 'ly-next')
-      if (d !== 0) {
-        const far = Math.abs(d) - 1
-        row.style.opacity = String(Math.max(0.25, (d < 0 ? 0.55 : 1) - far * 0.18))
-        row.style.setProperty('--f', String(Math.max(0.6, 1 - far * 0.1)))
-      }
-      this.box.append(row)
-      this.rows.push(row)
-    }
-    this.index = -2
+    this.view = document.createElement('div')
+    this.view.className = 'ly-view'
+    this.track = document.createElement('div')
+    this.track.className = 'ly-track'
+    this.view.append(this.track)
+    host.append(this.view)
   }
 
   get active(): boolean {
@@ -105,8 +121,7 @@ export class SongPlayer {
     this.title = this.parsed.title || name
     this.window =
       options.timing ?? estimateVocalWindow(envelope(buffer), ENVELOPE_STEP, this.duration)
-    this.lines = alignLyrics(this.parsed, this.window)
-    this.lingerUntil = (this.lines[this.lines.length - 1]?.end ?? 0) + LINGER
+    this.layoutItems(0)
 
     const gain = ctx.createGain()
     gain.gain.value = options.volume
@@ -123,10 +138,15 @@ export class SongPlayer {
     this.source = source
     this.box.dataset.pos = options.position
     this.box.style.setProperty('--s', String(options.fontScale))
-    this.build(options.linesBefore, options.linesAfter)
+    this.before = options.linesBefore
+    this.after = options.linesAfter
+    this.build()
+    this.finished = false
     this.startedAt = ctx.currentTime
     source.start()
     this.box.style.opacity = '1'
+    window.addEventListener('resize', this.onResize)
+    this.update()
     return true
   }
 
@@ -134,6 +154,7 @@ export class SongPlayer {
     const { source, ctx } = this
     this.source = null
     this.ctx = null
+    window.removeEventListener('resize', this.onResize)
     if (source) {
       source.onended = null
       try {
@@ -144,7 +165,6 @@ export class SongPlayer {
     }
     if (ctx) void ctx.close()
     this.box.style.opacity = '0'
-    this.index = -2
   }
 
   pause(): void {
@@ -157,8 +177,7 @@ export class SongPlayer {
 
   /** Verschiebt den Text (Sekunden, positiv = später); wirkt sofort. */
   nudge(seconds: number): void {
-    if (!this.parsed) return
-    this.lines = alignLyrics(this.parsed, this.window, seconds)
+    if (this.parsed) this.layoutItems(seconds)
   }
 
   /** Position im Lied in Sekunden. */
@@ -166,45 +185,161 @@ export class SongPlayer {
     return this.ctx ? this.ctx.currentTime - this.startedAt : 0
   }
 
-  /** Einmal pro Frame: Zeilen wechseln, Füllung der laufenden Zeile nachziehen. */
-  update(): void {
-    if (!this.source) return
-    const t = this.time
-    const lines = this.lines
-    if (!lines.length) {
-      if (this.index !== -1) {
-        this.index = -1
-        this.head.textContent = '♪ ' + this.title
-        this.head.style.display = ''
-        for (const r of this.rows) r.textContent = ''
-      }      return
+  /** Zeilen, Pausen und die Gleitbewegung zwischen ihnen aus den Zeitpunkten berechnen. */
+  private layoutItems(offset: number): void {
+    const lines: LyricLine[] = this.parsed ? alignLyrics(this.parsed, this.window, offset) : []
+    const items: Item[] = []
+    const first = lines[0]
+    items.push({
+      kind: 'title',
+      text: '♪ ' + this.title,
+      start: -1,
+      end: first ? Math.max(0.1, first.start - 0.3) : this.duration
+    })
+    lines.forEach((l, k) => {
+      items.push({ kind: 'line', text: l.text, start: l.start, end: l.end })
+      const next = lines[k + 1]
+      if (next && next.start - l.end >= REST_GAP) {
+        items.push({ kind: 'rest', text: REST_TEXT, start: l.end + 0.8, end: next.start - 1 })
+      }
+    })
+    this.items = items
+    this.lingerUntil = (lines[lines.length - 1]?.end ?? 0) + LINGER
+
+    // Gleiten: gegen Ende jeder Zeile beginnt die Spalte sanft zur nächsten zu laufen.
+    const glides: Glide[] = []
+    for (let k = 0; k + 1 < items.length; k++) {
+      const to = items[k + 1].start + 0.15
+      const length = Math.min(1.4, Math.max(0.8, items[k + 1].start - items[k].end + 0.5))
+      let from = to - length
+      if (k > 0) from = Math.max(from, glides[k - 1].to)
+      if (from >= to) from = to - 0.05
+      glides.push({ from, to })
     }
-    const i = lineIndexAt(lines, t)
-    const done = t > this.lingerUntil
-    const line = i >= 0 ? lines[i] : null
-    // Reine Musik: die Zeile ist zu Ende, die nächste beginnt erst später.
-    const rest = !done && line !== null && t > line.end + 1.5
-    const key = done ? -3 : rest ? i + 10_000 : i
-    if (key !== this.index) {
-      this.index = key
-      // Vor der ersten Zeile und nach der letzten: Titel bzw. leer.
-      this.head.style.display = i < 0 && !done ? '' : 'none'
-      this.head.textContent = '♪ ' + this.title
-      const at = (k: number): string => (!done && lines[k] ? lines[k].text : '')
-      const now = this.before
-      this.rows.forEach((row, r) => {
-        const d = r - now
-        if (d === 0) row.textContent = rest ? '♪ ♪ ♪' : at(i)
-        else if (i < 0) row.textContent = d > 0 ? at(d - 1) : '' // vor der ersten Zeile
-        else row.textContent = at(rest && d < 0 ? i + 1 + d : i + d)
-      })
-    }
-    const p =
-      line && !rest
-        ? Math.min(1, Math.max(0, (t - line.start) / Math.max(0.1, line.end - line.start)))
-        : 0
-    this.rows[this.before]?.style.setProperty('--p', `${(p * 100).toFixed(1)}%`)
+    this.glides = glides
   }
+
+  /** Zeilenfelder aufbauen und ausmessen. */
+  private build(): void {
+    this.track.replaceChildren()
+    this.rows = this.items.map((item) => {
+      const row = document.createElement('div')
+      row.className = 'ly-row' + (item.kind === 'line' ? '' : ' ly-' + item.kind)
+      row.textContent = item.text
+      row.style.opacity = '0'
+      this.track.append(row)
+      return row
+    })
+    this.states = this.rows.map(() => ({ op: 0, scale: 1, p: 0 }))
+    this.measure()
+  }
+
+  /**
+   * Höhe jeder Zeile messen: Die Spalte wird so verschoben, dass die laufende Zeile immer an
+   * derselben Stelle steht; die Fensterhöhe reicht für die größte Gruppe aus Zeilen davor/danach.
+   */
+  private measure(): void {
+    const rows = this.rows
+    if (!rows.length) return
+    const tops = rows.map((r) => r.offsetTop)
+    const heights = rows.map((r) => r.offsetHeight)
+    this.centers = rows.map((_, i) => tops[i] + heights[i] / 2)
+    let above = 0
+    let below = 0
+    for (let i = 0; i < rows.length; i++) {
+      above = Math.max(above, this.centers[i] - tops[Math.max(0, i - this.before)])
+      const last = Math.min(rows.length - 1, i + this.after)
+      below = Math.max(below, tops[last] + heights[last] - this.centers[i])
+    }
+    this.anchor = above
+    this.view.style.height = `${Math.ceil(above + below)}px`
+  }
+
+  /** Stelle in der Zeilenliste (Bruchzahl): 2,5 = halb zwischen Zeile 2 und 3. */
+  private position(t: number): number {
+    const glides = this.glides
+    let lo = 0
+    let hi = glides.length
+    // erste Bewegung, die noch nicht abgeschlossen ist
+    while (lo < hi) {
+      const mid = (lo + hi) >> 1
+      if (glides[mid].to <= t) lo = mid + 1
+      else hi = mid
+    }
+    const g = glides[lo]
+    if (!g || t <= g.from) return lo
+    return lo + smooth((t - g.from) / (g.to - g.from))
+  }
+
+  /** Einmal pro Frame: Spalte gleiten lassen, Größe, Helligkeit und Füllung nachziehen. */
+  update(): void {
+    if (!this.source || !this.rows.length) return
+    const t = this.time
+    if (!this.finished && t > this.lingerUntil) {
+      this.finished = true
+      this.box.style.opacity = '0'
+    }
+    const pos = this.position(t)
+    const k = Math.min(this.centers.length - 1, Math.floor(pos))
+    const center =
+      this.centers[k] +
+      (this.centers[Math.min(k + 1, this.centers.length - 1)] - this.centers[k]) * (pos - k)
+    this.track.style.transform = `translate3d(0, ${(this.anchor - center).toFixed(2)}px, 0)`
+
+    // Laufende Zeile: die letzte, deren Beginn erreicht ist.
+    let cur = -1
+    for (let i = 0; i < this.items.length && this.items[i].start <= t; i++) cur = i
+
+    const first = Math.max(0, Math.floor(pos) - this.before - 2)
+    const last = Math.min(this.rows.length - 1, Math.ceil(pos) + this.after + 2)
+    for (let r = 0; r < this.rows.length; r++) {
+      const st = this.states[r]
+      const row = this.rows[r]
+      if (r < first || r > last) {
+        if (st.op !== 0) {
+          st.op = 0
+          row.style.opacity = '0'
+        }
+        continue
+      }
+      const d = r - pos
+      let op: number
+      let scale: number
+      if (d < 0) {
+        op = (1 - 0.5 * Math.min(1, -d)) * clamp01(d + this.before + 1)
+        scale = 1 + (NOW_SCALE - 1) * clamp01(1 + d)
+      } else {
+        op = (1 - 0.15 * Math.min(1, d) - 0.2 * Math.max(0, d - 1)) * clamp01(this.after + 1 - d)
+        scale = 1 + (NOW_SCALE - 1) * clamp01(1 - d)
+      }
+      op = Math.max(0, op)
+      if (Math.abs(op - st.op) > 0.004) {
+        st.op = op
+        row.style.opacity = op.toFixed(3)
+      }
+      if (Math.abs(scale - st.scale) > 0.002) {
+        st.scale = scale
+        row.style.transform = `scale(${scale.toFixed(3)})`
+      }
+      // Füllung: gesungene Zeilen ganz gelb, laufende anteilig, kommende weiß.
+      const item = this.items[r]
+      let p = 0
+      if (item.kind === 'line') {
+        if (r < cur) p = 1
+        else if (r === cur) {
+          p = Math.min(1, Math.max(0, (t - item.start) / Math.max(0.1, item.end - item.start)))
+        }
+      }
+      if (Math.abs(p - st.p) > 0.002) {
+        st.p = p
+        row.style.setProperty('--p', `${(p * 100).toFixed(1)}%`)
+      }
+    }
+  }
+}
+
+function clamp01(x: number): number {
+  return Math.min(1, Math.max(0, x))
 }
 
 /** Lautstärke je Zeitfenster in dB (aus dem ersten Kanal). */

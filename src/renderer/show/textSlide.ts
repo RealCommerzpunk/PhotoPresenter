@@ -103,6 +103,10 @@ export class TextSlide extends TimedScene implements Scene {
     this.track.leaveAll()
   }
 
+  leaveTexts(): void {
+    this.track.leaveAll()
+  }
+
   destroy(): void {
     this.track.destroy()
     this.animated?.destroy()

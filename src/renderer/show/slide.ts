@@ -320,6 +320,10 @@ export class Slide extends TimedScene implements Scene {
     this.track.leaveAll()
   }
 
+  leaveTexts(): void {
+    this.track.leaveAll()
+  }
+
   destroy(): void {
     this.track.destroy()
     this.view.destroy({ children: true })
