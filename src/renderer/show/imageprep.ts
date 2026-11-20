@@ -53,34 +53,19 @@ function blurBackdrop(
   const s = Math.max((bw + pad * 2) / bitmap.width, (bh + pad * 2) / bitmap.height)
   const dw = bitmap.width * s
   const dh = bitmap.height * s
-  ctx.filter = 'blur(9px) saturate(0.85) brightness(0.6)'
+  ctx.filter = 'blur(9px) saturate(0.95) brightness(0.72)'
   ctx.drawImage(bitmap, (bw - dw) / 2, (bh - dh) / 2, dw, dh)
 }
 
-/** Mittlere Farbe eines Bildstreifens als [r, g, b]. */
-function averageColor(
-  data: Uint8ClampedArray,
-  n: number,
-  x0: number,
-  x1: number,
-  y0: number,
-  y1: number
-): number[] {
-  const sum = [0, 0, 0]
-  let count = 0
-  for (let y = y0; y < y1; y++) {
-    for (let x = x0; x < x1; x++) {
-      const i = (y * n + x) * 4
-      sum[0] += data[i]
-      sum[1] += data[i + 1]
-      sum[2] += data[i + 2]
-      count++
-    }
-  }
-  return sum.map((v) => v / Math.max(1, count))
-}
+/** Anteil des Fotos am Rand, dessen Farben nach außen fortgesetzt werden. */
+const AMBIENT_EDGE = 0.025
 
-/** Verlauf aus den Randfarben des Fotos, mit sanftem Lichtschein in der Mitte. */
+/**
+ * Farbverlauf aus den Rändern des Fotos: Die äußersten Pixelreihen werden Zeile für Zeile
+ * (bzw. Spalte für Spalte) bis an den Bildschirmrand gezogen, weichgezeichnet und nach
+ * außen leicht abgedunkelt. Liegt deckungsgleich unter dem Foto und bewegt sich mit ihm,
+ * damit die Farben an der weichen Kante nahtlos ins Foto übergehen.
+ */
 function ambientBackdrop(
   ctx: OffscreenCanvasRenderingContext2D,
   bitmap: ImageBitmap,
@@ -88,30 +73,67 @@ function ambientBackdrop(
   bh: number,
   horizontalGaps: boolean
 ): void {
-  const n = 16
-  const probe = new OffscreenCanvas(n, n).getContext('2d', { willReadFrequently: true })!
-  probe.drawImage(bitmap, 0, 0, n, n)
-  const { data } = probe.getImageData(0, 0, n, n)
-  const [a, b] = horizontalGaps
-    ? [averageColor(data, n, 0, 2, 0, n), averageColor(data, n, n - 2, n, 0, n)]
-    : [averageColor(data, n, 0, n, 0, 2), averageColor(data, n, 0, n, n - 2, n)]
-  const mid = averageColor(data, n, 0, n, 0, n)
-  const css = (c: number[], k: number): string =>
-    `rgb(${Math.round(c[0] * k)}, ${Math.round(c[1] * k)}, ${Math.round(c[2] * k)})`
-
-  const g = horizontalGaps
-    ? ctx.createLinearGradient(0, 0, bw, 0)
-    : ctx.createLinearGradient(0, 0, 0, bh)
-  g.addColorStop(0, css(a, 0.45))
-  g.addColorStop(0.5, css(mid, 0.55))
-  g.addColorStop(1, css(b, 0.45))
-  ctx.fillStyle = g
-  ctx.fillRect(0, 0, bw, bh)
-  const glow = ctx.createRadialGradient(bw / 2, bh / 2, 0, bw / 2, bh / 2, Math.max(bw, bh) * 0.6)
-  glow.addColorStop(0, css(mid, 0.35).replace('rgb', 'rgba').replace(')', ', 0.6)'))
-  glow.addColorStop(1, 'rgba(0, 0, 0, 0)')
-  ctx.fillStyle = glow
-  ctx.fillRect(0, 0, bw, bh)
+  const layer = new OffscreenCanvas(bw, bh)
+  const l = layer.getContext('2d', { willReadFrequently: true })!
+  const s = Math.min(bw / bitmap.width, bh / bitmap.height)
+  const dw = bitmap.width * s
+  const dh = bitmap.height * s
+  const dx = (bw - dw) / 2
+  const dy = (bh - dh) / 2
+  // 1 px Überlappung, damit zwischen Rand und Foto keine Fuge bleibt.
+  if (horizontalGaps) {
+    const e = Math.max(1, Math.round(bitmap.width * AMBIENT_EDGE))
+    l.drawImage(bitmap, 0, 0, e, bitmap.height, 0, dy, dx + 1, dh)
+    l.drawImage(
+      bitmap,
+      bitmap.width - e,
+      0,
+      e,
+      bitmap.height,
+      dx + dw - 1,
+      dy,
+      bw - dx - dw + 1,
+      dh
+    )
+  } else {
+    const e = Math.max(1, Math.round(bitmap.height * AMBIENT_EDGE))
+    l.drawImage(bitmap, 0, 0, bitmap.width, e, dx, 0, dw, dy + 1)
+    l.drawImage(
+      bitmap,
+      0,
+      bitmap.height - e,
+      bitmap.width,
+      e,
+      dx,
+      dy + dh - 1,
+      dw,
+      bh - dy - dh + 1
+    )
+  }
+  l.drawImage(bitmap, dx, dy, dw, dh)
+  // Erst ungefiltert als Grund: Der Weichzeichner wird am Rand durchsichtig, sonst entstünde
+  // dort ein dunkler Saum.
+  ctx.filter = 'brightness(0.85)'
+  ctx.drawImage(layer, 0, 0)
+  ctx.filter = `blur(${Math.round(bw / 48)}px) saturate(1.05) brightness(0.85)`
+  ctx.drawImage(layer, 0, 0)
+  ctx.filter = 'none'
+  // Nach außen sanft dunkler: gibt Tiefe, das Foto bleibt der hellste Teil.
+  const fade = (x0: number, y0: number, x1: number, y1: number): void => {
+    const g = ctx.createLinearGradient(x0, y0, x1, y1)
+    g.addColorStop(0, 'rgba(0, 0, 0, 0)')
+    g.addColorStop(1, 'rgba(0, 0, 0, 0.35)')
+    ctx.fillStyle = g
+    if (horizontalGaps) ctx.fillRect(Math.min(x0, x1), 0, Math.abs(x1 - x0), bh)
+    else ctx.fillRect(0, Math.min(y0, y1), bw, Math.abs(y1 - y0))
+  }
+  if (horizontalGaps) {
+    fade(dx, 0, 0, 0)
+    fade(dx + dw, 0, bw, 0)
+  } else {
+    fade(0, dy, 0, 0)
+    fade(0, dy + dh, 0, bh)
+  }
 }
 
 /**
@@ -146,7 +168,7 @@ function mirrorBackdrop(
     }
     l.restore()
   }
-  ctx.filter = 'blur(5px) saturate(0.9) brightness(0.7)'
+  ctx.filter = 'blur(5px) saturate(0.95) brightness(0.78)'
   ctx.drawImage(layer, 0, 0)
 }
 
@@ -181,7 +203,7 @@ function makeBackdrop(
   mode: FillMode,
   horizontalGaps: boolean
 ): ImageBitmap {
-  const bw = mode === 'mirror' ? BACKDROP_WIDTH * 2 : BACKDROP_WIDTH
+  const bw = mode === 'blur' ? BACKDROP_WIDTH : BACKDROP_WIDTH * 2
   const bh = Math.max(1, Math.round((bw * screen.h) / screen.w))
   const canvas = new OffscreenCanvas(bw, bh)
   const ctx = canvas.getContext('2d', { willReadFrequently: true })!
@@ -235,9 +257,9 @@ export async function preparePhoto(
   const fit = fitImage({ w: original.width, h: original.height }, screen, maxCrop, maxScale)
   // Ränder links/rechts, wenn das Bild schmaler ist als der Bildschirm, sonst oben/unten.
   const horizontalGaps = fit.gapX
-  // Spiegeln passt nur zum genau eingepassten Foto: sonst stattdessen weichzeichnen.
+  // Spiegeln und Farbverlauf setzen das genau eingepasste Foto fort: sonst weichzeichnen.
   const fill: FillMode =
-    requestedFill === 'mirror' && (fit.capped || (fit.gapX && fit.gapY)) ? 'blur' : requestedFill
+    requestedFill !== 'blur' && (fit.capped || (fit.gapX && fit.gapY)) ? 'blur' : requestedFill
   const physW = screen.w * pixelRatio
   const physH = screen.h * pixelRatio
   const needed =
@@ -291,26 +313,61 @@ export async function preparePhoto(
 export const THUMB_W = 384
 export const THUMB_H = 288
 
+/** Längste Seite eines Vorschaubilds der 3D-Welt (Panoramen). */
+const THUMB_MAX = 1024
+/** Längste Seite einer scharfen Kachel (Grenze für Texturen auf schwachen Grafikchips). */
+const SHARP_MAX = 4096
+
 /**
- * Vorschaubild für die 3D-Fotowelt: direkt verkleinert dekodiert (schnell) und mittig
- * auf 4:3 zugeschnitten.
+ * Scharfe Fassung für die Kachel, die am Anfang oder Ende der 3D-Welt bildschirmgroß zu
+ * sehen ist: ganzes Foto, `height` Pixel hoch (nie größer als das Original).
  */
-export async function prepareThumb(name: string): Promise<ImageBitmap> {
+async function prepareSharpTile(blob: Blob, height: number): Promise<ImageBitmap> {
+  const decoded = await createImageBitmap(blob, { imageOrientation: 'from-image' })
+  try {
+    const s = Math.min(
+      1,
+      height / decoded.height,
+      SHARP_MAX / Math.max(decoded.width, decoded.height)
+    )
+    const w = Math.max(1, Math.round(decoded.width * s))
+    const h = Math.max(1, Math.round(decoded.height * s))
+    const canvas = new OffscreenCanvas(w, h)
+    const ctx = canvas.getContext('2d', { willReadFrequently: true })!
+    ctx.imageSmoothingQuality = 'high'
+    ctx.drawImage(decoded, 0, 0, w, h)
+    return canvas.transferToImageBitmap()
+  } finally {
+    decoded.close()
+  }
+}
+
+/**
+ * Vorschaubild für die 3D-Fotowelt: direkt verkleinert dekodiert (schnell), im
+ * Seitenverhältnis des Fotos. Die Kachel zeigt davon die Mitte in 4:3; die Zielkachel zieht
+ * beim Eintauchen zum ganzen Foto auf, damit sie genau dem folgenden Vollbild entspricht.
+ */
+export async function prepareThumb(name: string, height = 0): Promise<ImageBitmap> {
   const response = await fetch(photoUrl(name))
   if (!response.ok) throw new Error(`${name}: HTTP ${response.status}`)
+  if (height > 0) return prepareSharpTile(await response.blob(), height)
   const decoded = await createImageBitmap(await response.blob(), {
     imageOrientation: 'from-image',
     resizeWidth: THUMB_W * 2,
     resizeQuality: 'medium'
   })
   try {
-    const canvas = new OffscreenCanvas(THUMB_W, THUMB_H)
+    // So groß, dass der 4:3-Ausschnitt mindestens THUMB_W × THUMB_H hat.
+    const s = Math.min(
+      Math.max(THUMB_W / decoded.width, THUMB_H / decoded.height),
+      THUMB_MAX / Math.max(decoded.width, decoded.height)
+    )
+    const w = Math.max(1, Math.round(decoded.width * s))
+    const h = Math.max(1, Math.round(decoded.height * s))
+    const canvas = new OffscreenCanvas(w, h)
     const ctx = canvas.getContext('2d', { willReadFrequently: true })!
-    const s = Math.max(THUMB_W / decoded.width, THUMB_H / decoded.height)
-    const dw = decoded.width * s
-    const dh = decoded.height * s
     ctx.imageSmoothingQuality = 'high'
-    ctx.drawImage(decoded, (THUMB_W - dw) / 2, (THUMB_H - dh) / 2, dw, dh)
+    ctx.drawImage(decoded, 0, 0, w, h)
     return canvas.transferToImageBitmap()
   } finally {
     decoded.close()

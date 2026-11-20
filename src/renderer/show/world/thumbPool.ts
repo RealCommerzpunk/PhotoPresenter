@@ -38,6 +38,11 @@ export class ThumbPool {
       .finally(() => (this.loading = false))
   }
 
+  /** Vorschaubild eines bestimmten Fotos, falls bereit (z. B. zum Wiederholen einer Welt). */
+  get(name: string): ImageBitmap | undefined {
+    return this.cache.get(name)
+  }
+
   /** Zufällige Auswahl bereitliegender Vorschaubilder (die Bitmaps bleiben im Speicher). */
   sample(count: number): { name: string; bitmap: ImageBitmap }[] {
     return shuffle([...this.cache.entries()])

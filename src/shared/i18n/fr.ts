@@ -341,6 +341,12 @@ export const fr: Record<MessageKey, string> = {
   'ui.persons.boost1': 'un peu plus souvent (×2)',
   'ui.persons.boost2': 'plus souvent (×3)',
   'ui.persons.boost3': 'beaucoup plus souvent (×4)',
+  'ui.persons.extraTime': 'Afficher plus longtemps',
+  'ui.persons.extraTimeHint':
+    'Les photos avec la personne principale restent affichées ce nombre de secondes de plus que la durée normale.',
+  'ui.persons.pairExtraTime': 'Afficher plus longtemps (avec partenaire)',
+  'ui.persons.pairExtraTimeHint':
+    'Remplace « Afficher plus longtemps » lorsque la personne principale et son partenaire sont ensemble sur la photo.',
   'ui.persons.focusNone': 'Mise au point dans le diaporama – aucune personne principale choisie',
   'ui.persons.focusFor': 'Mise au point dans le diaporama – pour ★ {focus}',
   'ui.persons.focusForBoth': 'Mise au point dans le diaporama – pour ★ {focus} et ☆ {partner}',
@@ -413,6 +419,9 @@ export const fr: Record<MessageKey, string> = {
   'ui.texts.duration': 'Durée du texte',
   'ui.texts.durationHint':
     'Combien de temps un texte reste affiché, apparition et disparition non comprises.',
+  'ui.texts.sizeRandom': 'Taille du texte avec style aléatoire',
+  'ui.texts.sizeRandomHint':
+    'Les textes au style aléatoire apparaissent d’autant plus petits ou plus grands que dans le style (100 % = comme dans le style). Les textes longs grandissent moins.',
   'ui.texts.new': '+ Nouveau texte',
   'ui.texts.none': 'Aucun texte pour l’instant.',
   'ui.texts.modeAdhoc': '📱 sur demande seulement',
@@ -487,6 +496,11 @@ export const fr: Record<MessageKey, string> = {
   'show.focus': 'Personne principale',
   'show.focusPartner': 'Personne principale et associée',
   'show.motionFocus': 'Mise au point : {mode}',
+  'show.focusNotChosen': 'Aucune personne principale choisie',
+  'show.focusNotHere': 'La personne principale n’est pas sur cette photo',
+  'show.partnerNotChosen': 'Aucune personne associée choisie',
+  'show.partnerNotHere':
+    'La personne principale et l’associée ne sont pas toutes deux sur cette photo',
   'show.panBefore': ', panoramique avant',
   'show.panAfter': ', panoramique après',
   'info.original': 'Original',
@@ -734,6 +748,9 @@ export const fr: Record<MessageKey, string> = {
   'remote.fillModes': 'Remplissage du fond',
   'remote.focusModes': 'Types de focus',
   'remote.focusFaceSize': 'Taille du visage',
+  'remote.focusExtraTime': 'Afficher plus longtemps',
+  'remote.focusPairExtraTime': 'Afficher plus longtemps (avec partenaire)',
+  'remote.textSizeRandom': 'Taille du texte avec style aléatoire',
   'remote.textBackgrounds': 'Fonds de texte',
   'remote.worldTiles': 'Photos dans le monde 3D',
   'remote.worldCameraSpeed': 'Vitesse de la caméra',

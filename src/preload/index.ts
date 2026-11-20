@@ -41,7 +41,7 @@ const api: PhotoPresenterApi = {
 
   faceStatus: () => ipcRenderer.invoke(IPC.faceStatus),
   onFaceStatus: (callback) => subscribe<FaceIndexStatus>(IPC.faceStatusChanged, callback),
-  getFaces: (name) => ipcRenderer.invoke(IPC.getFaces, name),
+  getFaces: (name, force) => ipcRenderer.invoke(IPC.getFaces, name, force),
   listFaces: (personId, photo) => ipcRenderer.invoke(IPC.listFaces, personId, photo),
   toggleSample: (personId, photo, face) =>
     ipcRenderer.invoke(IPC.toggleSample, personId, photo, face),

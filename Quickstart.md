@@ -47,7 +47,9 @@ Die Gesichtserkennung ist schon fertig trainiert. Die Fotos werden nicht neu ana
 |---|---|
 | **Esc** | Show beenden |
 | **Leertaste** | Pause / weiter |
-| **← / →** | ein Foto zurück / vor |
+| **← / →** | zurück / vor (auch durch Textfolien und 3D-Welten) |
+| **p** (klein) | auf dem aktuellen Foto die Fokus-Person anzoomen (das Foto bleibt länger stehen) |
+| **P** (groß) | Fokus-Person und Partner anzoomen |
 | **I** | Info zum Foto (Datum, Kamera, Auflösung …) |
 | **Q** | QR-Code für die Handy-Fernbedienung einblenden |
 | **q** (klein) | QR-Code für die Kinder-Fernbedienung einblenden |

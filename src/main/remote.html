@@ -632,6 +632,8 @@
         <input type="range" id="focusThreshold" min="20" max="70" step="1" />
       </div>
       <div id="focusFaceSize"></div>
+      <div id="focusExtraTime"></div>
+      <div id="focusPairExtraTime"></div>
       <div class="label" style="margin-top: 12px">Fokus-Arten</div>
       <div class="chips" id="focusModes"></div>
     </section>
@@ -648,6 +650,7 @@
     <section data-page="texte">
       <div id="textFillerEvery"></div>
       <div id="textDuration"></div>
+      <div id="textSizeRandom"></div>
       <div class="row">
         <div class="label">Neuer Text</div>
         <textarea id="newText" rows="2" placeholder="Text eingeben …"></textarea>
@@ -982,6 +985,9 @@
         rangeControl('worldTiles', t('remote.worldTiles'), photosUnit, 8, 120, 1)
         rangeControl('worldCameraSpeed', t('remote.worldCameraSpeed'), '×', 0.3, 3, 0.1)
         rangeControl('focusFaceSize', t('remote.focusFaceSize'), '%', 10, 80, 1, 100)
+        rangeControl('focusExtraTime', t('remote.focusExtraTime'), 's', 0, 30, 0.5)
+        rangeControl('focusPairExtraTime', t('remote.focusPairExtraTime'), 's', 0, 30, 0.5)
+        rangeControl('textSizeRandom', t('remote.textSizeRandom'), '%', 30, 250, 5, 100)
         // Einstellungen, die früher nur am PC gingen
         selectControl('language', t('remote.language'), () => state.labels.languages)
         switchControl('includeSubfolders', t('remote.includeSubfolders'))
@@ -1233,7 +1239,15 @@
             .forEach((b) => (b.onclick = () => command('emoji', s.emojis[Number(b.dataset.i)])))
         }
 
-        for (const key of ['worldTiles', 'worldCameraSpeed', 'focusFaceSize']) $(key).update(s[key])
+        for (const key of [
+          'worldTiles',
+          'worldCameraSpeed',
+          'focusFaceSize',
+          'focusExtraTime',
+          'focusPairExtraTime',
+          'textSizeRandom'
+        ])
+          $(key).update(s[key])
         for (const key of [
           'language',
           'includeSubfolders',

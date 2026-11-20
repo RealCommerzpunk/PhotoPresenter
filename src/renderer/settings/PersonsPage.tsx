@@ -652,6 +652,26 @@ export function PersonsPage({ s, update }: { s: Settings; update: Update }): Rea
             onChange={(v) => update({ focusBoost: Number(v) })}
           />
         </Field>
+        <Field label={t('ui.persons.extraTime')} hint={t('ui.persons.extraTimeHint')}>
+          <RangeInput
+            value={s.focusExtraTime}
+            onChange={(v) => update({ focusExtraTime: v })}
+            min={0}
+            max={30}
+            step={0.5}
+            unit="s"
+          />
+        </Field>
+        <Field label={t('ui.persons.pairExtraTime')} hint={t('ui.persons.pairExtraTimeHint')}>
+          <RangeInput
+            value={s.focusPairExtraTime}
+            onChange={(v) => update({ focusPairExtraTime: v })}
+            min={0}
+            max={30}
+            step={0.5}
+            unit="s"
+          />
+        </Field>
       </Card>
     </>
   )

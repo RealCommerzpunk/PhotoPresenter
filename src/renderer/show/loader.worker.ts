@@ -17,7 +17,8 @@ export type WorkerRequest =
       maxBase: number
     }
   | { id: number; kind: 'soft'; name: string; screen: Size }
-  | { id: number; kind: 'thumb'; name: string }
+  /** `height` > 0: scharfe Fassung in dieser Höhe (Kachel am Anfang/Ende der 3D-Welt). */
+  | { id: number; kind: 'thumb'; name: string; height?: number }
 
 export type WorkerResponse =
   | { id: number; ok: true; kind: 'photo'; images: PreparedImages }
@@ -44,7 +45,7 @@ self.onmessage = async (e: MessageEvent<WorkerRequest>) => {
       // Bitmaps werden übertragen, nicht kopiert.
       self.postMessage(msg, [...r.strips.map((s) => s.bitmap), r.backdrop, r.soft])
     } else if (req.kind === 'thumb') {
-      const thumb = await prepareThumb(req.name)
+      const thumb = await prepareThumb(req.name, req.height)
       self.postMessage({ id: req.id, ok: true, kind: 'thumb', thumb } satisfies WorkerResponse, [
         thumb
       ])

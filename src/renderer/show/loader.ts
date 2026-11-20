@@ -29,6 +29,8 @@ export interface LoadedPhoto {
   original: Size
   pixelRatio: number
   fit: Fit
+  /** Eigene Kopie der Randfüllung (für die 3D-Welt; gehört dem Aufrufer). */
+  copyBackdrop(): Promise<ImageBitmap>
   destroy(): void
 }
 
@@ -65,9 +67,12 @@ function textureFrom(bitmap: ImageBitmap): Texture {
   })
 }
 
-/** Vorschaubild (4:3) für die 3D-Fotowelt. */
-export async function loadThumb(name: string): Promise<ImageBitmap> {
-  const r = await ask({ kind: 'thumb', name })
+/**
+ * Vorschaubild für die 3D-Fotowelt (im Seitenverhältnis des Fotos). Mit `height` eine
+ * scharfe Fassung in dieser Höhe für die bildschirmgroße Kachel am Anfang/Ende der Welt.
+ */
+export async function loadThumb(name: string, height = 0): Promise<ImageBitmap> {
+  const r = await ask({ kind: 'thumb', name, height })
   if (r.kind !== 'thumb') throw new Error('unerwartete Antwort')
   return r.thumb
 }
@@ -118,6 +123,9 @@ export async function loadPhoto(
       maxCrop,
       maxBase > 0 ? (maxBase / pixelRatio) * (images.originalWidth / size.w) : Infinity
     ),
+    copyBackdrop() {
+      return createImageBitmap(images.backdrop)
+    },
     destroy() {
       for (const p of parts) p.texture.destroy(true)
       backdrop.destroy(true)

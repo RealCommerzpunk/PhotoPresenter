@@ -25,11 +25,12 @@
 - **"From … to" ranges everywhere:** display time, motion intensity, transition duration and effects can be
   fixed or randomised per photo.
 - **Face focus:** teach the app a person (offline face recognition, YuNet + SFace); photos showing them get a
-  camera move onto their face, optionally panning across the other faces first.
+  camera move onto their face, optionally panning across the other faces first; such photos can stay longer.
+  Keys p and P (with partner) do the same on the photo currently shown.
 - **Texts:** filler texts between photos or texts tied to photos (before, over or after), 12 animated styles
   plus your own. Texts and emojis automatically avoid covering faces.
-- **3D photo world:** an occasional interlude where the photos form a sphere, helix, tunnel, wobbly jelly cube …
-  and the camera dives into the next photo.
+- **3D photo world:** an occasional interlude – the current photo becomes a tile, the photos form a sphere, helix,
+  tunnel, wobbly jelly cube … and the camera dives seamlessly into the next photo.
 - **Phone remote control** via QR code (local network, no app needed): pause, skip, freeze a photo, trigger
   emojis, texts, effects and the 3D world, pick the next photos from a gallery, change almost every setting.
   A **kids remote** allows exactly
@@ -48,7 +49,7 @@ portable program alone and an installer.
 Windows SmartScreen warns because the build is not signed ("More info" → "Run anyway").
 A step-by-step guide (German) is in [Quickstart.md](Quickstart.md) / [Quickstart.pdf](Quickstart.pdf).
 
-**Linux (pre-release):** AppImage, `.deb` and a demo archive are on the [Linux release](https://github.com/RealCommerzpunk/PhotoPresenter/releases/tag/v0.15.0-linux), built by a GitHub workflow.
+**Linux (pre-release):** AppImage, `.deb` and a demo archive are on the [Linux release](https://github.com/RealCommerzpunk/PhotoPresenter/releases/tag/v0.16.0-linux), built by a GitHub workflow.
 
 **From source** – requires Node.js ≥ 22.12:
 
@@ -71,7 +72,9 @@ also picks up `Photos/`. Choose your own folder in the settings window (**Allgem
 |---|---|
 | Esc | quit the show |
 | Space | pause / resume |
-| ← / → | previous / next photo |
+| ← / → | previous / next (also through text slides and 3D worlds) |
+| p | zoom in on the focus person in the current photo |
+| P | zoom in on the focus person and partner |
 | I | photo info (resolution, zoom, EXIF) |
 | Q | show the QR code for the phone remote |
 | q (lowercase) | show the QR code for the kids remote |

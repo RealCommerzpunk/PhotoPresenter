@@ -344,17 +344,20 @@ export class FaceStore {
     return (emb) => matchFace(decodeEmbedding(emb), pos, neg, threshold)
   }
 
-  private focusPerson(settings: Settings): Person | undefined {
-    if (!settings.focusEnabled) return undefined
+  private focusPerson(settings: Settings, force = false): Person | undefined {
+    if (!settings.focusEnabled && !force) return undefined
     return settings.persons.find((p) => p.id === settings.focusPersonId && p.samples.length)
   }
 
-  /** Gesichter eines Fotos; der beste Treffer der Fokus-Person ist markiert. */
-  getFaces(name: string): FaceInfo | null {
+  /**
+   * Gesichter eines Fotos; der beste Treffer der Fokus-Person ist markiert (und der des
+   * Partners). `force`: auch bei ausgeschaltetem Fokus bzw. ohne „Gemeinsam“ (Taste p/P).
+   */
+  getFaces(name: string, force = false): FaceInfo | null {
     const entry = this.index.get(resolve(this.folder, name))
     if (!entry || !entry.faces.length) return null
     const settings = loadSettings()
-    const match = this.matcher(this.focusPerson(settings), settings.focusThreshold)
+    const match = this.matcher(this.focusPerson(settings, force), settings.focusThreshold)
     const results = entry.faces.map((f) => match?.(f.emb))
     let best = -1
     results.forEach((r, i) => {
@@ -362,7 +365,7 @@ export class FaceStore {
     })
     // Fokus-Partner: bester Treffer unter den übrigen Gesichtern (nur mit „Gemeinsam“).
     let partner = -1
-    const partnerPerson = this.partnerPerson(settings)
+    const partnerPerson = this.partnerPerson(settings, force)
     if (best >= 0 && partnerPerson) {
       const matchPartner = this.matcher(partnerPerson, settings.focusThreshold)!
       const partnerResults = entry.faces.map((f) => matchPartner(f.emb))
@@ -382,8 +385,8 @@ export class FaceStore {
     return { w: entry.w, h: entry.h, faces }
   }
 
-  private partnerPerson(settings: Settings): Person | undefined {
-    if (!settings.focusEnabled || !settings.focusTogether) return undefined
+  private partnerPerson(settings: Settings, force = false): Person | undefined {
+    if (!force && (!settings.focusEnabled || !settings.focusTogether)) return undefined
     if (settings.focusPartnerId === settings.focusPersonId) return undefined
     return settings.persons.find((p) => p.id === settings.focusPartnerId && p.samples.length)
   }

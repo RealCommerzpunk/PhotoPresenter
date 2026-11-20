@@ -2,6 +2,20 @@
 
 Alle Änderungen je Version. Format: neueste Version oben, Datum im Format JJJJ-MM-TT.
 
+## 0.16.0 – 2026-11-20
+
+Fließende Übergänge in und aus der 3D-Welt, Blättern durch alles, Fokus per Taste.
+
+- **3D-Welt beginnt mit dem aktuellen Foto**: Vor einer Welt zieht sich die Kamera weich ins Gesamtbild zurück; die Welt übernimmt das Foto samt Rand in derselben Größe, die Kamera fährt zurück, der Rand löst sich auf, das Foto wird zur Kachel und die übrigen Kacheln erscheinen rundherum. Auch bei „3D jetzt“ von der Fernbedienung (dann zügiger)
+- **Ausstieg aus der 3D-Welt ohne Bruch**: Die Zielkachel zieht beim Eintauchen vom 4:3-Ausschnitt zum ganzen Foto auf (kein Sprung mehr in der Zoomstufe), ist am Ende scharf und bekommt schon während des Eintauchens ihren Rand. Danach geht es nach kurzer Überblendung ohne Stillstand weiter – das Zielfoto steht nicht länger als andere Fotos
+- **← und → blättern durch alles**: Zurück geht Eintrag für Eintrag auch über Textfolien und 3D-Welten, vor läuft dieselbe Strecke wieder ab. Wiederholt sehen Fotos, Texte und Welten gleich aus (Randfüllung, Textstil und -hintergrund, Formation, Kacheln und Zielfoto der Welt)
+- **Tasten p und P**: p zoomt auf dem aktuellen Foto auf die Fokus-Person, P auf Fokus-Person und Partner. Die laufende Bewegung geht vorher weich ins Gesamtbild über; das Foto steht danach so lange wie ein Fokus-Foto. Geht auch bei ausgeschaltetem Fokus
+- **Länger zeigen bei Fokus** (Personen → Fokus in der Show): zusätzliche Sekunden für Fotos mit der Fokus-Person (Standard +3 s) und für Fotos mit Fokus-Person und Partner (Standard +5 s), fest oder zufällig, auch per Handy
+- **Schriftgröße bei Zufall** (Texte → Ablauf): Texte mit zufälligem Stil erscheinen kleiner oder größer als im Stil (Standard 70–140 %), lange Texte wachsen weniger; auch per Handy
+- **Randfüllung „Farbverlauf“ neu**: Statt zweier flacher, stark abgedunkelter Farbflächen setzen sich die Ränder des Fotos Zeile für Zeile bis an den Bildschirmrand fort, weichgezeichnet und nach außen leicht dunkler; die Füllung bewegt sich mit dem Foto. „Weichgezeichnet“ und „Gespiegelt“ sind etwas heller
+- **Rückseiten der Fotos in der 3D-Welt**: zwölf verschiedene Rückseiten aus altem Fotopapier (Weißtöne, Vergilbung, Flecken, Knicke, Eselsohren, Bleistift-Notizen) statt reinweiß
+- **Keine Statuseinblendungen mehr** auf dem Bildschirm (Pause, Weiter, Eingefroren, Anfang erreicht, Fokus-Hinweise …): Zu sehen ist nur, was bewusst eingeblendet wird – Texte, Emojis, QR-Codes, Info-Tafel. Rückmeldungen gehen an die Handy-Fernbedienung
+
 ## 0.15.0 – 2026-11-20
 
 Weniger Wiederholungen, alles auf dem Handy, flüssigere Personen-Seite.

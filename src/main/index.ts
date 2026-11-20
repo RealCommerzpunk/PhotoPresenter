@@ -700,7 +700,9 @@ app.whenReady().then(() => {
     faceStore.storeHash(name, phash, w, h)
   )
   ipcMain.handle(IPC.faceStatus, () => faceStore.status())
-  ipcMain.handle(IPC.getFaces, (_e, name: string) => faceStore.getFaces(name))
+  ipcMain.handle(IPC.getFaces, (_e, name: string, force?: boolean) =>
+    faceStore.getFaces(name, force === true)
+  )
   ipcMain.handle(IPC.listFaces, (_e, personId?: string, photo?: string) =>
     faceStore.listFaces(personId, photo)
   )

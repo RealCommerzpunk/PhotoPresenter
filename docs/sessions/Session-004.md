@@ -1,4 +1,4 @@
-# Session 004 – 2026-11-13 bis 2026-11-20
+# Session 004 – 2026-11-13 bis 2026-11-20 (bis Version 0.16.0)
 
 Version 0.14.0: Songs mit Karaoke, Zeiten-Editor, Kinder-Fernbedienung, Dichte der 3D-Welt.
 Fortsetzung bis 0.15.0: weniger Wiederholungen, alle Einstellungen auf dem Handy, Personen-Seite (siehe unten).
@@ -72,6 +72,34 @@ Fortsetzung bis 0.15.0: weniger Wiederholungen, alle Einstellungen auf dem Handy
 - Gesichtskacheln luden ganze Fotos → bei vielen kleinen Ansichten immer Vorschaubilder aus dem Cache.
 - Der Gesichtsindex behält gelöschte Fotos absichtlich → Anzeigen und Auswahlen müssen gegen die aktuelle Fotoliste filtern.
 - Demo-ZIP der Vorversion lag nicht mehr in `dist/` → Aufbau und `README.txt` aus dem Release-Asset übernommen (`gh release download`).
+
+## Fortsetzung 2026-11-20 (Nachmittag) – Version 0.16.0
+
+### Ergebnis
+
+- Version 0.16.0, 138 Unit-Tests; Releases v0.16.0 (Windows) und v0.16.0-linux (Vorabversion)
+- Neu: Ein- und Ausstieg der 3D-Welt mit Foto samt Rand, Verlauf für ←/→ über alle Einträge, Tasten p/P, „Länger zeigen“ bei Fokus, Schriftgröße bei Zufall, neuer Farbverlauf, Papier-Rückseiten, keine Statuseinblendungen
+
+### Ablauf
+
+1. Länger zeigen bei Fokus (Person / mit Partner), zufällige Schriftgröße bei Zufallsstil, Fernbedienung ergänzt.
+2. Randfüllung: Beispiele des Nutzers zeigten den alten „Farbverlauf“ (zwei flache, dunkle Flächen) → Ränder zeilenweise fortsetzen, deckungsgleich unter dem Foto.
+3. Ausstieg 3D-Welt: Sprung kam vom 4:3-Ausschnitt der Kachel → Vorschaubilder im Seitenverhältnis des Fotos, Zielkachel zieht zum ganzen Foto auf, scharfe Fassung.
+4. Verlauf für ←/→ (`history.ts`), Einstieg in die Welt mit dem aktuellen Foto, Tasten p/P.
+5. Auf Wunsch: keine Statuseinblendungen; 12 Papier-Rückseiten (danach kräftiger).
+6. Ausstieg wirkte noch zu lang (Stehen, dann Rand langsam) → der Rand entsteht in der Welt selbst während des Eintauchens bzw. löst sich beim Einstieg auf; Überblendung nur noch kurz.
+7. Backlog: Party-Version mit Abstimmung während der 3D-Welt.
+
+### Entscheidungen des Nutzers
+
+- Auf dem Show-Bildschirm nur bewusst Eingeblendetes (Texte, Emojis, QR-Codes)
+- Übergänge der 3D-Welt sollen so weich wie die übrigen sein, ohne Stillstand
+- Party-Version (Gäste-Fernbedienungen, Abstimmung in der 3D-Welt) viel später
+
+### Fehler und Lehren
+
+- Testaufnahmen alle 100 ms hinken zeitlich nach; Lage von 3D-Kacheln lieber per Projektion der Ecken (Konsolenausgabe) prüfen.
+- Ein Rand, der erst nach dem Übergang einblendet, wirkt wie ein Bruch: Übergänge zwischen gleichem Bild müssen beide Seiten identisch zeigen (Rand schon in der Welt).
 
 ## Offen am Ende
 

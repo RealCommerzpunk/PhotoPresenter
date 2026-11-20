@@ -270,6 +270,8 @@ export const settingsSchema = z.object({
   textDuration: field(rangeSchema, { min: 4, max: 6, mode: 'random' } satisfies Range),
   /** Stile, aus denen bei „Zufall“ gewählt wird (Vorlagen und eigene). */
   textStyles: field(looseWeighted, defaultTextStyles),
+  /** Schriftgröße bei zufälligem Stil: Faktor auf die Größe des Stils (1 = wie im Stil). */
+  textSizeRandom: field(rangeSchema, { min: 0.7, max: 1.4, mode: 'random' } satisfies Range),
   /** Fokus-Person: Gesicht in Fotos suchen und anzoomen. */
   focusEnabled: field(z.boolean(), true),
   focusPersonId: field(z.string(), ''),
@@ -285,6 +287,10 @@ export const settingsSchema = z.object({
   focusPanOthers: field(z.enum(['off', 'before', 'after', 'random']), 'random'),
   /** Fotos mit der Person häufiger zeigen: 0 = normal, 1–3 = zusätzliche Male je Runde. */
   focusBoost: field(z.number().int().min(0).max(3), 1),
+  /** Zusätzliche Anzeigedauer (Sekunden) für Fotos mit der Fokus-Person. */
+  focusExtraTime: field(rangeSchema, { min: 3, max: 3, mode: 'fixed' } satisfies Range),
+  /** Zusätzliche Anzeigedauer (Sekunden), wenn Fokus-Person und Partner zusammen zu sehen sind. */
+  focusPairExtraTime: field(rangeSchema, { min: 5, max: 5, mode: 'fixed' } satisfies Range),
   /** Partikel-Effekte über den Fotos (Konfetti, Schnee, Funkeln …). */
   effectsEnabled: field(z.boolean(), true),
   /** Nach wie vielen Fotos ein Effekt kommt. */

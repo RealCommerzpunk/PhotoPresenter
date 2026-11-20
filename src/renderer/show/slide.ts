@@ -1,7 +1,13 @@
 import { t } from '@shared/i18n'
 import { Container, Sprite } from 'pixi.js'
 import { pick, pickWeighted } from '@shared/random'
-import { FOCUS_LABELS, MOTION_LABELS, type MotionKind, type Settings } from '@shared/settings'
+import {
+  FOCUS_LABELS,
+  MOTION_LABELS,
+  type FillMode,
+  type MotionKind,
+  type Settings
+} from '@shared/settings'
 import type { TextItem, TextStyle } from '@shared/text'
 import { TextOverlay } from '../text/overlay'
 import type { LoadedPhoto } from './loader'
@@ -13,6 +19,7 @@ import {
   zoomLimit,
   type FaceBox,
   type FocusPlan,
+  type Keyframe,
   type Shot,
   type Size
 } from './motion'
@@ -34,8 +41,11 @@ export interface FocusTarget {
 }
 
 export interface SlideOptions {
-  /** Sekunden, die das Foto zu Beginn ruhig im Gesamtbild steht (z. B. nach der 3D-Welt). */
-  stillStart?: number
+  /**
+   * Nach der 3D-Welt: Das Foto beginnt im Gesamtbild (wie die Zielkachel) und die Bewegung
+   * läuft weich an, statt mit Tempo zu starten.
+   */
+  softStart?: boolean
   /** Alle Gesichter auf dem Foto (null = noch nicht analysiert): Texte weichen ihnen aus. */
   faces?: FaceBox[] | null
 }
@@ -56,6 +66,29 @@ export interface SlideStats {
   frozen: boolean
 }
 
+/** Anlaufzeit der Bewegung nach der 3D-Welt (Sekunden). */
+const MOTION_RAMP = 1.5
+
+/**
+ * Randfüllung zur Kamera `k` legen (k = Gesamtbild: zoom 1, x = y = 0). Auch die 3D-Welt
+ * nutzt das, damit ihr Rand beim Ein- und Austauchen genau dem des Fotos entspricht.
+ */
+export function placeBackdrop(sprite: Sprite, fill: FillMode, screen: Size, k: Keyframe): void {
+  const tex = sprite.texture
+  const cover = Math.max(screen.w / tex.width, screen.h / tex.height)
+  const cx = screen.w / 2
+  const cy = screen.h / 2
+  if (fill !== 'blur') {
+    // Spiegelung und Farbverlauf liegen deckungsgleich unter dem Foto und bewegen sich mit.
+    sprite.scale.set(cover * k.zoom)
+    sprite.position.set(cx + k.x, cy + k.y)
+  } else {
+    // Der Hintergrund bewegt sich langsamer und gegenläufig: Das gibt Tiefe.
+    sprite.scale.set(cover * 1.12 * (1 + (k.zoom - 1) * 0.35))
+    sprite.position.set(cx - k.x * 0.15, cy - k.y * 0.15)
+  }
+}
+
 /** Schleife beim Einfrieren: Fortschritt t = c + a · sin(ω · τ + φ). */
 interface FreezeLoop {
   c: number
@@ -71,10 +104,11 @@ export class Slide extends TimedScene implements Scene {
   private readonly backdrop: Sprite
   /** Foto aus Streifen-Sprites, Drehpunkt in der Fotomitte. */
   private readonly photo = new Container()
-  private readonly shot: Shot
+  private shot: Shot
   private readonly track = new OverlayTrack()
-  private readonly stillStart: number
-  private readonly motionText: string
+  /** Nach der 3D-Welt: vom Gesamtbild aus, Bewegung läuft weich an. */
+  private readonly softStart: boolean
+  private motionText: string
   private readonly maxZoom: number
   /** Verschiebung der Bewegungszeit nach dem Auftauen (Sekunden). */
   private motionShift = 0
@@ -83,6 +117,14 @@ export class Slide extends TimedScene implements Scene {
   private lastZoom = 1
   private readonly faces: FaceBox[] | null
   private screen: Size
+  /** Rückzug ins Gesamtbild vor der 3D-Welt (Beginn und Dauer in Sekunden Standzeit). */
+  private settle: { start: number; len: number } | null = null
+  /** Standzeit, ab der die Bewegung nach einem Neu-Fokus neu läuft (null = kein Neu-Fokus). */
+  private restart: number | null = null
+  /** Per Taste gestarteter Fokus (ersetzt `focus` für Anzeige und Info). */
+  private activeFocus?: FocusTarget
+  /** Kamera im letzten Frame (Startpunkt für einen Neu-Fokus). */
+  private lastKey: Keyframe = { zoom: 1, x: 0, y: 0 }
 
   constructor(
     readonly loaded: LoadedPhoto,
@@ -95,7 +137,7 @@ export class Slide extends TimedScene implements Scene {
     options: SlideOptions = {}
   ) {
     super(fadeIn)
-    this.stillStart = options.stillStart ?? 0
+    this.softStart = options.softStart ?? false
     this.faces = options.faces ?? null
     this.screen = screen
     this.display = pick(settings.displayDuration)
@@ -127,8 +169,8 @@ export class Slide extends TimedScene implements Scene {
           loaded.fit.scale,
           focus.face,
           focus.others,
-          // Nach einer Ruhephase immer vom Gesamtbild aus starten (keine Fahrt von der Seite).
-          this.stillStart && focus.plan.mode === 'journey'
+          // Nach der 3D-Welt immer vom Gesamtbild aus starten (keine Fahrt von der Seite).
+          this.softStart && focus.plan.mode === 'journey'
             ? { ...focus.plan, mode: 'slowZoom' }
             : focus.plan,
           Math.random,
@@ -136,17 +178,22 @@ export class Slide extends TimedScene implements Scene {
         ),
         maxZoom
       )
-      const mode = this.stillStart && focus.plan.mode === 'journey' ? 'slowZoom' : focus.plan.mode
+      const mode = this.softStart && focus.plan.mode === 'journey' ? 'slowZoom' : focus.plan.mode
       const pan = focus.others.length ? focus.plan.others : 'off'
       this.motionText =
         t('show.motionFocus', { mode: FOCUS_LABELS[mode] }) +
         (pan === 'off' ? '' : pan === 'before' ? t('show.panBefore') : t('show.panAfter'))
+      // Fotos mit der Fokus-Person (und dem Partner) stehen länger, je nach Einstellung.
+      this.display += Math.max(
+        0,
+        pick(focus.partner ? settings.focusPairExtraTime : settings.focusExtraTime)
+      )
       // Genug Zeit, damit die Kamera an jedem Gesicht kurz verweilen kann.
       const stations = this.shot.path?.length ?? 2
       this.display = Math.max(this.display, 5, stations * 2)
     } else {
-      // Nach einer Ruhephase vom Gesamtbild aus hineinzoomen, sonst nach Einstellung.
-      const kind: MotionKind = this.stillStart
+      // Nach der 3D-Welt vom Gesamtbild aus hineinzoomen, sonst nach Einstellung.
+      const kind: MotionKind = this.softStart
         ? 'zoomIn'
         : (pickWeighted(settings.motionKinds) ?? 'zoomIn')
       this.motionText = MOTION_LABELS[kind]
@@ -155,8 +202,6 @@ export class Slide extends TimedScene implements Scene {
         maxZoom
       )
     }
-
-    this.display += this.stillStart
 
     // Texte über dem Foto nacheinander; die Standzeit wird bei Bedarf verlängert.
     if (textHost && texts.length) {
@@ -189,9 +234,21 @@ export class Slide extends TimedScene implements Scene {
     return this.faces === null && style.position === 'center' ? 'bottom' : style.position
   }
 
+  /**
+   * Bewegungszeit nach `seconds` Standzeit. Nach der 3D-Welt läuft die Bewegung gegen Ende
+   * des Überblendens weich an (Tempo steigt über MOTION_RAMP Sekunden von 0).
+   */
+  private movingTime(seconds: number): number {
+    // Nach einem Neu-Fokus (Taste p/P) beginnt die Bewegung an dieser Stelle neu.
+    if (this.restart !== null) return Math.max(0, seconds - this.restart)
+    if (!this.softStart) return seconds
+    const m = Math.max(0, seconds - this.fadeIn * 0.5)
+    return m < MOTION_RAMP ? (m * m) / (2 * MOTION_RAMP) : m - MOTION_RAMP / 2
+  }
+
   /** Bewegungsfortschritt (0–1) nach `seconds` Standzeit, ohne Einfrieren. */
   private progressAt(seconds: number): number {
-    const moving = Math.max(0, seconds - this.stillStart) + this.motionShift
+    const moving = this.movingTime(seconds) + this.motionShift
     return Math.min(1, Math.max(0, moving / this.motionDuration))
   }
 
@@ -219,8 +276,9 @@ export class Slide extends TimedScene implements Scene {
   }
 
   get label(): string {
-    if (!this.focus) return this.loaded.name
-    const who = this.focus.partner ? t('show.focusPartner') : t('show.focus')
+    const focus = this.activeFocus ?? this.focus
+    if (!focus) return this.loaded.name
+    const who = focus.partner ? t('show.focusPartner') : t('show.focus')
     return `${this.loaded.name} · ${who}`
   }
 
@@ -230,7 +288,7 @@ export class Slide extends TimedScene implements Scene {
 
   /** Dauer der Bewegung in Sekunden (nach der Ruhephase). */
   private get motionDuration(): number {
-    return Math.max(0.001, this.lifetime - this.stillStart)
+    return Math.max(0.001, this.movingTime(this.lifetime))
   }
 
   get frozen(): boolean {
@@ -254,7 +312,7 @@ export class Slide extends TimedScene implements Scene {
       const omega = Math.min((2 * Math.PI) / 6, Math.max((2 * Math.PI) / 24, speed / a))
       this.loop = { c, a, omega, phi, time: 0 }
     } else {
-      const moving = Math.max(0, this.elapsed - this.stillStart)
+      const moving = this.movingTime(this.elapsed)
       this.motionShift = this.lastProgress * this.motionDuration - moving
       this.loop = null
     }
@@ -285,33 +343,103 @@ export class Slide extends TimedScene implements Scene {
     } else {
       this.elapsed += dt
       // Während der Ruhephase steht das Bild; danach läuft die Bewegung über die restliche Zeit.
-      const moving = Math.max(0, this.elapsed - this.stillStart) + this.motionShift
+      const moving = this.movingTime(this.elapsed) + this.motionShift
       t = Math.min(1, Math.max(0, moving / this.motionDuration))
     }
     this.track.update(this.elapsed)
     const { size, fit } = this.loaded
-    const k = evaluateShot(this.shot, t, size, screen, fit.scale)
+    let k = evaluateShot(this.shot, t, size, screen, fit.scale)
+    // Vor der 3D-Welt: Kamera weich zurück ins Gesamtbild – so steht das Foto am Ende genau
+    // so da wie die Kachel, mit der die Welt beginnt (den Rand blendet dann die Welt aus).
+    if (this.settle) {
+      const u = Math.min(1, Math.max(0, (this.elapsed - this.settle.start) / this.settle.len))
+      const settled = u * u * (3 - 2 * u)
+      k = { zoom: k.zoom + (1 - k.zoom) * settled, x: k.x * (1 - settled), y: k.y * (1 - settled) }
+    }
     this.lastProgress = t
     this.lastZoom = k.zoom
+    this.lastKey = k
 
     const cx = screen.w / 2
     const cy = screen.h / 2
     this.photo.scale.set(fit.scale * k.zoom)
     this.photo.position.set(cx + k.x, cy + k.y)
+    if (this.backdrop.visible) placeBackdrop(this.backdrop, this.loaded.fill, screen, k)
+  }
 
-    if (this.backdrop.visible) {
-      const tex = this.backdrop.texture
-      const cover = Math.max(screen.w / tex.width, screen.h / tex.height)
-      if (this.loaded.fill === 'mirror') {
-        // Spiegelung liegt deckungsgleich unter dem Foto und bewegt sich exakt mit.
-        this.backdrop.scale.set(cover * k.zoom)
-        this.backdrop.position.set(cx + k.x, cy + k.y)
-      } else {
-        // Der Hintergrund bewegt sich langsamer und gegenläufig: Das gibt Tiefe.
-        this.backdrop.scale.set(cover * 1.12 * (1 + (k.zoom - 1) * 0.35))
-        this.backdrop.position.set(cx - k.x * 0.15, cy - k.y * 0.15)
-      }
-    }
+  /**
+   * Neu-Fokus (Taste p bzw. P): Die laufende Bewegung geht weich ins Gesamtbild über
+   * (`settleLen` Sekunden), danach fährt die Kamera die Person bzw. Person und Partner an.
+   * Das Foto steht dafür so lange, wie ein Fokus-Foto stehen würde (inkl. Verlängerung).
+   * Vor der 3D-Welt (Rückzug läuft schon) passiert nichts.
+   */
+  refocus(target: FocusTarget, settings: Settings, settleLen = 1.5): boolean {
+    if (this.settle) return false
+    this.setFrozen(false)
+    const { size, fit, original, pixelRatio } = this.loaded
+    // Nicht stärker zoomen, als die geladene Auflösung hergibt (ohne Fokus wird das Foto
+    // kleiner geladen) und als die Zoomgrenze erlaubt.
+    const texCap = size.w < original.w ? 1.3 / Math.max(1e-6, fit.scale * pixelRatio) : Infinity
+    const cap = Math.max(1, Math.min(this.maxZoom, texCap))
+    // Fahrten von der Seite passen nicht: Es geht immer vom Gesamtbild aus.
+    const plan: FocusPlan =
+      target.plan.mode === 'journey' ? { ...target.plan, mode: 'slowZoom' } : target.plan
+    const focusShot = limitShot(
+      planFocusShot(
+        size,
+        this.screen,
+        fit.scale,
+        target.face,
+        target.others,
+        plan,
+        Math.random,
+        target.partner
+      ),
+      cap
+    )
+    const stations = focusShot.path ?? [
+      { ...focusShot.from, t: 0 },
+      { ...focusShot.to, t: 1 }
+    ]
+    const extra = pick(target.partner ? settings.focusPairExtraTime : settings.focusExtraTime)
+    const duration = Math.max(
+      pick(settings.displayDuration) + Math.max(0, extra),
+      5,
+      stations.length * 2
+    )
+    const total = settleLen + duration + this.fadeOut
+    const a = settleLen / total
+    const from = { ...this.lastKey, t: 0 }
+    const wide = { zoom: 1, x: 0, y: 0, t: a }
+    const path = [from, wide, ...stations.slice(1).map((s) => ({ ...s, t: a + s.t * (1 - a) }))]
+    this.shot = { from, to: path[path.length - 1], path }
+    this.restart = this.elapsed
+    this.motionShift = 0
+    this.display = this.elapsed - this.fadeIn + settleLen + duration
+    this.activeFocus = target
+    const pan = target.others.length ? plan.others : 'off'
+    this.motionText =
+      t('show.motionFocus', { mode: FOCUS_LABELS[plan.mode] }) +
+      (pan === 'off' ? '' : pan === 'before' ? t('show.panBefore') : t('show.panAfter'))
+    return true
+  }
+
+  /**
+   * Vor der 3D-Welt: in den letzten `len` Sekunden (bzw. ab jetzt, `now`) weich ins
+   * Gesamtbild zurück und die Randfüllung ausblenden. Verlängert die Standzeit bei Bedarf.
+   */
+  settleToWhole(len: number, now = false): void {
+    if (this.settle) return
+    this.setFrozen(false)
+    const start = now ? this.elapsed : Math.max(this.elapsed, this.fadeIn + this.display - len)
+    this.settle = { start, len }
+    this.display = now
+      ? start + len - this.fadeIn
+      : Math.max(this.display, start + len - this.fadeIn)
+  }
+
+  get settling(): boolean {
+    return this.settle !== null
   }
 
   hurry(fade: number): void {

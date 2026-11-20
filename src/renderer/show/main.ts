@@ -36,7 +36,8 @@ import { EmojiLayer } from './emojis'
 import { infoHtml } from './info'
 import { frame, mark, measure } from './perf'
 import { ThumbPool } from './world/thumbPool'
-import { loadThree, WorldScene } from './world/worldScene'
+import { ShowHistory, type HistoryRecord } from './history'
+import { loadThree, WorldScene, type WorldPlan } from './world/worldScene'
 
 const FIRST_FADE = 1.2
 const SKIP_FADE = 0.6
@@ -69,7 +70,22 @@ function notice(text: string, kind: ShowNotice['kind'] = 'ok'): void {
 }
 
 /** Vorbereiteter nächster Eintrag: alles geladen, kann sofort gezeigt werden. */
-type Prepared =
+type Prepared = PreparedContent & {
+  /** Eintrag im Verlauf (für ← und →). */
+  record: HistoryRecord
+  /** Neu (wird an den Verlauf angehängt) oder aus dem Verlauf wiederholt. */
+  fresh: boolean
+}
+
+/** Woher der nächste Eintrag kommt: neu aus dem Ablauf oder aus dem Verlauf. */
+interface Source {
+  entry: Entry
+  record?: HistoryRecord
+  /** Per Taste/Fernbedienung angesprungen (kurze Überblendung, kein Einstieg in die 3D-Welt). */
+  manual?: boolean
+}
+
+type PreparedContent =
   | {
       kind: 'photo'
       photo: LoadedPhoto
@@ -102,12 +118,13 @@ function showMessage(text: string | null): void {
   messageEl.style.opacity = text ? '1' : '0'
 }
 
-let statusTimer: number | undefined
+/**
+ * Kurze Rückmeldung zu einer Taste (Pause, Anfang erreicht …). Erscheint bewusst nicht auf
+ * dem Bildschirm: Dort ist nur zu sehen, was gewollt eingeblendet wird (Texte, Emojis,
+ * QR-Codes, Info-Tafel). Die Fernbedienung bekommt Hinweise getrennt per `notice`.
+ */
 function flashStatus(text: string): void {
-  statusEl.textContent = text
-  statusEl.style.opacity = '1'
-  window.clearTimeout(statusTimer)
-  statusTimer = window.setTimeout(() => (statusEl.style.opacity = '0'), 1200)
+  console.info('[Show]', text)
 }
 
 async function main(): Promise<void> {
@@ -179,6 +196,8 @@ async function main(): Promise<void> {
   let failures = 0
   /** Zuletzt gezeigtes Foto, Bezugspunkt für das Zurückblättern. */
   let lastPhoto: string | undefined
+  /** Alles Gezeigte in Reihenfolge (Fotos, Texte, 3D-Welten) für ← und →. */
+  const history = new ShowHistory()
 
   const screen = (): Size => ({ w: app.screen.width, h: app.screen.height })
 
@@ -210,8 +229,12 @@ async function main(): Promise<void> {
   }
 
   /** Fokusplan für ein Foto, wenn die Fokus-Person darauf erkannt wurde. */
-  function focusFor(info: FaceInfo | null): { target: FocusTarget; zoom: number } | null {
-    if (!settings.focusEnabled || !settings.focusPersonId) return null
+  function focusFor(
+    info: FaceInfo | null,
+    /** Auch bei ausgeschaltetem Fokus (Taste p/P). */
+    force = false
+  ): { target: FocusTarget; zoom: number } | null {
+    if ((!settings.focusEnabled && !force) || !settings.focusPersonId) return null
     const focusFace = info?.faces.find((f) => f.focus)
     if (!info || !focusFace) return null
     const partnerFace = info.faces.find((f) => f.partner)
@@ -260,18 +283,30 @@ async function main(): Promise<void> {
     ).then(() => undefined)
   }
 
-  async function prepare(entry: Entry): Promise<Prepared> {
+  async function prepare(source: Source): Promise<Prepared> {
     const prepStart = performance.now()
+    const { entry } = source
+    // Neue Einträge bekommen einen Verlaufseintrag; die Galerie-Nummer gehört nicht hinein
+    // (die Liste ist dann längst abgearbeitet).
+    const record: HistoryRecord = source.record ?? {
+      entry: entry.kind === 'photo' ? { ...entry, queueId: undefined } : entry
+    }
     try {
-      return await prepareInner(entry)
+      const content = await prepareInner(entry, record, !source.manual)
+      return Object.assign(content, { record, fresh: !source.record })
     } finally {
       mark(`Vorbereitung ${Math.round(performance.now() - prepStart)}ms`)
     }
   }
 
-  async function prepareInner(entry: Entry): Promise<Prepared> {
+  async function prepareInner(
+    entry: Entry,
+    record: HistoryRecord,
+    allowIntro: boolean
+  ): Promise<PreparedContent> {
     if (entry.kind === 'photo') {
-      const fill = pickWeighted(settings.fillModes) ?? 'blur'
+      const fill = record.fill ?? pickWeighted(settings.fillModes) ?? 'blur'
+      record.fill = fill
       // Gesichter: für den Fokus und damit Texte und Emojis ihnen ausweichen
       const faceInfo = await window.api.getFaces(entry.name).catch(() => null)
       const focus = focusFor(faceInfo)
@@ -288,7 +323,11 @@ async function main(): Promise<void> {
       // lange, und im Übergang ist alles schon da.
       await uploadGradually([photo.backdrop, ...photo.parts.map((p) => p.texture)])
       remember(entry.name, photo.soft)
-      const texts = entry.overlays.map((item) => ({ item, style: resolveStyle(item, settings) }))
+      const texts = entry.overlays.map((item, i) => ({
+        item,
+        style: record.styles?.[i] ?? resolveStyle(item, settings)
+      }))
+      record.styles = texts.map((t) => t.style)
       await Promise.all(texts.map((t) => loadFont(t.style)))
       return {
         kind: 'photo',
@@ -299,38 +338,87 @@ async function main(): Promise<void> {
         queueId: entry.queueId
       }
     }
-    if (entry.kind === 'world') return prepareWorld()
-    const style = resolveStyle(entry.item, settings)
+    if (entry.kind === 'world') return prepareWorld(record, allowIntro)
+    const style = record.styles?.[0] ?? resolveStyle(entry.item, settings)
+    record.styles = [style]
     const [background] = await Promise.all([softFor(entry.ref), loadFont(style)])
     return { kind: 'text', entry, style, background }
   }
 
   /** Zwischenspiel 3D-Fotowelt vorbereiten: Kacheln, Formationen, Zielfoto; vorab einmal zeichnen. */
-  async function prepareWorld(): Promise<Prepared> {
+  async function prepareWorld(
+    record: HistoryRecord,
+    allowIntro: boolean
+  ): Promise<PreparedContent> {
     const THREE = await loadThree()
-    let count = Math.max(WORLD_MIN_TILES, Math.round(pick(settings.worldTiles)))
-    // Je Zwischenspiel genau eine Formation (per Fernbedienung auch eine bestimmte).
-    const formation: WorldFormation =
-      worldFormationWanted ?? pickWeighted(settings.worldFormations) ?? 'sphere'
-    worldFormationWanted = null
-    const formations: WorldFormation[] = [formation]
-    // Der Wackelpudding-Würfel ist nur geschlossen mit 6 × g² Kacheln (z. B. 54 = 6 × 3 × 3).
-    if (formation === 'jelly') {
-      const g = Math.max(2, Math.round(Math.sqrt(count / 6)))
-      count = 6 * g * g
+    let replay = record.world
+    if (!replay) {
+      let count = Math.max(WORLD_MIN_TILES, Math.round(pick(settings.worldTiles)))
+      // Je Zwischenspiel genau eine Formation (per Fernbedienung auch eine bestimmte).
+      const formation: WorldFormation =
+        worldFormationWanted ?? pickWeighted(settings.worldFormations) ?? 'sphere'
+      worldFormationWanted = null
+      // Der Wackelpudding-Würfel ist nur geschlossen mit 6 × g² Kacheln (z. B. 54 = 6 × 3 × 3).
+      if (formation === 'jelly') {
+        const g = Math.max(2, Math.round(Math.sqrt(count / 6)))
+        count = 6 * g * g
+      }
+      const sampled = thumbs.sample(count)
+      // Zu wenige Vorschaubilder: Fotos wiederholen, damit die Form vollständig ist.
+      replay = {
+        formation,
+        tiles: Array.from({ length: count }, (_, i) => sampled[i % sampled.length].name),
+        duration: pick(settings.worldDuration),
+        cameraSpeed: pick(settings.worldCameraSpeed),
+        density: settings.worldDensity
+      }
+      record.world = replay
     }
-    const sampled = thumbs.sample(count)
-    // Zu wenige Vorschaubilder: Fotos wiederholen, damit die Form vollständig ist.
-    const tiles = Array.from({ length: count }, (_, i) => sampled[i % sampled.length])
+    const world = replay
+    // Kacheln aus dem Vorrat; fehlt ein Vorschaubild inzwischen, springt ein anderes ein.
+    const spare = thumbs.sample(world.tiles.length)
+    const tiles = world.tiles.map((name, i) => {
+      const bitmap = thumbs.get(name)
+      return bitmap ? { name, bitmap } : spare[i % spare.length]
+    })
+    // Einstieg: Das gerade gezeigte Foto wird scharf als Kachel aufgenommen.
+    let intro: WorldPlan['intro']
+    if (allowIntro && current instanceof Slide && !incoming) {
+      const slide = current
+      const { size, fit } = slide.loaded
+      const bitmap = await loadThumb(
+        slide.photoName,
+        Math.round(screen().h * app.renderer.resolution)
+      ).catch(() => null)
+      if (bitmap) {
+        // Der Rand des Fotos bleibt beim Einstieg erst stehen und blendet in der Welt aus.
+        const backdrop = fit.covers
+          ? undefined
+          : await slide.loaded
+              .copyBackdrop()
+              .then((b) => ({ bitmap: b, fill: slide.loaded.fill }))
+              .catch(() => undefined)
+        intro = {
+          name: slide.photoName,
+          bitmap,
+          w: size.w * fit.scale,
+          h: size.h * fit.scale,
+          backdrop
+        }
+      }
+    }
     const scene = new WorldScene(
       THREE,
       {
         tiles,
-        formations,
-        duration: pick(settings.worldDuration),
-        cameraSpeed: pick(settings.worldCameraSpeed),
-        density: settings.worldDensity,
-        age: settings.avoidRepeats ? (name) => playlist.age(name) : undefined
+        formations: [world.formation],
+        duration: world.duration,
+        cameraSpeed: world.cameraSpeed,
+        density: world.density,
+        age: settings.avoidRepeats ? (name) => playlist.age(name) : undefined,
+        finalIndex: world.finalIndex,
+        onFinal: (index) => (world.finalIndex = index),
+        intro
       },
       app.renderer.resolution,
       1.6
@@ -381,12 +469,31 @@ async function main(): Promise<void> {
     return sequencer.next()
   }
 
+  /**
+   * Was als Nächstes kommt: Nach dem Zurückblättern geht es erst den Verlauf wieder entlang
+   * (dieselben Fotos, Texte und 3D-Welten); Galerie-Fotos und „3D jetzt“ haben Vorrang.
+   */
+  function upcoming(): Source | undefined {
+    if (!queueNext() && !worldForced) {
+      const record = history.forward()
+      if (record) {
+        // In der 3D-Welt erst beim Eintauchen vorladen (wie sonst auch).
+        if (current instanceof WorldScene && !current.diving) return undefined
+        return { entry: record.entry, record }
+      }
+    }
+    const entry = nextEntry()
+    return entry && { entry }
+  }
+
   // ---------- Manuelle Reihenfolge (Galerie der Fernbedienung) ----------
   let photoQueue: PhotoQueue = await window.api.getQueue()
   /** Einträge, die die Show schon vorbereitet oder gezeigt hat. */
   const usedQueueIds = new Set<string>()
   /** Eintrag, der gerade vorbereitet wird (für das Verwerfen bei Änderungen der Liste). */
   let loadingEntry: Entry | null = null
+  /** Der ladende Eintrag stammt aus dem Verlauf. */
+  let loadingReplay = false
 
   function queueNext(): QueueItem | undefined {
     return photoQueue.items.find((i) => i.id !== photoQueue.playing && !usedQueueIds.has(i.id))
@@ -412,9 +519,12 @@ async function main(): Promise<void> {
     if (pending ? head?.id === pending : !head) return
     // Das vorbereitete Foto passt nicht mehr zur Liste: verwerfen und neu vorbereiten.
     const dropped = ready?.kind === 'photo' ? ready : null
+    // Verworfene neue Fotos kommen nach der Liste dran (aus dem Verlauf wiederholte nicht:
+    // die stehen ja weiter im Verlauf).
     if (pending) usedQueueIds.delete(pending)
-    else if (dropped && !dropped.queueId) sequencer.insertNext(dropped.photo.name)
-    else if (loadingEntry?.kind === 'photo' && !loadingEntry.queueId)
+    else if (dropped && !dropped.queueId) {
+      if (dropped.fresh) sequencer.insertNext(dropped.photo.name)
+    } else if (loadingEntry?.kind === 'photo' && !loadingEntry.queueId && !loadingReplay)
       sequencer.insertNext(loadingEntry.name)
     discardReady()
     prefetch()
@@ -441,15 +551,16 @@ async function main(): Promise<void> {
   }
 
   /** Bereitet den nächsten Eintrag vor (Standard: der nächste aus dem Ablauf). */
-  function prefetch(next: () => Entry | undefined = nextEntry): void {
+  function prefetch(next: () => Source | undefined = upcoming): void {
     if (loading || ready) return
-    const entry = next()
-    if (!entry) return
+    const source = next()
+    if (!source) return
     loading = true
-    loadingEntry = entry
+    loadingEntry = source.entry
+    loadingReplay = !!source.record
     const gen = generation
     mark('Vorladen startet')
-    prepare(entry)
+    prepare(source)
       .then((p) => {
         mark('Vorladen fertig')
         if (gen !== generation) dispose(p)
@@ -458,7 +569,15 @@ async function main(): Promise<void> {
           // Zielfoto der 3D-Welt: Das Eintauchen endet genau in seiner Größe.
           if (current instanceof WorldScene && p.kind === 'photo') {
             const { size, fit } = p.photo
-            current.setFinalFrame(size.w * fit.scale, size.h * fit.scale)
+            const world = current
+            world.setFinalFrame(size.w * fit.scale, size.h * fit.scale)
+            // Den Rand des Zielfotos zeigt schon die Welt während des Eintauchens.
+            if (!fit.covers) {
+              void p.photo
+                .copyBackdrop()
+                .then((b) => world.setFinalBackdrop(b, p.photo.fill))
+                .catch(() => undefined)
+            }
           }
           failures = 0
         }
@@ -466,6 +585,8 @@ async function main(): Promise<void> {
       .catch((err) => {
         console.warn('Eintrag übersprungen:', err)
         failures++
+        // Nicht mehr ladbar (z. B. Foto gelöscht): aus dem Verlauf nehmen.
+        if (source.record) history.remove(source.record)
       })
       .finally(() => {
         if (gen !== generation) return
@@ -479,6 +600,8 @@ async function main(): Promise<void> {
   function createScene(p: Prepared, fade: number): Scene {
     // Main-Prozess: welcher Eintrag der manuellen Reihenfolge jetzt zu sehen ist.
     window.api.queuePlaying(p.kind === 'photo' ? (p.queueId ?? null) : null)
+    if (p.fresh) history.push(p.record)
+    else history.show(p.record)
     if (p.kind === 'world') {
       worldFinalQueued = false
       p.scene.fadeIn = fade
@@ -491,14 +614,14 @@ async function main(): Promise<void> {
       // nicht aus der Playlist und fallen deshalb aus deren laufender Runde.
       if (p.queueId || current instanceof WorldScene) playlist.shownExternally(p.photo.name)
       window.api.photoShown(p.photo.name)
-      // Nach der 3D-Welt erst kurz im Vollbild stehen, dann die Bewegung beginnen.
-      const stillStart = current instanceof WorldScene ? 2 : 0
+      // Nach der 3D-Welt vom Gesamtbild aus (wie die Zielkachel), Bewegung läuft weich an.
       return new Slide(p.photo, screen(), settings, fade, p.texts, textHost, p.focus, {
-        stillStart,
+        softStart: current instanceof WorldScene,
         faces: p.faces
       })
     }
-    const backgroundKind = pickWeighted(settings.textBackgrounds) ?? 'photo'
+    const backgroundKind = p.record.background ?? pickWeighted(settings.textBackgrounds) ?? 'photo'
+    p.record.background = backgroundKind
     return new TextSlide(
       p.entry.item,
       p.style,
@@ -516,13 +639,24 @@ async function main(): Promise<void> {
     mark('Übergang startet')
     // Per Hand ausgelöste Texte und Effekte gehören zum bisherigen Bild.
     if (current) endManualExtras()
+    // Aus der 3D-Welt ins Zielfoto und in eine Welt, die mit dem aktuellen Foto beginnt:
+    // Beide Seiten zeigen dasselbe Bild samt Rand, also nur kurz überblenden.
+    if (
+      current instanceof WorldScene ||
+      (ready.kind === 'world' && ready.scene.hasIntro && current instanceof Slide)
+    )
+      fade = Math.min(fade, 0.7)
     incoming = createScene(ready, fade)
     reportStatus()
     maybeStartEffect()
     ready = null
     slideLayer.removeChildren()
     // Nach dem Eintauchen in ein Foto der 3D-Welt weich überblenden: Es ist dasselbe Foto.
-    const plain = !current || current instanceof WorldScene
+    // Ebenso in eine Welt, die mit dem aktuellen Foto beginnt.
+    const plain =
+      !current ||
+      current instanceof WorldScene ||
+      (incoming instanceof WorldScene && incoming.hasIntro)
     transitions.begin(plain ? 'fade' : (pickWeighted(settings.transitions) ?? 'fade'))
     // Den ersten Übergangs-Frame sofort zeichnen. Sonst zeigt die Übergangsfläche in diesem
     // Frame noch ihren alten Inhalt vom vorigen Übergang: ein sichtbares Zucken/Blitzen.
@@ -957,10 +1091,14 @@ async function main(): Promise<void> {
     }
     discardReady()
     prefetch()
-    current?.hurry(SKIP_FADE)
+    // Ein Foto zieht sich zügig ins Gesamtbild zurück, die Welt nimmt es dann auf.
+    if (current instanceof Slide) current.settleToWhole(1.5, true)
+    else current?.hurry(SKIP_FADE)
   }
   /** „3D jetzt“ kam während eines Übergangs: danach sofort ins Zwischenspiel. */
   let worldAfterTransition = false
+  /** Welt, für die die scharfe Zielkachel schon angefordert ist. */
+  let sharpFor: WorldScene | null = null
 
   function discardReady(): void {
     generation++
@@ -970,19 +1108,59 @@ async function main(): Promise<void> {
     loadingEntry = null
   }
 
+  /**
+   * Taste p/P: Das aktuelle Foto geht mit seiner Bewegung weich ins Gesamtbild über, dann
+   * zoomt die Kamera auf die Fokus-Person (P: Person und Partner). Das Foto steht dafür länger.
+   */
+  async function focusNow(pair: boolean): Promise<void> {
+    const slide = current instanceof Slide && !incoming ? current : null
+    if (!slide) return
+    // Rückmeldungen nur auf die Fernbedienung, nie auf den Bildschirm.
+    if (!settings.focusPersonId) {
+      notice(t('show.focusNotChosen'), 'warn')
+      return
+    }
+    const info = await window.api.getFaces(slide.photoName, true).catch(() => null)
+    if (current !== slide || incoming) return
+    const found = focusFor(info, true)
+    if (!found) {
+      notice(t('show.focusNotHere'), 'warn')
+      return
+    }
+    const { target } = found
+    if (pair && !target.partner) {
+      notice(t(settings.focusPartnerId ? 'show.partnerNotHere' : 'show.partnerNotChosen'), 'warn')
+      return
+    }
+    // Nur die Person: Der Partner zählt dann zu den übrigen Gesichtern.
+    const chosen: FocusTarget = pair
+      ? target
+      : {
+          ...target,
+          partner: undefined,
+          others: target.partner ? [...target.others, target.partner] : target.others
+        }
+    if (slide.refocus(chosen, settings)) {
+      // Ein schon vorbereitetes nächstes Foto bleibt gültig; nur die Standzeit ist länger.
+      notice(pair ? t('show.focusPartner') : t('show.focus'))
+      reportStatus()
+    }
+  }
+
   /** Springt vor (+1) oder zurück (-1), mit kurzer Überblendung. */
   function skip(direction: 1 | -1): void {
     if (incoming || !current) return
     freezeAfterTransition = false
     if (direction === -1) {
-      const entry = lastPhoto ? sequencer.back(lastPhoto) : undefined
-      if (!entry) {
+      // Eintrag für Eintrag zurück, auch über Textfolien und 3D-Welten.
+      const record = history.back()
+      if (!record) {
         flashStatus(t('show.start'))
         notice(t('show.start'), 'warn')
         return
       }
       discardReady()
-      prefetch(() => entry)
+      prefetch(() => ({ entry: record.entry, record, manual: true }))
     }
     current.hurry(SKIP_FADE)
   }
@@ -1007,6 +1185,23 @@ async function main(): Promise<void> {
     updateInstantTexts(dt)
     // In der 3D-Welt wird erst beim Eintauchen vorgeladen (siehe nextEntry).
     if (current instanceof WorldScene && !incoming && !ready && !loading) prefetch()
+    // Die nächste Welt beginnt mit dem aktuellen Foto: vorher weich ins Gesamtbild zurück.
+    if (
+      ready?.kind === 'world' &&
+      ready.scene.hasIntro &&
+      current instanceof Slide &&
+      !incoming &&
+      !current.settling
+    )
+      current.settleToWhole(2.5)
+    // Beim Eintauchen: scharfe Fassung des Zielfotos für die bildschirmgroße Kachel.
+    if (current instanceof WorldScene && current.diving && sharpFor !== current) {
+      const scene = current
+      sharpFor = scene
+      void loadThumb(scene.finalName, Math.round(s.h * app.renderer.resolution))
+        .then((bmp) => scene.setFinalSharp(bmp))
+        .catch(() => undefined)
+    }
     // Vorschaubilder für die 3D-Welt nur in ruhigen Phasen nachladen.
     if (!incoming && (settings.worldEnabled || worldForced)) {
       thumbs.tick(Math.round(Math.max(settings.worldTiles.min, settings.worldTiles.max)))
@@ -1085,6 +1280,12 @@ async function main(): Promise<void> {
         if (song.active) stopSong()
         else void startSong()
         break
+      case 'p': // klein: Fokus-Person auf dem aktuellen Foto anzoomen
+        void focusNow(false)
+        break
+      case 'P': // groß: Fokus-Person und Partner
+        void focusNow(true)
+        break
       case 'k':
       case 'K':
         void window.api.openKids().then((r) => {
@@ -1094,7 +1295,6 @@ async function main(): Promise<void> {
       case 'd':
       case 'D':
         showFps = !showFps
-        window.clearTimeout(statusTimer)
         statusEl.style.opacity = showFps ? '1' : '0'
         break
     }

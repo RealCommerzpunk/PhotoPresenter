@@ -9,7 +9,7 @@
 Zufällige Vollbild-Foto-Diashow für Windows und Linux.
 
 **Loslegen mit einem Weitergabe-Ordner:** [Quickstart.md](Quickstart.md) (auch als [PDF](Quickstart.pdf)).
-**Linux (Vorabversion):** AppImage, `.deb` und Demo-Archiv im [Linux-Release](https://github.com/RealCommerzpunk/PhotoPresenter/releases/tag/v0.15.0-linux).
+**Linux (Vorabversion):** AppImage, `.deb` und Demo-Archiv im [Linux-Release](https://github.com/RealCommerzpunk/PhotoPresenter/releases/tag/v0.16.0-linux).
 
 **Demo zum Herunterladen:** `PhotoPresenter-Demo-x.y.z.zip` aus dem [neuesten Release](https://github.com/RealCommerzpunk/PhotoPresenter/releases/latest) laden, entpacken, die `.exe` doppelklicken – mit 163 Demo-Fotos und fertigen Einstellungen, ohne Installation. Dort gibt es auch das Programm allein und einen Installer.
 
@@ -20,10 +20,12 @@ Zufällige Vollbild-Foto-Diashow für Windows und Linux.
 - Konfigurierbare Übergänge. Anzeigedauer, Bewegungsintensität, Überblenddauer und Effekte
   sind jeweils als Bereich „von … bis“ einstellbar, fest oder zufällig.
 - **Fokus-Person**: Eine angelernte Person wird in den Fotos erkannt und angezoomt,
-  optional mit einem Schwenk über die anderen Gesichter.
+  optional mit einem Schwenk über die anderen Gesichter; solche Fotos stehen auf Wunsch länger.
+  Per Taste (p, P mit Partner) auch auf dem gerade gezeigten Foto.
 - **Texte**: Fülltexte zwischen den Fotos und an Fotos gebundene Texte (vor, nach oder über dem Bild),
   mit frei wählbaren oder zufälligen Stilen und Animationen. Texte und Emojis verdecken keine Gesichter.
-- **3D-Fotowelt**, Partikel-Effekte, **Handy-Fernbedienung** per QR-Code mit fast allen Einstellungen (dazu eine **Kinder-Fernbedienung**: je Foto ein Emoji und ein Text) und eine **portable Version** zum Mitnehmen.
+- **3D-Fotowelt**: Das aktuelle Foto wird zur Kachel, die Fotos bilden Formationen, die Kamera taucht nahtlos ins nächste Foto ein.
+- Partikel-Effekte, **Handy-Fernbedienung** per QR-Code mit fast allen Einstellungen (dazu eine **Kinder-Fernbedienung**: je Foto ein Emoji und ein Text) und eine **portable Version** zum Mitnehmen.
 - **Songs mit Karaoke-Text:** MP3 und gleichnamige TXT in den Ordner `Songs` legen, der Text gleitet passend zur Musik mit. Die Zeiten passt ein Mitsing-Editor ein (Taste halten, solange eine Zeile gesungen wird, danach auf der Wellenform nachziehen).
 
 > Status: in Entwicklung. Der Fahrplan steht unten.
@@ -63,7 +65,7 @@ Tests, Typprüfung und Lint vor jedem Commit lokal ausführen: `npm run typechec
 
 ## Bedienung in der Show
 
-Esc beenden · Leertaste Pause · ←/→ blättern · I Info zum Foto (Auflösung, Zoom, EXIF) · R Fernbedienung als Fenster · K Kinder-Fernbedienung · S Song mit Karaoke-Text · Q QR-Code · q QR-Code der Kinder-Fernbedienung · D fps
+Esc beenden · Leertaste Pause · ←/→ blättern (auch durch Texte und 3D-Welten) · p Fokus-Person anzoomen · P Fokus-Person und Partner · I Info zum Foto (Auflösung, Zoom, EXIF) · R Fernbedienung als Fenster · K Kinder-Fernbedienung · S Song mit Karaoke-Text · Q QR-Code · q QR-Code der Kinder-Fernbedienung · D fps
 
 ## Mitnehmen
 

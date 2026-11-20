@@ -259,7 +259,8 @@ export interface PhotoPresenterApi {
   // Gesichtserkennung: Show und Einstellungen
   faceStatus(): Promise<FaceIndexStatus>
   onFaceStatus(callback: (status: FaceIndexStatus) => void): () => void
-  getFaces(name: string): Promise<FaceInfo | null>
+  /** `force`: Fokus-Person und Partner markieren, auch wenn der Fokus aus ist (Taste p/P). */
+  getFaces(name: string, force?: boolean): Promise<FaceInfo | null>
   /** Gesichter des Ordners (oder nur eines Fotos) mit Abgleich zur Person. */
   listFaces(personId?: string, photo?: string): Promise<FaceListItem[]>
   toggleSample(personId: string, photo: string, face: number): Promise<void>

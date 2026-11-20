@@ -1,9 +1,11 @@
 import { t } from '@shared/i18n'
 import type * as ThreeNS from 'three'
 import { Container, Sprite, Texture } from 'pixi.js'
-import type { WorldFormation } from '@shared/settings'
+import type { FillMode, WorldFormation } from '@shared/settings'
+import { placeBackdrop } from '../slide'
 import type { Size } from '../motion'
 import { freshestAmong } from '../playlist'
+import { PAPER_COUNT, paperCanvases } from './paper'
 import { TimedScene, type Scene } from '../scene'
 import {
   easeInOut,
@@ -36,6 +38,8 @@ function sharedRenderer(THREE: Three): ThreeNS.WebGLRenderer {
   if (!renderer) {
     renderer = new THREE.WebGLRenderer({
       antialias: true,
+      // Durchsichtiger Hintergrund: Beim Ein- und Austauchen liegt darunter der Rand des Fotos.
+      alpha: true,
       // Das Bild wird nach dem Zeichnen als Textur in PixiJS übernommen.
       preserveDrawingBuffer: true,
       powerPreference: 'high-performance'
@@ -58,6 +62,28 @@ function geometries(THREE: Three): { tile: ThreeNS.PlaneGeometry; frame: ThreeNS
   return { tile: tileGeometry, frame: frameGeometry! }
 }
 
+/**
+ * Zeigt aus einem Bild mit Seitenverhältnis `image` den größten mittigen Ausschnitt mit
+ * Seitenverhältnis `shown` (über repeat/offset der Textur, ohne Verzerrung).
+ */
+function cropTexture(tex: ThreeNS.Texture, image: number, shown: number): void {
+  const rx = shown < image ? shown / image : 1
+  const ry = shown < image ? 1 : image / shown
+  tex.repeat.set(rx, ry)
+  tex.offset.set((1 - rx) / 2, (1 - ry) / 2)
+}
+
+/** Randfüllung eines Fotos unter der 3D-Szene, mit ihrer aktuellen Stärke (0–1). */
+interface Edge {
+  sprite: Sprite
+  texture: Texture
+  bitmap: ImageBitmap
+  fill: FillMode
+  strength: number
+  /** Wie weit die Randfüllung schon da ist (zählt ab Ankunft der Bitmap, 0–1). */
+  arrived: number
+}
+
 export interface WorldTile {
   name: string
   bitmap: ImageBitmap
@@ -76,6 +102,22 @@ export interface WorldPlan {
    * genommen, deren Foto am längsten nicht zu sehen war.
    */
   age?: (name: string) => number
+  /** Zielkachel vorgeben (beim Wiederholen aus dem Verlauf), sonst wird sie gewählt. */
+  finalIndex?: number
+  /** Meldet die gewählte Zielkachel (für den Verlauf). */
+  onFinal?: (index: number) => void
+  /**
+   * Foto, das gerade zu sehen ist: Die Welt beginnt mit ihm bildschirmgroß (w × h, wie
+   * eingepasst) und nimmt es als Kachel auf. Die scharfe Bitmap gehört danach der Szene.
+   */
+  intro?: {
+    name: string
+    bitmap: ImageBitmap
+    w: number
+    h: number
+    /** Randfüllung des Fotos: steht anfangs und blendet beim Zurückfahren aus. */
+    backdrop?: { bitmap: ImageBitmap; fill: FillMode }
+  }
 }
 
 interface Phase {
@@ -89,6 +131,8 @@ interface Phase {
 const FIRST_MORPH = 3.2
 const MORPH = 2.6
 const DIVE = 3.4
+/** Dauer des Einstiegs: Kamera fährt vom aufgenommenen Foto zurück in die Welt. */
+const INTRO = 3.4
 const FOV = 50
 
 /**
@@ -125,6 +169,9 @@ export class WorldScene extends TimedScene implements Scene {
   private readonly camera: ThreeNS.PerspectiveCamera
   private readonly meshes: ThreeNS.Mesh[] = []
   private readonly tileTextures: ThreeNS.Texture[] = []
+  private readonly paperTextures: ThreeNS.Texture[] = []
+  /** Seitenverhältnis der Vorschaubilder (= des Fotos). */
+  private readonly imageAspects: number[] = []
   private readonly materials: ThreeNS.Material[] = []
   private readonly phases: Phase[] = []
   /** Kachel, in die die Kamera eintaucht; wird erst zu Beginn des Eintauchens gewählt. */
@@ -139,6 +186,18 @@ export class WorldScene extends TimedScene implements Scene {
   private frameBlend = 0
   /** Eigener Rahmen der Zielkachel, damit er beim Eintauchen ausblenden kann. */
   private finalBorder: ThreeNS.MeshBasicMaterial | null = null
+  /** Kachel mit dem aufgenommenen Foto (Einstieg), -1 = ohne Einstieg. */
+  private introIndex = -1
+  private introBorder: ThreeNS.MeshBasicMaterial | null = null
+  private introDone = false
+  /** Bitmaps, die die Szene selbst freigibt (scharfe Fassungen). */
+  private readonly ownBitmaps: ImageBitmap[] = []
+  private readonly normal: ThreeNS.Vector3
+  private gone = false
+  private readonly bg: ThreeNS.Color
+  /** Rand des aufgenommenen Fotos (Einstieg) bzw. des Zielfotos (Eintauchen). */
+  private introEdge: Edge | null = null
+  private finalEdge: Edge | null = null
   private readonly jelly: {
     uTime: { value: number }
     uJelly: { value: number }
@@ -162,12 +221,15 @@ export class WorldScene extends TimedScene implements Scene {
 
     this.scene = new THREE.Scene()
     const bg = new THREE.Color(0x05070d)
-    this.scene.background = bg
+    // Hintergrund über die Löschfarbe statt scene.background: So kann er beim Ein- und
+    // Austauchen durchsichtig werden und den Rand des Fotos darunter zeigen.
+    this.bg = bg
     this.scene.fog = new THREE.Fog(bg, 18, 75)
     this.camera = new THREE.PerspectiveCamera(FOV, 16 / 9, 0.1, 200)
     this.helper = new THREE.Object3D()
     this.qa = new THREE.Quaternion()
     this.qb = new THREE.Quaternion()
+    this.normal = new THREE.Vector3()
 
     const { tile, frame } = geometries(THREE)
     this.jelly = {
@@ -178,11 +240,25 @@ export class WorldScene extends TimedScene implements Scene {
     const frameMaterial = new THREE.MeshBasicMaterial({ color: 0xf4f1ea, side: THREE.DoubleSide })
     this.jellify(frameMaterial)
     this.materials.push(frameMaterial)
+    // Rückseiten: leicht verschmutztes, geknicktes Fotopapier in verschiedenen Weißtönen.
+    const backMaterials = paperCanvases().map((canvas) => {
+      const tex = new THREE.CanvasTexture(canvas)
+      tex.colorSpace = THREE.SRGBColorSpace
+      this.paperTextures.push(tex)
+      const mat = new THREE.MeshBasicMaterial({ map: tex, side: THREE.FrontSide })
+      this.jellify(mat)
+      this.materials.push(mat)
+      return mat
+    })
     for (const t of plan.tiles) {
       const tex = new THREE.Texture(t.bitmap)
       tex.colorSpace = THREE.SRGBColorSpace
       tex.flipY = false
       tex.needsUpdate = true
+      // Vorschaubilder haben das Seitenverhältnis des Fotos; die Kachel zeigt die Mitte in 4:3.
+      const imageAspect = t.bitmap.width / Math.max(1, t.bitmap.height)
+      this.imageAspects.push(imageAspect)
+      cropTexture(tex, imageAspect, TILE_W / TILE_H)
       this.tileTextures.push(tex)
       // transparent, damit die übrigen Kacheln beim Eintauchen ausblenden können
       const mat = new THREE.MeshBasicMaterial({
@@ -197,10 +273,174 @@ export class WorldScene extends TimedScene implements Scene {
       const border = new THREE.Mesh(frame, frameMaterial)
       border.position.z = -0.01
       mesh.add(border)
+      // Rückseite knapp hinter dem Rahmen, nach hinten gewandt (je Kachel fest, auch beim
+      // Wiederholen der Welt gleich).
+      const i = this.meshes.length
+      const paper = backMaterials[Math.floor(hash01(i, 31) * PAPER_COUNT) % PAPER_COUNT]
+      const back = new THREE.Mesh(frame, paper)
+      back.rotation.y = Math.PI
+      back.position.z = -0.01
+      border.add(back)
       this.scene.add(mesh)
       this.meshes.push(mesh)
     }
     this.planPhases()
+    this.setupIntro()
+  }
+
+  /** Eigener, ausblendbarer Rahmen für eine Kachel (Einstieg bzw. Zielkachel). */
+  private ownBorder(index: number): ThreeNS.MeshBasicMaterial {
+    const border = this.meshes[index].children[0] as ThreeNS.Mesh
+    const mat = (border.material as ThreeNS.MeshBasicMaterial).clone()
+    mat.transparent = true
+    this.materials.push(mat)
+    border.material = mat
+    return mat
+  }
+
+  /** Bild einer Kachel ersetzen (z. B. durch eine scharfe Fassung desselben Fotos). */
+  private replaceTexture(index: number, bitmap: ImageBitmap): void {
+    const THREE = this.THREE
+    const tex = new THREE.Texture(bitmap)
+    tex.colorSpace = THREE.SRGBColorSpace
+    tex.flipY = false
+    tex.needsUpdate = true
+    const old = this.tileTextures[index]
+    tex.repeat.copy(old.repeat)
+    tex.offset.copy(old.offset)
+    old.dispose()
+    this.tileTextures[index] = tex
+    this.imageAspects[index] = bitmap.width / Math.max(1, bitmap.height)
+    ;(this.meshes[index].material as ThreeNS.MeshBasicMaterial).map = tex
+  }
+
+  /**
+   * Einstieg vorbereiten: Das aktuelle Foto ersetzt die Kachel, die nach dem Zurückfahren
+   * der Kamera am meisten zugewandt ist; so endet die Fahrt mit dem Foto gut sichtbar.
+   */
+  private setupIntro(): void {
+    const intro = this.plan.intro
+    if (!intro || !this.meshes.length) return
+    const kind = this.plan.formations[0]
+    const t = FIRST_MORPH + 1.5
+    const cam = this.cameraPose(kind, t - this.formationStart(kind)).pos
+    let best = 0
+    let bestScore = -Infinity
+    for (let i = 0; i < this.meshes.length; i++) {
+      const p = this.place(kind, i, t)
+      const n: Vec3 = [p.target[0] - p.pos[0], p.target[1] - p.pos[1], p.target[2] - p.pos[2]]
+      const toCam: Vec3 = [cam[0] - p.pos[0], cam[1] - p.pos[1], cam[2] - p.pos[2]]
+      const cl = Math.hypot(...toCam) || 1
+      const facing =
+        (n[0] * toCam[0] + n[1] * toCam[1] + n[2] * toCam[2]) / ((Math.hypot(...n) || 1) * cl)
+      const score = facing - cl * 0.01
+      if (score > bestScore) {
+        bestScore = score
+        best = i
+      }
+    }
+    this.introIndex = best
+    this.plan.tiles[best] = { name: intro.name, bitmap: intro.bitmap }
+    this.ownBitmaps.push(intro.bitmap)
+    this.replaceTexture(best, intro.bitmap)
+    this.introBorder = this.ownBorder(best)
+    if (intro.backdrop) {
+      this.introEdge = this.makeEdge(intro.backdrop.bitmap, intro.backdrop.fill)
+      this.introEdge.strength = 1
+    }
+    this.shapeIntro(0)
+  }
+
+  /**
+   * Kachel des Einstiegs formen: anfangs im Seitenverhältnis und ganz (wie das Foto auf dem
+   * Bildschirm), dann zur normalen 4:3-Kachel mit Rahmen.
+   */
+  private shapeIntro(k: number): void {
+    const intro = this.plan.intro
+    if (!intro) return
+    const e = easeInOut(k)
+    const tile = TILE_W / TILE_H
+    const start = intro.w / Math.max(1, intro.h)
+    const a = start + (tile - start) * e
+    const wide = a >= tile
+    this.meshes[this.introIndex].scale.set(wide ? a / tile : 1, wide ? 1 : tile / a, 1)
+    cropTexture(this.tileTextures[this.introIndex], this.imageAspects[this.introIndex], a)
+    if (this.introBorder) {
+      this.introBorder.opacity = Math.min(1, Math.max(0, (k - 0.45) / 0.45))
+      this.meshes[this.introIndex].children[0].visible = this.introBorder.opacity > 0.01
+    }
+    if (k >= 1) this.introDone = true
+  }
+
+  /** Kamera direkt vor der Einstiegskachel, so nah, dass sie so groß ist wie vorher das Foto. */
+  private introFront(screen: Size): { pos: Vec3; look: Vec3 } {
+    const mesh = this.meshes[this.introIndex]
+    const intro = this.plan.intro!
+    const p = mesh.position
+    this.normal.set(0, 0, 1).applyQuaternion(mesh.quaternion)
+    const halfFov = (FOV * Math.PI) / 360
+    const height = TILE_H * mesh.scale.y
+    const d = (height * screen.h) / (2 * Math.tan(halfFov) * Math.max(1, intro.h))
+    return {
+      pos: [p.x + this.normal.x * d, p.y + this.normal.y * d, p.z + this.normal.z * d],
+      look: [p.x, p.y, p.z]
+    }
+  }
+
+  /** Randfüllung als Sprite unter der Szene (die Bitmap gehört danach der Szene). */
+  private makeEdge(bitmap: ImageBitmap, fill: FillMode): Edge {
+    const texture = Texture.from(bitmap)
+    const sprite = new Sprite(texture)
+    sprite.anchor.set(0.5)
+    sprite.visible = false
+    // unter das Bild der 3D-Szene
+    this.view.addChildAt(sprite, 0)
+    return { sprite, texture, bitmap, fill, strength: 0, arrived: 0 }
+  }
+
+  private edgeStrength(edge: Edge | null): number {
+    return edge?.strength ?? 0
+  }
+
+  /**
+   * Rand des Zielfotos: erscheint in der zweiten Hälfte des Eintauchens, während die
+   * übrigen Kacheln verschwinden – am Ende steht das Foto samt Rand wie danach im Vollbild.
+   */
+  setFinalBackdrop(bitmap: ImageBitmap, fill: FillMode): void {
+    if (this.gone || this.finalEdge) {
+      bitmap.close()
+      return
+    }
+    this.finalEdge = this.makeEdge(bitmap, fill)
+  }
+
+  /** Stärke der Ränder für diesen Zeitpunkt (Einstieg blendet aus, Zielfoto blendet ein). */
+  private updateEdges(t: number, dt: number, introK: number): void {
+    const smooth = (x: number): number => {
+      const c = Math.min(1, Math.max(0, x))
+      return c * c * (3 - 2 * c)
+    }
+    if (this.introEdge) this.introEdge.strength = 1 - smooth(introK / 0.5)
+    const edge = this.finalEdge
+    if (edge) {
+      const dive = this.phases[this.phases.length - 1]
+      const k = (t - dive.start) / dive.duration
+      edge.arrived = Math.min(1, edge.arrived + dt / 0.8)
+      edge.strength = Math.min(smooth((k - 0.45) / 0.55), smooth(edge.arrived))
+    }
+  }
+
+  /**
+   * Scharfe Fassung des Zielfotos: ersetzt die Vorschau der Zielkachel, damit sie am Ende
+   * des Eintauchens so scharf ist wie das folgende Vollbild. Die Bitmap gehört der Szene.
+   */
+  setFinalSharp(bitmap: ImageBitmap): void {
+    if (this.gone) {
+      bitmap.close()
+      return
+    }
+    this.ownBitmaps.push(bitmap)
+    if (this.finalIndex >= 0) this.replaceTexture(this.finalIndex, bitmap)
   }
 
   /**
@@ -247,6 +487,8 @@ export class WorldScene extends TimedScene implements Scene {
       r.initTexture(tex)
       await nextFrame()
     }
+    for (const tex of this.paperTextures) r.initTexture(tex)
+    await nextFrame()
     r.compile(this.scene, this.camera)
     await nextFrame()
     this.update(0, screen)
@@ -306,11 +548,15 @@ export class WorldScene extends TimedScene implements Scene {
 
   update(dt: number, screen: Size): void {
     this.elapsed += dt
-    if (this.finalFrame) this.frameBlend = Math.min(1, this.frameBlend + dt / 0.6)
+    if (this.finalFrame) this.frameBlend = Math.min(1, this.frameBlend + dt / 1.0)
     // Die 3D-Zeit läuft ab Beginn des Einblendens.
     const t = this.elapsed
     const phase = this.phaseAt(t)
     const n = this.meshes.length
+    // Fortschritt des Einstiegs (beginnt nach dem Überblenden; ohne Einstieg gleich 1).
+    // (nach dem Überblenden noch einen Augenblick ruhig auf dem Foto, dann zurück)
+    const introK =
+      this.introIndex >= 0 ? Math.min(1, Math.max(0, (t - this.fadeIn - 0.3) / INTRO)) : 1
 
     // Kacheln
     for (let i = 0; i < n; i++) {
@@ -349,8 +595,12 @@ export class WorldScene extends TimedScene implements Scene {
         const k = (t - phase.start) / phase.duration
         opacity = 1 - Math.min(1, Math.max(0, (k - 0.2) / 0.5))
       }
+      // Einstieg: Die übrigen Kacheln erscheinen erst, während die Kamera zurückfährt.
+      if (introK < 1 && i !== this.introIndex)
+        opacity *= Math.min(1, Math.max(0, (introK - 0.15) / 0.55))
       ;(mesh.material as ThreeNS.MeshBasicMaterial).opacity = opacity
       mesh.children[0].visible = opacity > 0.6
+      if (i === this.introIndex && !this.introDone && phase.kind !== 'dive') this.shapeIntro(introK)
       if (phase.kind === 'dive' && i === this.finalIndex) this.shapeFinal(t, phase)
     }
 
@@ -383,9 +633,23 @@ export class WorldScene extends TimedScene implements Scene {
     } else {
       cam = this.cameraPose(phase.to, t - this.formationStart(phase.to))
     }
+    // Oben der Kamera: normalerweise senkrecht; beim Einstieg erst wie die Kachel geneigt
+    // (sie kann sich beim Einfliegen drehen), damit das Foto anfangs gerade steht.
+    this.camera.up.set(0, 1, 0)
+    if (introK < 1) {
+      // Einstieg: Die Kamera beginnt direkt vor dem aufgenommenen Foto und fährt zurück.
+      const front = this.introFront(screen)
+      const k = easeInOut(introK)
+      cam = { pos: mix(front.pos, cam.pos, k), look: mix(front.look, cam.look, k) }
+      const tileUp = this.normal
+        .set(0, 1, 0)
+        .applyQuaternion(this.meshes[this.introIndex].quaternion)
+      this.camera.up.set(tileUp.x * (1 - k), tileUp.y * (1 - k) + k, tileUp.z * (1 - k)).normalize()
+    }
     this.camera.position.set(cam.pos[0], cam.pos[1], cam.pos[2])
     this.camera.lookAt(cam.look[0], cam.look[1], cam.look[2])
 
+    this.updateEdges(t, dt, introK)
     this.render(screen)
   }
 
@@ -429,13 +693,15 @@ export class WorldScene extends TimedScene implements Scene {
           scores.map(() => 0),
           0
         )
-    this.finalIndex = best
+    // Beim Wiederholen aus dem Verlauf dieselbe Kachel wie beim ersten Mal.
+    const forced = this.plan.finalIndex
+    this.finalIndex = forced !== undefined && forced >= 0 && forced < scores.length ? forced : best
+    this.plan.onFinal?.(this.finalIndex)
     // Eigener, ausblendbarer Rahmen für die Zielkachel
-    const border = this.meshes[best].children[0] as ThreeNS.Mesh
-    this.finalBorder = (border.material as ThreeNS.MeshBasicMaterial).clone()
-    this.finalBorder.transparent = true
-    this.materials.push(this.finalBorder)
-    border.material = this.finalBorder
+    this.finalBorder =
+      this.finalIndex === this.introIndex && this.introBorder
+        ? this.introBorder
+        : this.ownBorder(this.finalIndex)
   }
 
   /**
@@ -455,12 +721,19 @@ export class WorldScene extends TimedScene implements Scene {
   private finalAspect(): number {
     const tile = TILE_W / TILE_H
     if (!this.finalFrame) return tile
-    return tile + (this.finalFrame.w / this.finalFrame.h - tile) * this.frameBlend
+    return tile + (this.finalFrame.w / this.finalFrame.h - tile) * this.frameEase
+  }
+
+  /** Weicher Verlauf der Anpassung an das Zielfoto (ohne Ruck am Anfang und Ende). */
+  private get frameEase(): number {
+    const k = this.frameBlend
+    return k * k * (3 - 2 * k)
   }
 
   /**
-   * Zielkachel beim Eintauchen formen: Seitenverhältnis des Fotos annehmen (Vorschau wird
-   * passend beschnitten, nicht verzerrt) und den hellen Rahmen ausblenden.
+   * Zielkachel beim Eintauchen formen: Seitenverhältnis des Fotos annehmen und dabei
+   * vom 4:3-Ausschnitt zum ganzen Foto aufziehen (nicht verzerrt). So zeigt die Kachel am
+   * Ende genau das Bild, mit dem die Show weitergeht – ohne Sprung beim Überblenden.
    */
   private shapeFinal(t: number, phase: Phase): void {
     const k = easeInOut((t - phase.start) / phase.duration)
@@ -469,11 +742,7 @@ export class WorldScene extends TimedScene implements Scene {
     const a = tile + (this.finalAspect() - tile) * k
     const wide = a >= tile
     mesh.scale.set(wide ? a / tile : 1, wide ? 1 : tile / a, 1)
-    const tex = this.tileTextures[this.finalIndex]
-    const rx = wide ? 1 : a / tile
-    const ry = wide ? tile / a : 1
-    tex.repeat.set(rx, ry)
-    tex.offset.set((1 - rx) / 2, (1 - ry) / 2)
+    cropTexture(this.tileTextures[this.finalIndex], this.imageAspects[this.finalIndex], a)
     if (this.finalBorder) {
       this.finalBorder.opacity = 1 - Math.min(1, Math.max(0, (k - 0.15) / 0.45))
       mesh.children[0].visible = this.finalBorder.opacity > 0.01
@@ -497,7 +766,7 @@ export class WorldScene extends TimedScene implements Scene {
       const a = this.finalFrame.w / this.finalFrame.h
       const height = a >= tile ? TILE_H : (TILE_H * tile) / a
       const exact = (height * this.size.h) / (2 * Math.tan(halfFov) * this.finalFrame.h)
-      d += (exact - d) * this.frameBlend
+      d += (exact - d) * this.frameEase
     }
     return {
       pos: [
@@ -524,10 +793,18 @@ export class WorldScene extends TimedScene implements Scene {
       this.camera.aspect = screen.w / screen.h
       this.camera.updateProjectionMatrix()
     }
+    // Rand des Fotos (Einstieg bzw. Zielfoto) unter der Szene: dort durchsichtig.
+    const b = Math.max(this.edgeStrength(this.introEdge), this.edgeStrength(this.finalEdge))
+    r.setClearColor(this.bg, 1 - b)
     r.render(this.scene, this.camera)
     this.texture.source.update()
     this.sprite.width = screen.w
     this.sprite.height = screen.h
+    for (const edge of [this.introEdge, this.finalEdge]) {
+      if (!edge) continue
+      edge.sprite.visible = edge.strength > 0.001
+      placeBackdrop(edge.sprite, edge.fill, screen, { zoom: 1, x: 0, y: 0 })
+    }
   }
 
   /** Weiterschalten: sofort ins Eintauchen wechseln (statt bis zum Ende zu warten). */
@@ -538,8 +815,21 @@ export class WorldScene extends TimedScene implements Scene {
     this.fadeOut = fade
   }
 
+  /** Beginnt die Welt mit dem vorher gezeigten Foto (Einstieg)? */
+  get hasIntro(): boolean {
+    return this.introIndex >= 0
+  }
+
   destroy(): void {
+    this.gone = true
     for (const tex of this.tileTextures) tex.dispose()
+    for (const tex of this.paperTextures) tex.dispose()
+    for (const bmp of this.ownBitmaps) bmp.close()
+    for (const edge of [this.introEdge, this.finalEdge]) {
+      if (!edge) continue
+      edge.texture.destroy(true)
+      edge.bitmap.close()
+    }
     for (const mat of this.materials) mat.dispose()
     this.scene.clear()
     this.view.destroy({ children: true })

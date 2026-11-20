@@ -273,6 +273,17 @@ export function TextsPage({ s, update }: { s: Settings; update: Update }): React
             unit="s"
           />
         </Field>
+        <Field label={t('ui.texts.sizeRandom')} hint={t('ui.texts.sizeRandomHint')}>
+          <RangeInput
+            value={s.textSizeRandom}
+            onChange={(v) => update({ textSizeRandom: v })}
+            min={30}
+            max={250}
+            step={5}
+            unit="%"
+            factor={100}
+          />
+        </Field>
       </Card>
       <Card title={t('ui.texts.listTitle', { n: s.texts.length })}>
         <div>
