@@ -127,6 +127,10 @@ export const es: Record<MessageKey, string> = {
     'También puede ser relativa a la carpeta del programa, p. ej. «Fotos»: se usa la carpeta Fotos junto al programa (práctico para una memoria USB).',
   'ui.photos.subfolders': 'Subcarpetas',
   'ui.photos.includeSubfolders': 'Incluir fotos de las subcarpetas',
+  'ui.photos.repeats': 'Repeticiones',
+  'ui.photos.repeatsHint':
+    'El orden sigue siendo aleatorio. Lo que se vio hace poco (también como destino del mundo 3D, desde la galería o en una presentación anterior) tarda en volver.',
+  'ui.photos.avoidRepeats': 'repetir lo menos posible',
   'ui.fill.title': 'Llenar la pantalla',
   'ui.fill.maxCrop': 'Recortar como máximo',
   'ui.fill.maxCropHint':

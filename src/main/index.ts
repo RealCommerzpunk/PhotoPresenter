@@ -48,6 +48,7 @@ import { RemoteServer } from './remote'
 import { iconPath, iconPng } from './resources'
 import { loadSettings, photoFolder, updateSettings } from './settings'
 import { ThumbCache } from './thumbs'
+import { RecentPhotos } from './recent'
 
 registerPhotoScheme()
 
@@ -140,6 +141,8 @@ function applyQueueOp(op: QueueOp): void {
     queue.apply(op)
   else if (op?.op === 'clear') queue.apply(op)
 }
+
+const recent = new RecentPhotos(() => join(app.getPath('userData'), 'recent.json'))
 
 const thumbs = new ThumbCache(
   () => join(app.getPath('userData'), 'thumbs'),
@@ -659,6 +662,10 @@ app.whenReady().then(() => {
   ipcMain.handle(IPC.photoInfo, (_e, name: string) => photoInfo(name))
   ipcMain.handle(IPC.getQueue, () => queue.get())
   ipcMain.on(IPC.queuePlaying, (_e, id: string | null) => queue.setPlaying(id))
+  ipcMain.handle(IPC.recentPhotos, () => recent.get())
+  ipcMain.on(IPC.photoShown, (_e, name: unknown) => {
+    if (typeof name === 'string' && name) void recent.add(name)
+  })
   ipcMain.handle(IPC.thumbResult, (_e, requestId: number, data: Uint8Array | null) =>
     thumbs.handleResult(requestId, data)
   )
@@ -746,6 +753,7 @@ app.whenReady().then(() => {
 
 app.on('before-quit', () => {
   faceStore?.flush()
+  recent.flush()
   void remote.stop()
 })
 

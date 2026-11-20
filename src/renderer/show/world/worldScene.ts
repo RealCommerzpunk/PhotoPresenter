@@ -3,6 +3,7 @@ import type * as ThreeNS from 'three'
 import { Container, Sprite, Texture } from 'pixi.js'
 import type { WorldFormation } from '@shared/settings'
 import type { Size } from '../motion'
+import { freshestAmong } from '../playlist'
 import { TimedScene, type Scene } from '../scene'
 import {
   easeInOut,
@@ -69,6 +70,12 @@ export interface WorldPlan {
   cameraSpeed: number
   /** 0 = locker (viel Abstand zwischen den Fotos), 1 = dicht. */
   density: number
+  /**
+   * Wie viele Fotos her ein Foto zuletzt zu sehen war (nie = Infinity). Gesetzt, wenn
+   * Wiederholungen vermieden werden sollen: Unter den gut erreichbaren Kacheln wird dann die
+   * genommen, deren Foto am längsten nicht zu sehen war.
+   */
+  age?: (name: string) => number
 }
 
 interface Phase {
@@ -397,8 +404,7 @@ export class WorldScene extends TimedScene implements Scene {
    * Kamera nie durch die Formation hindurch (z. B. auf die Rückseite eines Würfels).
    */
   private chooseFinal(kind: WorldFormation, t: number, cam: Vec3): void {
-    let best = 0
-    let bestScore = -Infinity
+    const scores: number[] = []
     for (let i = 0; i < this.meshes.length; i++) {
       const p = this.place(kind, i, t)
       const n: Vec3 = [p.target[0] - p.pos[0], p.target[1] - p.pos[1], p.target[2] - p.pos[2]]
@@ -407,12 +413,22 @@ export class WorldScene extends TimedScene implements Scene {
       const cl = Math.hypot(...toCam) || 1
       const facing = (n[0] * toCam[0] + n[1] * toCam[1] + n[2] * toCam[2]) / (nl * cl)
       // zugewandt zählt am meisten, Nähe ein wenig
-      const score = facing - cl * 0.01
-      if (score > bestScore) {
-        bestScore = score
-        best = i
-      }
+      scores.push(facing - cl * 0.01)
     }
+    const age = this.plan.age
+    // Ohne Verlauf die bestgelegene Kachel; sonst unter den gut gelegenen (≈ bis 35° weiter
+    // weggedreht) das Foto, das am längsten nicht zu sehen war.
+    const best = age
+      ? freshestAmong(
+          scores,
+          this.plan.tiles.slice(0, scores.length).map((tile) => age(tile.name)),
+          0.2
+        )
+      : freshestAmong(
+          scores,
+          scores.map(() => 0),
+          0
+        )
     this.finalIndex = best
     // Eigener, ausblendbarer Rahmen für die Zielkachel
     const border = this.meshes[best].children[0] as ThreeNS.Mesh

@@ -315,6 +315,12 @@ export const settingsSchema = z.object({
   language: field(z.enum(['auto', ...LANGUAGES]), 'auto'),
   /** Doppelte Fotos überspringen: nur die hochauflösendste Fassung zeigen. */
   dupesSkip: field(z.boolean(), false),
+  /**
+   * Möglichst wenig Wiederholungen: Fotos bleiben zufällig, aber was kürzlich zu sehen war
+   * (auch als Zielfoto der 3D-Welt, aus der Galerie oder in einer früheren Show), kommt erst
+   * spät wieder.
+   */
+  avoidRepeats: field(z.boolean(), true),
   showDisplay: field(z.string(), ''),
   /** Bereich dieses Bildschirms, den die Show füllt. */
   showArea: field(z.enum(SHOW_AREAS), 'full'),

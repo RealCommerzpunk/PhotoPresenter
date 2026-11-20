@@ -43,9 +43,45 @@ export function arrange(
 }
 
 /**
+ * Neue Runde so ordnen, dass kürzlich gezeigte Fotos hinten liegen: Alles, was vor weniger
+ * als einer halben Runde zu sehen war, kommt (gemischt) ans Ende. Damit liegen zwischen zwei
+ * Auftritten desselben Fotos mindestens eine halbe Runde, auch über die Rundengrenze und
+ * über einen Neustart der Show hinweg. `age` = wie viele Fotos her (nie gezeigt = Infinity).
+ */
+export function freshFirst(
+  round: string[],
+  age: (name: string) => number,
+  rng: Rng = Math.random
+): string[] {
+  const window = Math.floor(round.length / 2)
+  const fresh = round.filter((n) => age(n) >= window)
+  const recent = round.filter((n) => age(n) < window)
+  return [...shuffle(fresh, rng), ...shuffle(recent, rng)]
+}
+
+/**
+ * Unter mehreren gleich guten Kandidaten den nehmen, der am längsten nicht zu sehen war.
+ * `scores`: je Kandidat, höher = besser; gleich gut = höchstens `slack` unter dem besten.
+ */
+export function freshestAmong(scores: number[], ages: number[], slack: number): number {
+  let best = 0
+  for (let i = 1; i < scores.length; i++) if (scores[i] > scores[best]) best = i
+  let pick = best
+  for (let i = 0; i < scores.length; i++) {
+    if (scores[i] < scores[best] - slack) continue
+    if (ages[i] > ages[pick] || (ages[i] === ages[pick] && scores[i] > scores[pick])) pick = i
+  }
+  return pick
+}
+
+/**
  * Zufällige Reihenfolge ohne Wiederholung: Erst wenn alle Fotos gezeigt wurden,
  * wird neu gemischt, und das zuletzt gezeigte Foto kommt nicht direkt wieder.
  * Merkt sich den Verlauf, damit man zurückblättern kann.
+ *
+ * Mit `avoidRepeats` zählt außerdem, wann ein Foto zuletzt zu sehen war – egal woher es kam
+ * (Zielfoto der 3D-Welt, Galerie der Fernbedienung, frühere Shows): Kürzlich gezeigte Fotos
+ * kommen in der nächsten Runde nach hinten, von außen gezeigte fallen aus der laufenden Runde.
  */
 export class Playlist {
   private queue: string[] = []
@@ -54,6 +90,10 @@ export class Playlist {
   private boostExtra = 0
   /** Position im Verlauf; zeigt auf das aktuelle Foto. */
   private cursor = -1
+  /** Zähler der gezeigten Fotos und je Foto der Stand beim letzten Auftritt. */
+  private seq = 0
+  private lastShown = new Map<string, number>()
+  avoidRepeats = true
 
   constructor(
     private items: string[],
@@ -62,6 +102,30 @@ export class Playlist {
 
   get size(): number {
     return this.items.length
+  }
+
+  /** Verlauf aus früheren Shows übernehmen (ältestes zuerst). */
+  setRecent(names: string[]): void {
+    for (const n of names) this.lastShown.set(n, ++this.seq)
+  }
+
+  /**
+   * Ein Foto, das nicht aus dieser Playlist kam (Zielfoto der 3D-Welt, Galerie), ist jetzt zu
+   * sehen: Es zählt als gezeigt und fällt aus der laufenden Runde, statt bald noch mal zu kommen.
+   * (Was `next()` liefert, zählt die Playlist selbst.)
+   */
+  shownExternally(name: string): void {
+    this.lastShown.set(name, ++this.seq)
+    if (this.avoidRepeats) {
+      const i = this.queue.indexOf(name)
+      if (i >= 0) this.queue.splice(i, 1)
+    }
+  }
+
+  /** Wie viele Fotos her ein Foto zuletzt zu sehen war; nie gezeigt = Infinity. */
+  age(name: string): number {
+    const s = this.lastShown.get(name)
+    return s === undefined ? Infinity : this.seq - s
   }
 
   /**
@@ -94,12 +158,15 @@ export class Playlist {
       this.queue =
         this.boosted.length && this.boostExtra
           ? arrange(round, last, this.rng)
-          : shuffle(round, this.rng)
+          : this.avoidRepeats
+            ? freshFirst(round, (n) => this.age(n), this.rng)
+            : shuffle(round, this.rng)
       if (this.queue.length > 1 && this.queue[0] === last) {
         this.queue.push(this.queue.shift()!)
       }
     }
     const item = this.queue.shift()!
+    this.lastShown.set(item, ++this.seq)
     this.history.push(item)
     if (this.history.length > 500) this.history.shift()
     this.cursor = this.history.length - 1

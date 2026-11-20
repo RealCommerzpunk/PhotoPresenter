@@ -173,6 +173,13 @@ function General({ s, update }: { s: Settings; update: Update }): React.JSX.Elem
             label={t('ui.photos.includeSubfolders')}
           />
         </Field>
+        <Field label={t('ui.photos.repeats')} hint={t('ui.photos.repeatsHint')}>
+          <Toggle
+            checked={s.avoidRepeats}
+            onChange={(v) => update({ avoidRepeats: v })}
+            label={t('ui.photos.avoidRepeats')}
+          />
+        </Field>
       </Card>
       <ScreenCard s={s} update={update} />
       <Card title={t('ui.fill.title')}>

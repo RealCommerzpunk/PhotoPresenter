@@ -124,6 +124,10 @@ async function main(): Promise<void> {
   let settings: Settings = await window.api.getSettings()
   applyLanguage(settings)
   const playlist = new Playlist([])
+  // Wann welche Fotos zuletzt zu sehen waren (auch in früheren Shows dieses Programmlaufs
+  // und davor, gespeichert vom Hauptprozess), damit sie nicht bald wiederkommen.
+  playlist.avoidRepeats = settings.avoidRepeats
+  playlist.setRecent(await window.api.recentPhotos())
   const sequencer = new Sequencer(playlist, settings.textFillerEvery)
   sequencer.setTexts(settings.texts, settings.textFillerEvery)
 
@@ -325,7 +329,8 @@ async function main(): Promise<void> {
         formations,
         duration: pick(settings.worldDuration),
         cameraSpeed: pick(settings.worldCameraSpeed),
-        density: settings.worldDensity
+        density: settings.worldDensity,
+        age: settings.avoidRepeats ? (name) => playlist.age(name) : undefined
       },
       app.renderer.resolution,
       1.6
@@ -482,6 +487,10 @@ async function main(): Promise<void> {
     if (p.kind === 'photo') {
       lastPhoto = p.photo.name
       photosSinceWorld++
+      // Verlauf gegen Wiederholungen: Zielfoto der 3D-Welt und Fotos aus der Galerie kamen
+      // nicht aus der Playlist und fallen deshalb aus deren laufender Runde.
+      if (p.queueId || current instanceof WorldScene) playlist.shownExternally(p.photo.name)
+      window.api.photoShown(p.photo.name)
       // Nach der 3D-Welt erst kurz im Vollbild stehen, dann die Bewegung beginnen.
       const stillStart = current instanceof WorldScene ? 2 : 0
       return new Slide(p.photo, screen(), settings, fade, p.texts, textHost, p.focus, {
@@ -1097,6 +1106,7 @@ async function main(): Promise<void> {
       next.includeSubfolders !== settings.includeSubfolders ||
       next.dupesSkip !== settings.dupesSkip
     settings = next
+    playlist.avoidRepeats = settings.avoidRepeats
     applyLanguage(settings)
     applyTexts()
     void refreshFocusPhotos()

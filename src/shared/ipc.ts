@@ -42,6 +42,8 @@ export const IPC = {
   getQueue: 'queue:get',
   queueChanged: 'queue:changed',
   queuePlaying: 'queue:playing',
+  recentPhotos: 'recent:list',
+  photoShown: 'recent:shown',
   thumbRequest: 'thumbs:request',
   thumbResult: 'thumbs:result',
   listDisplays: 'displays:list',
@@ -293,6 +295,12 @@ export interface PhotoPresenterApi {
   onQueueChanged(callback: (queue: PhotoQueue) => void): () => void
   /** Show-Fenster: dieser Eintrag ist jetzt zu sehen (null: ein normales Foto). */
   queuePlaying(id: string | null): void
+
+  // Verlauf gegen Wiederholungen (übersteht Neustarts der Show und des Programms)
+  /** Zuletzt gezeigte Fotos, ältestes zuerst. */
+  recentPhotos(): Promise<string[]>
+  /** Show-Fenster: dieses Foto ist jetzt zu sehen. */
+  photoShown(name: string): void
 
   // Mitnehmen
   dataInfo(): Promise<DataInfo>

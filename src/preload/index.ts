@@ -64,6 +64,8 @@ const api: PhotoPresenterApi = {
   getQueue: () => ipcRenderer.invoke(IPC.getQueue),
   onQueueChanged: (callback) => subscribe<PhotoQueue>(IPC.queueChanged, callback),
   queuePlaying: (id) => ipcRenderer.send(IPC.queuePlaying, id),
+  recentPhotos: () => ipcRenderer.invoke(IPC.recentPhotos),
+  photoShown: (name) => ipcRenderer.send(IPC.photoShown, name),
 
   dataInfo: () => ipcRenderer.invoke(IPC.dataInfo),
   exportPackage: () => ipcRenderer.invoke(IPC.exportPackage),

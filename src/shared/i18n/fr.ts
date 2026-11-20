@@ -127,6 +127,10 @@ export const fr: Record<MessageKey, string> = {
     'Peut aussi être relatif au dossier du programme, p. ex. « Photos » : le dossier Photos à côté du programme est alors utilisé (pratique pour une clé USB).',
   'ui.photos.subfolders': 'Sous-dossiers',
   'ui.photos.includeSubfolders': 'Inclure les photos des sous-dossiers',
+  'ui.photos.repeats': 'Répétitions',
+  'ui.photos.repeatsHint':
+    'L’ordre reste aléatoire. Ce qui a été vu récemment (aussi comme cible du monde 3D, depuis la galerie ou lors d’un diaporama précédent) ne revient que tard.',
+  'ui.photos.avoidRepeats': 'le moins de répétitions possible',
   'ui.fill.title': 'Remplir l’écran',
   'ui.fill.maxCrop': 'Rogner au maximum',
   'ui.fill.maxCropHint':

@@ -129,6 +129,10 @@ export const de = {
     'Auch relativ zum Programmordner möglich, z. B. „Fotos“: dann wird der Ordner Fotos neben dem Programm verwendet (praktisch für einen USB-Stick).',
   'ui.photos.subfolders': 'Unterordner',
   'ui.photos.includeSubfolders': 'Fotos aus Unterordnern einbeziehen',
+  'ui.photos.repeats': 'Wiederholungen',
+  'ui.photos.repeatsHint':
+    'Die Reihenfolge bleibt zufällig. Was kürzlich zu sehen war (auch als Ziel der 3D-Welt, aus der Galerie oder in einer früheren Show), kommt erst spät wieder.',
+  'ui.photos.avoidRepeats': 'möglichst wenig Wiederholungen',
   'ui.fill.title': 'Bildschirm füllen',
   'ui.fill.maxCrop': 'Höchstens beschneiden',
   'ui.fill.maxCropHint':

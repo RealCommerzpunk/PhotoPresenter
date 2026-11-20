@@ -127,6 +127,10 @@ export const en: Record<MessageKey, string> = {
     'Can also be relative to the program folder, e.g. “Photos”: the folder Photos next to the program is used (handy for a USB stick).',
   'ui.photos.subfolders': 'Subfolders',
   'ui.photos.includeSubfolders': 'Include photos from subfolders',
+  'ui.photos.repeats': 'Repeats',
+  'ui.photos.repeatsHint':
+    'The order stays random. Photos seen recently (also as the 3D world’s target, from the gallery or in an earlier show) only come back late.',
+  'ui.photos.avoidRepeats': 'as few repeats as possible',
   'ui.fill.title': 'Filling the screen',
   'ui.fill.maxCrop': 'Crop at most',
   'ui.fill.maxCropHint':
