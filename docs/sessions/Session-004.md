@@ -1,6 +1,7 @@
-# Session 004 – 2026-11-13 bis 2026-11-15
+# Session 004 – 2026-11-13 bis 2026-11-20
 
 Version 0.14.0: Songs mit Karaoke, Zeiten-Editor, Kinder-Fernbedienung, Dichte der 3D-Welt.
+Fortsetzung bis 0.15.0: weniger Wiederholungen, alle Einstellungen auf dem Handy, Personen-Seite (siehe unten).
 
 ## Ergebnis
 
@@ -43,10 +44,40 @@ Version 0.14.0: Songs mit Karaoke, Zeiten-Editor, Kinder-Fernbedienung, Dichte d
 - Produktseite bei 0.13 und 0.14 nicht mitgepflegt → steht jetzt als Schritt in den Release-Regeln in CLAUDE.md.
 - `npm run dev` zeigte die Einstellungen leer (doppeltes React, auch ohne eigene Änderungen) → Aufnahmen der Einstellungen mit gebautem Stand (`electron-vite preview --skipBuild`).
 
+## Fortsetzung 2026-11-20 – Version 0.15.0
+
+### Ergebnis
+
+- Version 0.15.0, 132 Unit-Tests, alles auf GitHub
+- Releases: v0.15.0 (Windows, Latest: Demo-ZIP, portable exe, Installer) und v0.15.0-linux (Vorabversion per Workflow)
+- Neu: möglichst wenig Wiederholungen (gemeinsamer Verlauf, `recent.json`, übersteht Neustarts; Zielfoto der 3D-Welt am längsten nicht gezeigt), fast alle Einstellungen auf der Fernbedienung (Abgleich per Test, Ausnahmen in `REMOTE_EXCLUDED`), Personen-Seite mit Gesichts-Vorschaubildern und stabiler Reihenfolge; behoben: aussortierte/gelöschte Fotos auf der Personen-Seite
+
+### Ablauf
+
+1. Backlog-Eintrag Kaffee-Spende (Ko-fi, Wero).
+2. Fragen beantwortet: Dev-Einstellungen in `%APPDATA%\PhotoPresenter`; „Paket für die Weitergabe“ enthält aus `npm run dev` kein Programm (nur aus der gebauten exe).
+3. Personen-Seite: schwarze Kacheln und zähes Scrollen kamen von ganzen Fotos je Kachel (riesig vergrößert) → Gesichtsausschnitte aus dem Analyse-Fenster (`photo://…?face=`), Cache; Klick sortiert nicht mehr um, Knopf „neu sortieren“.
+4. Kaputte Kacheln von nach `Duplicates/` verschobenen Fotos → `FaceStore.entriesOfPhotos()` (nur Fotos des letzten Einlesens), Ersatzanzeige „Foto fehlt“.
+5. Wiederholungen: `freshFirst` (kürzlich Gezeigtes ans Rundenende), `shownExternally` (3D-Ziel und Galerie aus der Runde), `freshestAmong` für das 3D-Ziel, Verlauf im Hauptprozess (`recent.ts`).
+6. Fernbedienung: 16 weitere Einstellungen, neue Bausteine in `remote.html`, Test für die Vollständigkeit.
+7. Changelog, Plan, CLAUDE.md, READMEs, Produktseite; Releases Windows und Linux.
+
+### Entscheidungen des Nutzers
+
+- Kaffee-Spende (Ko-fi, Wero) bleibt im Backlog
+- 0.15.0 veröffentlichen wie vorgeschlagen (Windows + Linux); erster echter Einsatz am 2026-11-21
+
+### Fehler und Lehren
+
+- Gesichtskacheln luden ganze Fotos → bei vielen kleinen Ansichten immer Vorschaubilder aus dem Cache.
+- Der Gesichtsindex behält gelöschte Fotos absichtlich → Anzeigen und Auswahlen müssen gegen die aktuelle Fotoliste filtern.
+- Demo-ZIP der Vorversion lag nicht mehr in `dist/` → Aufbau und `README.txt` aus dem Release-Asset übernommen (`gh release download`).
+
 ## Offen am Ende
 
+- Rückmeldung vom ersten echten Einsatz (2026-11-21); Wiederholungs-Vermeidung und Fernbedienung nur per Test/Ansicht geprüft, nicht im Betrieb
+- Backlog: Kaffee-Spende (Ko-fi, Wero; Adresse/Wero-Weg vom Nutzer nötig); Fokus-Bevorzugung achtet nur darauf, dass kein Foto direkt auf sich selbst folgt
 - Zeiten-Editor vom Nutzer mit Ton noch nicht abschließend bestätigt; Klang/Synchronität nur vom Nutzer prüfbar
-- Backlog: alle Einstellungen auf die Fernbedienung (u. a. Dichte, Karaoke), globale Vermeidung von Wiederholungen
 - `Songs/` optional ins Weitergabe-Paket („Mitnehmen“)
 - Produktseite, Quickstart und Changelog in en/es/fr; Linux auf echter Hardware testen
 - Meilenstein 7: npm audit, Test 4K/große Fotos, echter iPhone-Test
