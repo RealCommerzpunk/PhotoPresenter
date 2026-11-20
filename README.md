@@ -15,7 +15,8 @@
 
 ## Features
 
-- **Photos from a folder** in random order without repeats, filling the screen as far as possible.
+- **Photos from a folder** in random order – recently shown photos only come back late, even after a restart –
+  filling the screen as far as possible.
   Empty borders are filled unobtrusively from the photo itself (blur, colour gradient or mirror).
 - **Camera motion** (Ken Burns): zoom in/out, pans and camera journeys – never beyond the photo's edge
   and never blowing up small photos beyond a configurable limit.
@@ -30,7 +31,8 @@
 - **3D photo world:** an occasional interlude where the photos form a sphere, helix, tunnel, wobbly jelly cube …
   and the camera dives into the next photo.
 - **Phone remote control** via QR code (local network, no app needed): pause, skip, freeze a photo, trigger
-  emojis, texts, effects and the 3D world, pick the next photos from a gallery. A **kids remote** allows exactly
+  emojis, texts, effects and the 3D world, pick the next photos from a gallery, change almost every setting.
+  A **kids remote** allows exactly
   one emoji and one text per photo.
 - **Songs with karaoke lyrics:** put an MP3 and a TXT with the same name into `Songs/`; the lyrics glide along
   with the music. A sing-along editor (hold a key while each line is sung, then drag on the waveform) sets the timing.

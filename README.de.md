@@ -13,7 +13,8 @@ Zufällige Vollbild-Foto-Diashow für Windows und Linux.
 
 **Demo zum Herunterladen:** `PhotoPresenter-Demo-x.y.z.zip` aus dem [neuesten Release](https://github.com/RealCommerzpunk/PhotoPresenter/releases/latest) laden, entpacken, die `.exe` doppelklicken – mit 163 Demo-Fotos und fertigen Einstellungen, ohne Installation. Dort gibt es auch das Programm allein und einen Installer.
 
-- Fotos aus einem Ordner in zufälliger Reihenfolge, möglichst bildschirmfüllend.
+- Fotos aus einem Ordner in zufälliger Reihenfolge, möglichst bildschirmfüllend. Kürzlich gezeigte Fotos
+  kommen erst spät wieder, auch nach einem Neustart.
   Freie Ränder werden unauffällig aus dem Foto selbst aufgefüllt.
 - Lebendige Bewegung: Zoom, Schwenk, Kamerafahrten (Ken Burns).
 - Konfigurierbare Übergänge. Anzeigedauer, Bewegungsintensität, Überblenddauer und Effekte
@@ -22,7 +23,7 @@ Zufällige Vollbild-Foto-Diashow für Windows und Linux.
   optional mit einem Schwenk über die anderen Gesichter.
 - **Texte**: Fülltexte zwischen den Fotos und an Fotos gebundene Texte (vor, nach oder über dem Bild),
   mit frei wählbaren oder zufälligen Stilen und Animationen. Texte und Emojis verdecken keine Gesichter.
-- **3D-Fotowelt**, Partikel-Effekte, **Handy-Fernbedienung** per QR-Code (dazu eine **Kinder-Fernbedienung**: je Foto ein Emoji und ein Text) und eine **portable Version** zum Mitnehmen.
+- **3D-Fotowelt**, Partikel-Effekte, **Handy-Fernbedienung** per QR-Code mit fast allen Einstellungen (dazu eine **Kinder-Fernbedienung**: je Foto ein Emoji und ein Text) und eine **portable Version** zum Mitnehmen.
 - **Songs mit Karaoke-Text:** MP3 und gleichnamige TXT in den Ordner `Songs` legen, der Text gleitet passend zur Musik mit. Die Zeiten passt ein Mitsing-Editor ein (Taste halten, solange eine Zeile gesungen wird, danach auf der Wellenform nachziehen).
 
 > Status: in Entwicklung. Der Fahrplan steht unten.

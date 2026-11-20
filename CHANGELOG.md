@@ -2,6 +2,15 @@
 
 Alle Änderungen je Version. Format: neueste Version oben, Datum im Format JJJJ-MM-TT.
 
+## 0.15.0 – 2026-11-20
+
+Weniger Wiederholungen, alles auf dem Handy, flüssigere Personen-Seite.
+
+- **Möglichst wenig Wiederholungen** (Allgemein → Fotos, Standard an): Die Reihenfolge bleibt zufällig, aber was kürzlich zu sehen war, kommt erst spät wieder – mindestens eine halbe Runde Abstand, auch über die Rundengrenze und über einen Neustart der Show oder des Programms hinweg. Das Zielfoto der 3D-Welt ist unter den gut erreichbaren Kacheln das, welches am längsten nicht zu sehen war; es und Fotos aus der Galerie der Fernbedienung kommen in der laufenden Runde nicht noch einmal. Mit „Häufiger zeigen“ (Fokus-Person) gilt weiterhin nur, dass kein Foto direkt auf sich selbst folgt
+- **Fernbedienung mit allen Einstellungen**, die nicht nur am PC gehen: neu sind Sprache, Unterordner, Dubletten überspringen, Wiederholungen, Beschnitt, Begrenzung kleiner Fotos, Dichte der 3D-Welt und die ganze Karaoke-Darstellung (Position, Schriftgröße, Zeilen, Farben, Hintergrund, Abdunkeln). Nur am PC bleiben Ordnerwahl, Bildschirm, Stil-Editor, Personen anlernen, Zeiten-Editor und das Ein-/Ausschalten der Fernbedienung
+- **Personen-Seite flüssig**: Die Gesichter kommen als kleine, zwischengespeicherte Vorschaubilder statt als ganze Fotos; das Scrollen durch Hunderte Gesichter ruckelt nicht mehr, und kleine Gesichter in großen Fotos erscheinen nicht mehr schwarz. Beim Anklicken bleiben die Gesichter an ihrem Platz (neu sortiert wird beim Personenwechsel oder mit „neu sortieren“)
+- **Behoben**: Fotos, die gelöscht oder nach `Duplicates` aussortiert wurden, erschienen weiter als Gesichter auf der Personen-Seite (als kaputtes Bild) und zählten bei „erkannt auf … Fotos“ und für die Fokus-Bevorzugung mit
+
 ## 0.14.0 – 2026-11-15
 
 Songs mit Karaoke, Kinder-Fernbedienung, dichtere 3D-Welt.
