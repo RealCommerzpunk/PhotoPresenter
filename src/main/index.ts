@@ -1,4 +1,11 @@
-import { MESSAGES, getLanguage, resolveLanguage, setLanguage, t } from '@shared/i18n'
+import {
+  LANGUAGE_NAMES,
+  MESSAGES,
+  getLanguage,
+  resolveLanguage,
+  setLanguage,
+  t
+} from '@shared/i18n'
 import { mkdir, writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
 import {
@@ -31,6 +38,8 @@ import {
   FOCUS_LABELS,
   MOTION_LABELS,
   PAN_OTHERS,
+  SONG_BACKGROUND_LABELS,
+  SONG_POSITION_LABELS,
   TEXT_BACKGROUND_LABELS,
   TRANSITION_LABELS,
   WORLD_FORMATION_LABELS,
@@ -99,7 +108,10 @@ function remoteState(): RemoteState {
       motionKinds: MOTION_LABELS,
       fillModes: FILL_LABELS,
       focusModes: FOCUS_LABELS,
-      textBackgrounds: TEXT_BACKGROUND_LABELS
+      textBackgrounds: TEXT_BACKGROUND_LABELS,
+      songPositions: SONG_POSITION_LABELS,
+      songBackgrounds: SONG_BACKGROUND_LABELS,
+      languages: { auto: t('ui.language.auto'), ...LANGUAGE_NAMES }
     }
   }
 }

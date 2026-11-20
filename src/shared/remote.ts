@@ -109,8 +109,43 @@ export const REMOTE_KEYS = [
   'textBackgrounds',
   'worldTiles',
   'worldCameraSpeed',
-  'songVolume'
+  'songVolume',
+  'maxCrop',
+  'maxBaseScale',
+  'includeSubfolders',
+  'dupesSkip',
+  'avoidRepeats',
+  'language',
+  'worldDensity',
+  'songLyricsPosition',
+  'songFontScale',
+  'songLinesBefore',
+  'songLinesAfter',
+  'songColorNow',
+  'songColorNext',
+  'songColorPast',
+  'songBackground',
+  'songDim'
 ] as const satisfies readonly (keyof Settings)[]
+
+/**
+ * Einstellungen, die bewusst nur am PC gehen (mit Grund). Jede Einstellung steht entweder
+ * hier oder in `REMOTE_KEYS` – ein Test prüft das, damit neue Einstellungen nicht vergessen werden.
+ */
+export const REMOTE_EXCLUDED: Partial<Record<keyof Settings, string>> = {
+  version: 'intern (Schema-Version)',
+  photoFolder: 'Ordnerauswahl nur am PC',
+  songsFolder: 'Ordnerauswahl nur am PC',
+  textStyles: 'Stil-Editor mit Vorschau nur am PC',
+  customStyles: 'Stil-Editor mit Vorschau nur am PC',
+  showDisplay: 'Bildschirmwahl baut das Show-Fenster um',
+  showArea: 'Bildschirmbereich baut das Show-Fenster um',
+  songPhoto: 'Fotoauswahl fürs Lied nur am PC',
+  songTiming: 'Zeiten-Editor nur am PC',
+  remoteEnabled: 'würde die Fernbedienung selbst abschalten',
+  remotePort: 'würde die Verbindung der Fernbedienung trennen',
+  persons: 'Personen anlernen nur am PC (Auswahl der Fokus-Person geht per Fernbedienung)'
+}
 
 export type RemoteSettings = Pick<Settings, (typeof REMOTE_KEYS)[number]>
 
@@ -134,6 +169,10 @@ export interface RemoteState {
     fillModes: Record<string, string>
     focusModes: Record<string, string>
     textBackgrounds: Record<string, string>
+    songPositions: Record<string, string>
+    songBackgrounds: Record<string, string>
+    /** Sprachen der Oberfläche, `auto` zuerst. */
+    languages: Record<string, string>
   }
 }
 

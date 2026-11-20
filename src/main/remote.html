@@ -297,6 +297,18 @@
         text-align: left;
         margin-bottom: 8px;
       }
+      .colors {
+        display: flex;
+        gap: 12px;
+      }
+      .colors input {
+        width: 56px;
+        height: 40px;
+        padding: 2px;
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        border-radius: 8px;
+        background: transparent;
+      }
       .chips {
         display: flex;
         flex-wrap: wrap;
@@ -557,6 +569,13 @@
     </section>
 
     <section data-page="ablauf">
+      <h2>Allgemein</h2>
+      <div id="language"></div>
+      <div id="includeSubfolders"></div>
+      <div id="dupesSkip"></div>
+      <div id="avoidRepeats"></div>
+    </section>
+    <section data-page="ablauf">
       <h2>Zeiten</h2>
       <div id="displayDuration"></div>
       <div id="transitionDuration"></div>
@@ -568,6 +587,8 @@
         <label>Höchste Vergrößerung <span class="value" id="maxUpscaleValue"></span></label>
         <input type="range" id="maxUpscale" min="100" max="250" step="5" />
       </div>
+      <div id="maxCrop"></div>
+      <div id="maxBaseScale"></div>
     </section>
     <section data-page="ablauf">
       <div class="label">Bewegungsarten</div>
@@ -653,6 +674,7 @@
       <div id="worldDuration"></div>
       <div id="worldTiles"></div>
       <div id="worldCameraSpeed"></div>
+      <div id="worldDensity"></div>
       <div class="label" style="margin-top: 12px">Beim Zufall dabei</div>
       <div class="chips" id="formations"></div>
     </section>
@@ -668,6 +690,16 @@
       <div class="hint">
         Der Text läuft als Karaoke mit. Taste S am PC startet ebenfalls einen Song.
       </div>
+    </section>
+    <section data-page="songs">
+      <h2>Karaoke-Darstellung</h2>
+      <div id="songLyricsPosition"></div>
+      <div id="songFontScale"></div>
+      <div id="songLinesBefore"></div>
+      <div id="songLinesAfter"></div>
+      <div id="songColors"></div>
+      <div id="songBackground"></div>
+      <div id="songDim"></div>
     </section>
 
     <section data-page="kids">
@@ -825,6 +857,75 @@
         }
       }
 
+      /** Einzelner Regler; `format` zeigt den Wert, `fix` rechnet den Reglerwert in die Einstellung um. */
+      function sliderControl(key, title, min, max, step, factor, format, fix = (v) => v) {
+        const box = $(key)
+        box.className = 'row'
+        box.innerHTML =
+          '<label>' + escapeHtml(title) + ' <span class="value"></span></label><input type="range">'
+        const input = box.querySelector('input')
+        Object.assign(input, { min, max, step })
+        const value = box.querySelector('.value')
+        input.oninput = () => {
+          const v = fix(Number(input.value) / factor)
+          value.textContent = format(v)
+          debounced(key, () => patch({ [key]: v }))
+        }
+        box.update = (v) => {
+          if (document.activeElement !== input) input.value = v * factor
+          value.textContent = format(v)
+        }
+      }
+
+      /** Schalter für eine Ja/Nein-Einstellung. */
+      function switchControl(key, title) {
+        const box = $(key)
+        box.className = 'switch'
+        box.innerHTML = escapeHtml(title) + ' <input type="checkbox">'
+        const input = box.querySelector('input')
+        input.onchange = () => patch({ [key]: input.checked })
+        box.update = (v) => (input.checked = !!v)
+      }
+
+      /** Auswahlliste; `labels()` liefert { Wert: Beschriftung }. */
+      function selectControl(key, title, labels) {
+        const box = $(key)
+        box.className = 'row'
+        box.innerHTML = '<div class="label">' + escapeHtml(title) + '</div><select></select>'
+        const select = box.querySelector('select')
+        select.onchange = () => patch({ [key]: select.value })
+        box.update = (v) =>
+          options(
+            select,
+            Object.entries(labels()).map(([k, l]) => [k, escapeHtml(l)]),
+            v
+          )
+      }
+
+      /** Mehrere Farbfelder in einer Zeile (z. B. die drei Karaoke-Farben). */
+      function colorControl(id, title, keys) {
+        const box = $(id)
+        box.className = 'row'
+        box.innerHTML =
+          '<div class="label">' +
+          escapeHtml(title) +
+          '</div><div class="colors">' +
+          keys.map((k) => '<input type="color" data-key="' + k + '">').join('') +
+          '</div>'
+        const inputs = [...box.querySelectorAll('input')]
+        for (const input of inputs) {
+          input.oninput = () =>
+            debounced(input.dataset.key, () => patch({ [input.dataset.key]: input.value }))
+        }
+        box.update = (s) => {
+          for (const input of inputs) {
+            if (document.activeElement !== input) input.value = s[input.dataset.key]
+          }
+        }
+      }
+
+      const percent = (v) => Math.round(v * 100) + ' %'
+
       function options(select, items, current) {
         const html = items.map(([v, l]) => '<option value="' + v + '">' + l + '</option>').join('')
         if (select.dataset.html !== html) {
@@ -881,6 +982,43 @@
         rangeControl('worldTiles', t('remote.worldTiles'), photosUnit, 8, 120, 1)
         rangeControl('worldCameraSpeed', t('remote.worldCameraSpeed'), '×', 0.3, 3, 0.1)
         rangeControl('focusFaceSize', t('remote.focusFaceSize'), '%', 10, 80, 1, 100)
+        // Einstellungen, die früher nur am PC gingen
+        selectControl('language', t('remote.language'), () => state.labels.languages)
+        switchControl('includeSubfolders', t('remote.includeSubfolders'))
+        switchControl('dupesSkip', t('remote.dupesSkip'))
+        switchControl('avoidRepeats', t('remote.avoidRepeats'))
+        sliderControl('maxCrop', t('remote.maxCrop'), 0, 30, 1, 100, percent)
+        // Ganz links = unbegrenzt (0), sonst 100–400 %.
+        sliderControl(
+          'maxBaseScale',
+          t('remote.maxBaseScale'),
+          90,
+          400,
+          10,
+          100,
+          (v) => (v ? percent(v) : t('remote.unlimited')),
+          (v) => (v < 1 ? 0 : v)
+        )
+        sliderControl('worldDensity', t('remote.worldDensity'), 0, 100, 5, 100, percent)
+        selectControl(
+          'songLyricsPosition',
+          t('remote.songPosition'),
+          () => state.labels.songPositions
+        )
+        sliderControl('songFontScale', t('remote.songFontScale'), 50, 200, 5, 100, percent)
+        sliderControl('songLinesBefore', t('remote.songLinesBefore'), 0, 6, 1, 1, String)
+        sliderControl('songLinesAfter', t('remote.songLinesAfter'), 0, 8, 1, 1, String)
+        colorControl('songColors', t('remote.songColors'), [
+          'songColorNow',
+          'songColorNext',
+          'songColorPast'
+        ])
+        selectControl(
+          'songBackground',
+          t('remote.songBackground'),
+          () => state.labels.songBackgrounds
+        )
+        sliderControl('songDim', t('remote.songDim'), 0, 100, 5, 100, percent)
         $('songVolume').oninput = (e) => {
           $('songVolumeValue').textContent = e.target.value + ' %'
           debounced('songVolume', () => patch({ songVolume: Number(e.target.value) / 100 }))
@@ -1096,6 +1234,26 @@
         }
 
         for (const key of ['worldTiles', 'worldCameraSpeed', 'focusFaceSize']) $(key).update(s[key])
+        for (const key of [
+          'language',
+          'includeSubfolders',
+          'dupesSkip',
+          'avoidRepeats',
+          'maxCrop',
+          'maxBaseScale',
+          'worldDensity',
+          'songLyricsPosition',
+          'songFontScale',
+          'songLinesBefore',
+          'songLinesAfter',
+          'songBackground',
+          'songDim'
+        ]) {
+          $(key).update(s[key])
+        }
+        $('songColors').update(s)
+        // Abdunkeln gilt nur für „Foto abdunkeln“ und „festes Foto“.
+        $('songDim').style.display = s.songBackground === 'slideshow' ? 'none' : ''
         if (document.activeElement !== $('songVolume'))
           $('songVolume').value = Math.round(s.songVolume * 100)
         $('songVolumeValue').textContent = Math.round(s.songVolume * 100) + ' %'
