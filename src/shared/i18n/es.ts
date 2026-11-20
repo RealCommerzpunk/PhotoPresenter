@@ -297,6 +297,7 @@ export const es: Record<MessageKey, string> = {
   'ui.dupes.trash': 'Eliminar (papelera)',
   'ui.persons.onlyMatches': 'mostrar solo coincidencias',
   'ui.persons.resort': 'reordenar',
+  'ui.persons.photoMissing': 'falta la foto',
   'ui.persons.resortTitle':
     'Ordenar de nuevo por similitud. Al hacer clic, las caras se quedan en su sitio.',
   'ui.persons.sample': 'Ejemplo',

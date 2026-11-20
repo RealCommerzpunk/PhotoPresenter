@@ -249,7 +249,7 @@ export class FaceStore {
   }
 
   status(): FaceIndexStatus {
-    const inFolder = this.entriesInFolder()
+    const inFolder = this.entriesOfPhotos()
     return {
       total: this.total,
       done: Math.max(0, this.total - this.queue.length),
@@ -304,6 +304,18 @@ export class FaceStore {
   private entriesInFolder(): [string, Entry][] {
     const prefix = resolve(this.folder) + (process.platform === 'win32' ? '\\' : '/')
     return this.folder ? [...this.index].filter(([k]) => k.startsWith(prefix)) : []
+  }
+
+  /**
+   * Einträge der Fotos, die es beim letzten Einlesen noch gab. Der Index behält Fotos, die
+   * gelöscht, verschoben oder als Dublette nach `Duplicates/` aussortiert wurden (kommen sie
+   * zurück, muss nichts neu analysiert werden) – anzeigen oder zeigen soll man sie aber nicht.
+   * Solange das Einlesen für diesen Ordner noch nicht fertig ist, alle Einträge.
+   */
+  private entriesOfPhotos(): [string, Entry][] {
+    const all = this.entriesInFolder()
+    if (resolve(this.scanFolder || '.') !== resolve(this.folder || '.') || this.scanning) return all
+    return all.filter(([abs]) => this.files.has(this.relative(abs)))
   }
 
   private relative(abs: string): string {
@@ -381,7 +393,7 @@ export class FaceStore {
     const settings = loadSettings()
     const match = this.matcher(this.focusPerson(settings), settings.focusThreshold)
     if (!match) return []
-    return this.entriesInFolder()
+    return this.entriesOfPhotos()
       .filter(([, e]) => e.faces.some((f) => match(f.emb).match))
       .map(([k]) => this.relative(k))
   }
@@ -399,7 +411,7 @@ export class FaceStore {
       const entry = this.index.get(abs)
       entries = entry ? [[abs, entry]] : []
     } else {
-      entries = this.entriesInFolder()
+      entries = this.entriesOfPhotos()
     }
     const items: FaceListItem[] = []
     for (const [abs, e] of entries) {

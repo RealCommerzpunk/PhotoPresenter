@@ -299,6 +299,7 @@ export const fr: Record<MessageKey, string> = {
   'ui.dupes.trash': 'Supprimer (corbeille)',
   'ui.persons.onlyMatches': 'n’afficher que les correspondances',
   'ui.persons.resort': 'trier à nouveau',
+  'ui.persons.photoMissing': 'photo absente',
   'ui.persons.resortTitle':
     'Trier à nouveau par ressemblance. Les visages restent en place quand vous cliquez.',
   'ui.persons.sample': 'Exemple',

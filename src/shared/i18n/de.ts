@@ -295,6 +295,7 @@ export const de = {
   'ui.dupes.trash': 'Löschen (Papierkorb)',
   'ui.persons.onlyMatches': 'nur Treffer zeigen',
   'ui.persons.resort': 'neu sortieren',
+  'ui.persons.photoMissing': 'Foto fehlt',
   'ui.persons.resortTitle':
     'Nach Ähnlichkeit neu ordnen. Beim Anklicken bleiben die Gesichter an ihrem Platz.',
   'ui.persons.sample': 'Beispiel',

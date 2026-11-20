@@ -14,9 +14,22 @@ type Update = (patch: Partial<Settings>) => void
  * vergrößert, das machte die Galerie zäh und kleine Gesichter in großen Fotos schwarz.
  */
 function FaceThumb({ item, size = 92 }: { item: FaceListItem; size?: number }): React.JSX.Element {
+  const [broken, setBroken] = useState(false)
+  if (broken) {
+    // Foto inzwischen verschoben oder gelöscht (fällt beim nächsten Einlesen aus der Liste).
+    return (
+      <div
+        className="flex items-center justify-center rounded-md bg-white/5 text-center text-[10px] text-white/40"
+        style={{ width: size, height: size }}
+      >
+        {t('ui.persons.photoMissing')}
+      </div>
+    )
+  }
   return (
     <div className="overflow-hidden rounded-md bg-black/60" style={{ width: size, height: size }}>
       <img
+        onError={() => setBroken(true)}
         src={faceThumbUrl(item.photo, item.box)}
         alt=""
         loading="lazy"
