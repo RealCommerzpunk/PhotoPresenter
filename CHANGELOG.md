@@ -2,6 +2,14 @@
 
 Alle Änderungen je Version. Format: neueste Version oben, Datum im Format JJJJ-MM-TT.
 
+## 0.16.1 – 2026-11-20
+
+Feinschliff der 3D-Welt.
+
+- **Bessere Ausschnitte auf den Kacheln**: Fotos, die nicht ins 4:3-Format der Kacheln passen, werden nicht mehr stur in der Mitte beschnitten. Der Ausschnitt rückt so, dass die Fokus-Person (und der Partner) zu sehen ist, sonst alle Gesichter; ohne Gesichter sitzt er bei Hochformaten etwas höher (Köpfe statt Füße). Gezoomt wird dabei nicht
+- **Welle und Karussell mittig**: Die Kamera blickt auf die Mitte der Formation, statt sie am unteren Bildrand laufen zu lassen
+- **Ausstieg ohne Nachzügler-Effekt**: Die weiche Kante zwischen Foto und Rand hat die Zielkachel schon beim Eintauchen; im Vollbild angekommen ist das Foto fertig und es geht direkt mit der Bewegung weiter
+
 ## 0.16.0 – 2026-11-20
 
 Fließende Übergänge in und aus der 3D-Welt, Blättern durch alles, Fokus per Taste.

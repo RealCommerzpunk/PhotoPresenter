@@ -38,6 +38,9 @@ import { frame, mark, measure } from './perf'
 import { ThumbPool } from './world/thumbPool'
 import { ShowHistory, type HistoryRecord } from './history'
 import { loadThree, WorldScene, type WorldPlan } from './world/worldScene'
+import { tileCropCenter } from './world/crop'
+import { featherFraction } from './imageprep'
+import { TILE_H, TILE_W } from './world/formations'
 
 const FIRST_FADE = 1.2
 const SKIP_FADE = 0.6
@@ -377,10 +380,26 @@ async function main(): Promise<void> {
     const world = replay
     // Kacheln aus dem Vorrat; fehlt ein Vorschaubild inzwischen, springt ein anderes ein.
     const spare = thumbs.sample(world.tiles.length)
-    const tiles = world.tiles.map((name, i) => {
+    const picked = world.tiles.map((name, i) => {
       const bitmap = thumbs.get(name)
       return bitmap ? { name, bitmap } : spare[i % spare.length]
     })
+    // 4:3-Ausschnitt je Kachel so legen, dass die Gesichter (vor allem Fokus-Person und
+    // Partner) zu sehen sind – ohne zu zoomen.
+    const introName = allowIntro && current instanceof Slide ? current.photoName : undefined
+    const names = [...new Set([...picked.map((t) => t.name), ...(introName ? [introName] : [])])]
+    const faceInfos = new Map(
+      await Promise.all(
+        names.map(async (n) => [n, await window.api.getFaces(n, true).catch(() => null)] as const)
+      )
+    )
+    const cropFor = (name: string, bitmap: ImageBitmap): [number, number] =>
+      tileCropCenter(
+        bitmap.width / Math.max(1, bitmap.height),
+        TILE_W / TILE_H,
+        faceInfos.get(name)?.faces ?? []
+      )
+    const tiles = picked.map((t) => ({ ...t, crop: cropFor(t.name, t.bitmap) }))
     // Einstieg: Das gerade gezeigte Foto wird scharf als Kachel aufgenommen.
     let intro: WorldPlan['intro']
     if (allowIntro && current instanceof Slide && !incoming) {
@@ -403,7 +422,8 @@ async function main(): Promise<void> {
           bitmap,
           w: size.w * fit.scale,
           h: size.h * fit.scale,
-          backdrop
+          backdrop,
+          crop: cropFor(slide.photoName, bitmap)
         }
       }
     }
@@ -571,6 +591,17 @@ async function main(): Promise<void> {
             const { size, fit } = p.photo
             const world = current
             world.setFinalFrame(size.w * fit.scale, size.h * fit.scale)
+            // Scharfe Zielkachel mit derselben weichen Kante wie danach das Vollbild.
+            if (p.photo.name === world.finalName) {
+              const w = size.w * fit.scale
+              const h = size.h * fit.scale
+              const feather = fit.covers
+                ? undefined
+                : { sides: fit.gapX, topBottom: fit.gapY, frac: featherFraction(screen(), w, h) }
+              void loadThumb(p.photo.name, Math.round(h * app.renderer.resolution), feather)
+                .then((bmp) => world.setFinalSharp(bmp))
+                .catch(() => undefined)
+            }
             // Den Rand des Zielfotos zeigt schon die Welt während des Eintauchens.
             if (!fit.covers) {
               void p.photo
@@ -1097,8 +1128,6 @@ async function main(): Promise<void> {
   }
   /** „3D jetzt“ kam während eines Übergangs: danach sofort ins Zwischenspiel. */
   let worldAfterTransition = false
-  /** Welt, für die die scharfe Zielkachel schon angefordert ist. */
-  let sharpFor: WorldScene | null = null
 
   function discardReady(): void {
     generation++
@@ -1194,14 +1223,6 @@ async function main(): Promise<void> {
       !current.settling
     )
       current.settleToWhole(2.5)
-    // Beim Eintauchen: scharfe Fassung des Zielfotos für die bildschirmgroße Kachel.
-    if (current instanceof WorldScene && current.diving && sharpFor !== current) {
-      const scene = current
-      sharpFor = scene
-      void loadThumb(scene.finalName, Math.round(s.h * app.renderer.resolution))
-        .then((bmp) => scene.setFinalSharp(bmp))
-        .catch(() => undefined)
-    }
     // Vorschaubilder für die 3D-Welt nur in ruhigen Phasen nachladen.
     if (!incoming && (settings.worldEnabled || worldForced)) {
       thumbs.tick(Math.round(Math.max(settings.worldTiles.min, settings.worldTiles.max)))

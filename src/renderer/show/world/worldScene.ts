@@ -13,6 +13,7 @@ import {
   hash01,
   jellyCenter,
   placement,
+  ringLookY,
   scattered,
   TILE_H,
   TILE_W,
@@ -66,11 +67,21 @@ function geometries(THREE: Three): { tile: ThreeNS.PlaneGeometry; frame: ThreeNS
  * Zeigt aus einem Bild mit Seitenverhältnis `image` den größten mittigen Ausschnitt mit
  * Seitenverhältnis `shown` (über repeat/offset der Textur, ohne Verzerrung).
  */
-function cropTexture(tex: ThreeNS.Texture, image: number, shown: number): void {
+function cropTexture(
+  tex: ThreeNS.Texture,
+  image: number,
+  shown: number,
+  /** Wunschmitte des Ausschnitts (0–1, oben links); wird an den Bildrand begrenzt. */
+  center: [number, number] = [0.5, 0.5]
+): void {
   const rx = shown < image ? shown / image : 1
   const ry = shown < image ? 1 : image / shown
   tex.repeat.set(rx, ry)
-  tex.offset.set((1 - rx) / 2, (1 - ry) / 2)
+  // v läuft hier von oben nach unten (Vorschaubilder werden nicht gespiegelt hochgeladen)
+  tex.offset.set(
+    Math.min(1 - rx, Math.max(0, center[0] - rx / 2)),
+    Math.min(1 - ry, Math.max(0, center[1] - ry / 2))
+  )
 }
 
 /** Randfüllung eines Fotos unter der 3D-Szene, mit ihrer aktuellen Stärke (0–1). */
@@ -87,6 +98,11 @@ interface Edge {
 export interface WorldTile {
   name: string
   bitmap: ImageBitmap
+  /**
+   * Mitte des 4:3-Ausschnitts (0–1, oben links), z. B. so, dass die Fokus-Person zu sehen
+   * ist (`tileCropCenter`); ohne Angabe mittig.
+   */
+  crop?: [number, number]
 }
 
 export interface WorldPlan {
@@ -117,6 +133,8 @@ export interface WorldPlan {
     h: number
     /** Randfüllung des Fotos: steht anfangs und blendet beim Zurückfahren aus. */
     backdrop?: { bitmap: ImageBitmap; fill: FillMode }
+    /** Mitte des 4:3-Ausschnitts, sobald das Foto zur Kachel geworden ist. */
+    crop?: [number, number]
   }
 }
 
@@ -172,6 +190,8 @@ export class WorldScene extends TimedScene implements Scene {
   private readonly paperTextures: ThreeNS.Texture[] = []
   /** Seitenverhältnis der Vorschaubilder (= des Fotos). */
   private readonly imageAspects: number[] = []
+  /** Mitte des 4:3-Ausschnitts je Kachel. */
+  private readonly crops: [number, number][] = []
   private readonly materials: ThreeNS.Material[] = []
   private readonly phases: Phase[] = []
   /** Kachel, in die die Kamera eintaucht; wird erst zu Beginn des Eintauchens gewählt. */
@@ -255,10 +275,12 @@ export class WorldScene extends TimedScene implements Scene {
       tex.colorSpace = THREE.SRGBColorSpace
       tex.flipY = false
       tex.needsUpdate = true
-      // Vorschaubilder haben das Seitenverhältnis des Fotos; die Kachel zeigt die Mitte in 4:3.
+      // Vorschaubilder haben das Seitenverhältnis des Fotos; die Kachel zeigt einen 4:3-
+      // Ausschnitt, der die Gesichter (vor allem der Fokus-Person) enthält.
       const imageAspect = t.bitmap.width / Math.max(1, t.bitmap.height)
       this.imageAspects.push(imageAspect)
-      cropTexture(tex, imageAspect, TILE_W / TILE_H)
+      this.crops.push(t.crop ?? [0.5, 0.5])
+      cropTexture(tex, imageAspect, TILE_W / TILE_H, t.crop)
       this.tileTextures.push(tex)
       // transparent, damit die übrigen Kacheln beim Eintauchen ausblenden können
       const mat = new THREE.MeshBasicMaterial({
@@ -340,7 +362,8 @@ export class WorldScene extends TimedScene implements Scene {
       }
     }
     this.introIndex = best
-    this.plan.tiles[best] = { name: intro.name, bitmap: intro.bitmap }
+    this.plan.tiles[best] = { name: intro.name, bitmap: intro.bitmap, crop: intro.crop }
+    this.crops[best] = intro.crop ?? [0.5, 0.5]
     this.ownBitmaps.push(intro.bitmap)
     this.replaceTexture(best, intro.bitmap)
     this.introBorder = this.ownBorder(best)
@@ -364,7 +387,12 @@ export class WorldScene extends TimedScene implements Scene {
     const a = start + (tile - start) * e
     const wide = a >= tile
     this.meshes[this.introIndex].scale.set(wide ? a / tile : 1, wide ? 1 : tile / a, 1)
-    cropTexture(this.tileTextures[this.introIndex], this.imageAspects[this.introIndex], a)
+    cropTexture(
+      this.tileTextures[this.introIndex],
+      this.imageAspects[this.introIndex],
+      a,
+      this.crops[this.introIndex]
+    )
     if (this.introBorder) {
       this.introBorder.opacity = Math.min(1, Math.max(0, (k - 0.45) / 0.45))
       this.meshes[this.introIndex].children[0].visible = this.introBorder.opacity > 0.01
@@ -514,13 +542,12 @@ export class WorldScene extends TimedScene implements Scene {
     switch (info.camera) {
       case 'orbit': {
         const a = u * 0.14 * s + hash01(kind.length, 3) * Math.PI * 2
+        const y = info.height + Math.sin(u * 0.2) * 1.2
+        // Karussell: so weit nach unten blicken, dass der ganze Ring mittig im Bild liegt.
+        const lookY = info.ring ? ringLookY(y, info.distance, info.ring) : 0
         return {
-          pos: [
-            Math.sin(a) * info.distance,
-            info.height + Math.sin(u * 0.2) * 1.2,
-            Math.cos(a) * info.distance
-          ],
-          look: [0, 0, 0]
+          pos: [Math.sin(a) * info.distance, y, Math.cos(a) * info.distance],
+          look: [0, lookY, 0]
         }
       }
       case 'dolly': {
@@ -537,7 +564,8 @@ export class WorldScene extends TimedScene implements Scene {
       }
       case 'sweep': {
         const x = -info.travel / 2 + Math.min(info.travel, u * 0.9 * s)
-        return { pos: [x, info.height, 9], look: [x * 0.6, -2, -5] }
+        // auf die Mitte des Feldes blicken (sonst läge die Welle am unteren Bildrand)
+        return { pos: [x, info.height, 9], look: [x * 0.6, -2, info.centerZ ?? -5] }
       }
     }
   }
@@ -742,7 +770,12 @@ export class WorldScene extends TimedScene implements Scene {
     const a = tile + (this.finalAspect() - tile) * k
     const wide = a >= tile
     mesh.scale.set(wide ? a / tile : 1, wide ? 1 : tile / a, 1)
-    cropTexture(this.tileTextures[this.finalIndex], this.imageAspects[this.finalIndex], a)
+    cropTexture(
+      this.tileTextures[this.finalIndex],
+      this.imageAspects[this.finalIndex],
+      a,
+      this.crops[this.finalIndex]
+    )
     if (this.finalBorder) {
       this.finalBorder.opacity = 1 - Math.min(1, Math.max(0, (k - 0.15) / 0.45))
       mesh.children[0].visible = this.finalBorder.opacity > 0.01

@@ -77,7 +77,7 @@ Fortsetzung bis 0.15.0: weniger Wiederholungen, alle Einstellungen auf dem Handy
 
 ### Ergebnis
 
-- Version 0.16.0, 138 Unit-Tests; Releases v0.16.0 (Windows) und v0.16.0-linux (Vorabversion)
+- Version 0.16.0, danach 0.16.1 (145 Unit-Tests); Releases v0.16.1 (Windows) und v0.16.1-linux (Vorabversion)
 - Neu: Ein- und Ausstieg der 3D-Welt mit Foto samt Rand, Verlauf für ←/→ über alle Einträge, Tasten p/P, „Länger zeigen“ bei Fokus, Schriftgröße bei Zufall, neuer Farbverlauf, Papier-Rückseiten, keine Statuseinblendungen
 
 ### Ablauf
@@ -89,6 +89,7 @@ Fortsetzung bis 0.15.0: weniger Wiederholungen, alle Einstellungen auf dem Handy
 5. Auf Wunsch: keine Statuseinblendungen; 12 Papier-Rückseiten (danach kräftiger).
 6. Ausstieg wirkte noch zu lang (Stehen, dann Rand langsam) → der Rand entsteht in der Welt selbst während des Eintauchens bzw. löst sich beim Einstieg auf; Überblendung nur noch kurz.
 7. Backlog: Party-Version mit Abstimmung während der 3D-Welt.
+8. 0.16.1: Kachel-Ausschnitte nach Gesichtern (`crop.ts`), Welle und Karussell mittig (Blickpunkt), weiche Kante der Zielkachel schon beim Eintauchen.
 
 ### Entscheidungen des Nutzers
 

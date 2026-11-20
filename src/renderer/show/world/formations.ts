@@ -25,6 +25,25 @@ export interface FormationInfo {
   height: number
   /** Länge der Strecke bei Durchflug/Überflug. */
   travel: number
+  /**
+   * Karussell: Radius des Rings. Die Kamera blickt dann so weit nach unten, dass nahe und
+   * ferne Kacheln mittig im Bild liegen (sonst säßen die nahen am unteren Rand).
+   */
+  ring?: number
+  /** Welle: z-Mitte des Feldes, auf die die Kamera beim Überflug blickt. */
+  centerZ?: number
+}
+
+/**
+ * Blickhöhe für die Kamera vor einem Ring auf Höhe 0: Mitte zwischen dem Winkel zur nahen
+ * und zur fernen Seite, damit der ganze Ring mittig im Bild steht.
+ * @param camY Höhe der Kamera, dist Abstand zur Ringmitte, ring Radius
+ */
+export function ringLookY(camY: number, dist: number, ring: number): number {
+  const near = Math.max(0.5, dist - ring)
+  const far = dist + ring
+  const down = (Math.atan2(camY, near) + Math.atan2(camY, far)) / 2
+  return camY - dist * Math.tan(down)
 }
 
 export const TILE_W = 1.6
@@ -276,7 +295,8 @@ export function formationInfo(kind: WorldFormation, n: number, density = 0): For
         camera: 'orbit',
         distance: carouselRadius(n, d) + 5,
         height: 2,
-        travel: 0
+        travel: 0,
+        ring: carouselRadius(n, d)
       }
     case 'tunnel':
       return {
@@ -285,8 +305,13 @@ export function formationInfo(kind: WorldFormation, n: number, density = 0): For
         height: 0,
         travel: Math.ceil(n / Math.round(mix(10, 14, d))) * mix(2.4, 1.35, d)
       }
-    case 'wave':
-      return { camera: 'sweep', distance: 12, height: 6, travel: 10 }
+    case 'wave': {
+      const cols = Math.ceil(Math.sqrt(n * 1.6))
+      const rows = Math.ceil(n / cols)
+      // Feld reicht von z = 3 nach hinten (siehe placement)
+      const centerZ = 3 - ((rows - 1) * mix(1.6, 1.3, d)) / 2
+      return { camera: 'sweep', distance: 12, height: 6, travel: 10, centerZ }
+    }
     case 'jelly':
       return {
         camera: 'orbit',

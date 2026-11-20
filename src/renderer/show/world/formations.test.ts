@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { WORLD_FORMATIONS } from '@shared/settings'
-import { easeInOut, formationInfo, placement, type Vec3 } from './formations'
+import { easeInOut, formationInfo, placement, ringLookY, type Vec3 } from './formations'
 
 const dist = (a: Vec3, b: Vec3): number => Math.hypot(a[0] - b[0], a[1] - b[1], a[2] - b[2])
 
@@ -68,5 +68,27 @@ describe('Formationen', () => {
     expect(easeInOut(1)).toBe(1)
     expect(easeInOut(0.5)).toBeCloseTo(0.5)
     expect(easeInOut(0.1)).toBeLessThan(0.1)
+  })
+})
+
+describe('Kamera mittig auf Karussell und Welle', () => {
+  it('Karussell: nahe und ferne Kacheln liegen gleich weit von der Bildmitte', () => {
+    const camY = 2
+    const distance = 19
+    const ring = 14
+    const lookY = ringLookY(camY, distance, ring)
+    const pitch = Math.atan2(camY - lookY, distance)
+    const near = Math.atan2(camY, distance - ring) - pitch
+    const far = Math.atan2(camY, distance + ring) - pitch
+    expect(near).toBeCloseTo(-far, 5)
+    expect(lookY).toBeLessThan(0)
+  })
+
+  it('Welle: Blickpunkt in der Mitte des Feldes', () => {
+    const n = 50
+    const info = formationInfo('wave', n, 0.5)
+    const zs = Array.from({ length: n }, (_, i) => placement('wave', i, n, 0, 0.5).pos[2])
+    const mid = (Math.max(...zs) + Math.min(...zs)) / 2
+    expect(info.centerZ).toBeCloseTo(mid, 5)
   })
 })

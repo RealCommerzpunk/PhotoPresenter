@@ -134,6 +134,7 @@ Jeder Meilenstein ergibt eine lauffähige Version und einen eigenen Commit/PR.
 - ✅ 0.14.0: Songs mit Karaoke (gleitender Text, Darstellung und Hintergrund einstellbar), Zeiten-Editor (Mitsingen + Wellenform), Kinder-Fernbedienung (Taste K, QR-Code mit q), Fernbedienung vervollständigt, Dichte der 3D-Welt
 - ✅ 0.15.0: möglichst wenig Wiederholungen (gemeinsamer Verlauf, übersteht Neustarts), alle Einstellungen auf der Fernbedienung, Personen-Seite mit Gesichts-Vorschaubildern
 - ✅ 0.16.0: Ein- und Ausstieg der 3D-Welt mit dem aktuellen bzw. Zielfoto samt Rand, Show-Verlauf für ←/→ über alle Einträge, Tasten p/P (Fokus per Taste), längere Anzeigedauer bei Fokus, zufällige Schriftgröße, neuer Farbverlauf, Papier-Rückseiten, keine Statuseinblendungen
+- ✅ 0.16.1: Kachel-Ausschnitte nach Gesichtern (Fokus-Person zuerst), Welle und Karussell mittig, weiche Kante der Zielkachel schon beim Eintauchen
 - ✅ 0.13.0: Oberfläche in Deutsch/Englisch/Spanisch/Französisch, Dublettenprüfung (pHash, beste Fassung, Überspringen, Aufräumen), schlankeres Programm (app.asar 32 MB), Linux-Pakete per manuellem GitHub-Workflow
 - ✅ 0.12.5: Fingerabdruck im Gesichtsindex, Demo als Download-Release
 - ✅ 0.12.4: Produktseite (docs/index.html), Fokus-Partner mit neutralem Symbol

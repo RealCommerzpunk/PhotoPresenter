@@ -1,6 +1,7 @@
 import { ImageSource, Texture } from 'pixi.js'
 import type { FillMode } from '@shared/settings'
 import type { WorkerRequest, WorkerResponse } from './loader.worker'
+import type { TileFeather } from './imageprep'
 import { fitImage, type Fit, type Size } from './motion'
 
 /** Ein waagerechter Streifen des Fotos als eigene Textur. */
@@ -71,8 +72,12 @@ function textureFrom(bitmap: ImageBitmap): Texture {
  * Vorschaubild für die 3D-Fotowelt (im Seitenverhältnis des Fotos). Mit `height` eine
  * scharfe Fassung in dieser Höhe für die bildschirmgroße Kachel am Anfang/Ende der Welt.
  */
-export async function loadThumb(name: string, height = 0): Promise<ImageBitmap> {
-  const r = await ask({ kind: 'thumb', name, height })
+export async function loadThumb(
+  name: string,
+  height = 0,
+  feather?: TileFeather
+): Promise<ImageBitmap> {
+  const r = await ask({ kind: 'thumb', name, height, feather })
   if (r.kind !== 'thumb') throw new Error('unerwartete Antwort')
   return r.thumb
 }

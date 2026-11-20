@@ -318,11 +318,33 @@ const THUMB_MAX = 1024
 /** Längste Seite einer scharfen Kachel (Grenze für Texturen auf schwachen Grafikchips). */
 const SHARP_MAX = 4096
 
+/** Weiche Kante für die scharfe Zielkachel (wie beim eingepassten Foto). */
+export interface TileFeather {
+  sides: boolean
+  topBottom: boolean
+  /** Breite der Kante als Anteil der Bildhöhe. */
+  frac: number
+}
+
+/**
+ * Weiche Kante des eingepassten Fotos als Anteil seiner Höhe – dieselbe Rechnung wie in
+ * `preparePhoto` (Bildschirm-Pixel: 3 % der kürzeren Bildschirmseite, höchstens 15 % der
+ * kürzeren Fotoseite).
+ */
+export function featherFraction(screen: Size, photoW: number, photoH: number): number {
+  const px = Math.min(Math.min(photoW, photoH) * 0.15, FEATHER * Math.min(screen.w, screen.h))
+  return px / Math.max(1, photoH)
+}
+
 /**
  * Scharfe Fassung für die Kachel, die am Anfang oder Ende der 3D-Welt bildschirmgroß zu
  * sehen ist: ganzes Foto, `height` Pixel hoch (nie größer als das Original).
  */
-async function prepareSharpTile(blob: Blob, height: number): Promise<ImageBitmap> {
+async function prepareSharpTile(
+  blob: Blob,
+  height: number,
+  feather?: TileFeather
+): Promise<ImageBitmap> {
   const decoded = await createImageBitmap(blob, { imageOrientation: 'from-image' })
   try {
     const s = Math.min(
@@ -336,6 +358,10 @@ async function prepareSharpTile(blob: Blob, height: number): Promise<ImageBitmap
     const ctx = canvas.getContext('2d', { willReadFrequently: true })!
     ctx.imageSmoothingQuality = 'high'
     ctx.drawImage(decoded, 0, 0, w, h)
+    // Dieselbe weiche Kante wie das Vollbild danach: So ist sie beim Eintauchen schon da.
+    if (feather && (feather.sides || feather.topBottom)) {
+      featherEdges(ctx, w, h, feather.sides, feather.topBottom, feather.frac * h)
+    }
     return canvas.transferToImageBitmap()
   } finally {
     decoded.close()
@@ -347,10 +373,14 @@ async function prepareSharpTile(blob: Blob, height: number): Promise<ImageBitmap
  * Seitenverhältnis des Fotos. Die Kachel zeigt davon die Mitte in 4:3; die Zielkachel zieht
  * beim Eintauchen zum ganzen Foto auf, damit sie genau dem folgenden Vollbild entspricht.
  */
-export async function prepareThumb(name: string, height = 0): Promise<ImageBitmap> {
+export async function prepareThumb(
+  name: string,
+  height = 0,
+  feather?: TileFeather
+): Promise<ImageBitmap> {
   const response = await fetch(photoUrl(name))
   if (!response.ok) throw new Error(`${name}: HTTP ${response.status}`)
-  if (height > 0) return prepareSharpTile(await response.blob(), height)
+  if (height > 0) return prepareSharpTile(await response.blob(), height, feather)
   const decoded = await createImageBitmap(await response.blob(), {
     imageOrientation: 'from-image',
     resizeWidth: THUMB_W * 2,
