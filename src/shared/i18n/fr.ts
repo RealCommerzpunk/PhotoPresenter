@@ -298,6 +298,9 @@ export const fr: Record<MessageKey, string> = {
   'ui.dupes.move': 'Déplacer vers le sous-dossier « Duplicates »',
   'ui.dupes.trash': 'Supprimer (corbeille)',
   'ui.persons.onlyMatches': 'n’afficher que les correspondances',
+  'ui.persons.resort': 'trier à nouveau',
+  'ui.persons.resortTitle':
+    'Trier à nouveau par ressemblance. Les visages restent en place quand vous cliquez.',
   'ui.persons.sample': 'Exemple',
   'ui.persons.notName': 'pas {name}',
   'ui.persons.thisPerson': 'cette personne',

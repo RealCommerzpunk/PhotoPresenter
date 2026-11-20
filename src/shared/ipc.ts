@@ -131,6 +131,8 @@ export interface ThumbRequest {
   name: string
   /** Höhe des Vorschaubilds in Pixeln. */
   height: number
+  /** Quadratischer Ausschnitt um ein Gesicht (relativ 0–1), statt des ganzen Fotos. */
+  face?: RelBox
 }
 
 /** Schema des Protokolls, über das die Show Fotos aus dem gewählten Ordner lädt. */
@@ -139,6 +141,11 @@ export const PHOTO_SCHEME = 'photo'
 /** URL für ein Foto (Pfad relativ zum Fotoordner). */
 export function photoUrl(relativePath: string): string {
   return `${PHOTO_SCHEME}://local/${encodeURIComponent(relativePath)}`
+}
+
+/** Kleines, zwischengespeichertes Vorschaubild eines Gesichts (Ausschnitt um `box`). */
+export function faceThumbUrl(relativePath: string, box: RelBox): string {
+  return `${photoUrl(relativePath)}?face=${box.map((v) => v.toFixed(4)).join(',')}`
 }
 
 export interface PhotoList {

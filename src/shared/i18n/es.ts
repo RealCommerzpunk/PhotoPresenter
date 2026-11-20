@@ -296,6 +296,9 @@ export const es: Record<MessageKey, string> = {
   'ui.dupes.move': 'Mover a la subcarpeta «Duplicates»',
   'ui.dupes.trash': 'Eliminar (papelera)',
   'ui.persons.onlyMatches': 'mostrar solo coincidencias',
+  'ui.persons.resort': 'reordenar',
+  'ui.persons.resortTitle':
+    'Ordenar de nuevo por similitud. Al hacer clic, las caras se quedan en su sitio.',
   'ui.persons.sample': 'Ejemplo',
   'ui.persons.notName': 'no es {name}',
   'ui.persons.thisPerson': 'esta persona',

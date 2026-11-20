@@ -606,7 +606,7 @@ function setSettings(patch: Partial<Settings>): Settings {
 
 app.whenReady().then(() => {
   applyLanguage()
-  handlePhotoProtocol()
+  handlePhotoProtocol((rel, box) => thumbs.get(rel, box))
   ipcMain.handle(IPC.startShow, (_e, options?: ShowOptions) => startShow(options))
   ipcMain.handle(IPC.stopShow, () => stopShow())
   ipcMain.handle(IPC.appVersion, () => app.getVersion())

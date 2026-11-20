@@ -1,11 +1,13 @@
 import { createHash } from 'node:crypto'
 import { mkdir, readFile, stat, writeFile } from 'node:fs/promises'
 import { dirname, join } from 'node:path'
-import type { ThumbRequest } from '@shared/ipc'
+import type { RelBox, ThumbRequest } from '@shared/ipc'
 import { resolvePhoto } from './photos'
 
 /** Kantenlänge der Vorschaubilder (passt in 256 × 256, Seitenverhältnis bleibt). */
 export const THUMB_SIZE = 256
+/** Kantenlänge der Gesichts-Vorschauen (Kachel 92 px, doppelt für hochauflösende Bildschirme). */
+const FACE_THUMB_SIZE = 192
 const TIMEOUT_MS = 30_000
 
 /**
@@ -24,13 +26,15 @@ export class ThumbCache {
     private readonly send: (request: ThumbRequest) => boolean
   ) {}
 
-  async get(name: string): Promise<Buffer | null> {
+  /** Vorschaubild eines Fotos; mit `face` ein quadratischer Ausschnitt um dieses Gesicht. */
+  async get(name: string, face?: RelBox): Promise<Buffer | null> {
     const abs = resolvePhoto(name)
     if (!abs) return null
     let key: string
     try {
       const st = await stat(abs)
-      key = createHash('sha1').update(`${abs}|${st.size}|${st.mtimeMs}`).digest('hex')
+      const crop = face ? `|face:${face.join(',')}` : ''
+      key = createHash('sha1').update(`${abs}|${st.size}|${st.mtimeMs}${crop}`).digest('hex')
     } catch {
       return null
     }
@@ -42,14 +46,14 @@ export class ThumbCache {
     }
     let job = this.inflight.get(key)
     if (!job) {
-      job = this.create(name, file).finally(() => this.inflight.delete(key))
+      job = this.create(name, file, face).finally(() => this.inflight.delete(key))
       this.inflight.set(key, job)
     }
     return job
   }
 
-  private async create(name: string, file: string): Promise<Buffer | null> {
-    const data = await this.ask(name)
+  private async create(name: string, file: string, face?: RelBox): Promise<Buffer | null> {
+    const data = await this.ask(name, face)
     if (!data) return null
     const buffer = Buffer.from(data)
     try {
@@ -61,7 +65,7 @@ export class ThumbCache {
     return buffer
   }
 
-  private ask(name: string): Promise<Uint8Array | null> {
+  private ask(name: string, face?: RelBox): Promise<Uint8Array | null> {
     const requestId = this.nextId++
     return new Promise((resolve) => {
       const timer = setTimeout(() => finish(null), TIMEOUT_MS)
@@ -71,7 +75,10 @@ export class ThumbCache {
         resolve(data)
       }
       this.pending.set(requestId, finish)
-      if (!this.send({ requestId, name, height: THUMB_SIZE })) finish(null)
+      const request: ThumbRequest = face
+        ? { requestId, name, height: FACE_THUMB_SIZE, face }
+        : { requestId, name, height: THUMB_SIZE }
+      if (!this.send(request)) finish(null)
     })
   }
 

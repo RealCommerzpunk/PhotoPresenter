@@ -1,42 +1,35 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { t } from '@shared/i18n'
 import type { FaceIndexStatus } from '@shared/faces'
-import { photoUrl, type FaceListItem, type RelBox } from '@shared/ipc'
+import { faceThumbUrl, photoUrl, type FaceListItem, type RelBox } from '@shared/ipc'
 import { FOCUS_LABELS, PAN_OTHERS, type Person, type Settings } from '@shared/settings'
 import { Card, Field, RangeInput, Select, Toggle, WeightedList } from './controls'
 import { PhotoBrowser, usePhotoList } from './PhotoBrowser'
 
 type Update = (patch: Partial<Settings>) => void
 
-/** Quadratischer Ausschnitt eines Gesichts aus dem Foto (mit etwas Rand). */
+/**
+ * Quadratischer Ausschnitt eines Gesichts (mit etwas Rand). Kommt als kleines, zwischengespeichertes
+ * Vorschaubild vom Hauptprozess – früher wurde dafür jedes Foto in voller Größe geladen und
+ * vergrößert, das machte die Galerie zäh und kleine Gesichter in großen Fotos schwarz.
+ */
 function FaceThumb({ item, size = 92 }: { item: FaceListItem; size?: number }): React.JSX.Element {
-  const [x, y, w, h] = item.box
-  const side = Math.max(w * item.w, h * item.h) * 1.6
-  const scale = size / side
-  const cx = (x + w / 2) * item.w
-  const cy = (y + h / 2) * item.h
   return (
-    <div
-      className="relative overflow-hidden rounded-md bg-black"
-      style={{ width: size, height: size }}
-    >
+    <div className="overflow-hidden rounded-md bg-black/60" style={{ width: size, height: size }}>
       <img
-        src={photoUrl(item.photo)}
+        src={faceThumbUrl(item.photo, item.box)}
         alt=""
         loading="lazy"
         decoding="async"
         draggable={false}
-        className="absolute max-w-none"
-        style={{
-          width: item.w * scale,
-          height: item.h * scale,
-          left: size / 2 - cx * scale,
-          top: size / 2 - cy * scale
-        }}
+        className="h-full w-full object-cover"
       />
     </div>
   )
 }
+
+/** Eindeutiger Schlüssel eines Gesichts in der Galerie. */
+const faceKey = (f: FaceListItem): string => `${f.photo}#${f.face}`
 
 function useFaceStatus(): FaceIndexStatus | null {
   const [status, setStatus] = useState<FaceIndexStatus | null>(null)
@@ -74,7 +67,11 @@ function FaceTile({
 }): React.JSX.Element {
   const state = faceState(f, person.name || t('ui.persons.thisPerson'))
   return (
-    <div className={`relative flex flex-col items-center gap-1 rounded-lg p-1 ${state.ring}`}>
+    <div
+      className={`relative flex flex-col items-center gap-1 rounded-lg p-1 ${state.ring}`}
+      // Kacheln außerhalb des sichtbaren Bereichs überspringt der Browser beim Zeichnen.
+      style={{ contentVisibility: 'auto', containIntrinsicSize: '100px 122px' }}
+    >
       <button
         onClick={() => void window.api.toggleSample(person.id, f.photo, f.face).then(onChanged)}
         title={t('ui.persons.tileTitle', { photo: f.photo, name: person.name })}
@@ -123,10 +120,28 @@ function FaceGallery({
   const [onlyMatches, setOnlyMatches] = useState(false)
   const [limit, setLimit] = useState(96)
   const key = personKey(person)
+  // Reihenfolge der Kacheln, solange man bei dieser Person bleibt: Ein Klick auf ein Gesicht
+  // ändert die Ähnlichkeiten, die Kacheln sollen aber nicht umspringen (sonst ist die Stelle
+  // weg, an der man gerade war). Neu sortiert wird beim Personenwechsel oder per Knopf.
+  const order = useRef<{ person: string; pos: Map<string, number> } | null>(null)
 
   const reload = useCallback(() => {
-    void window.api.listFaces(person.id).then(setFaces)
+    void window.api.listFaces(person.id).then((list) => {
+      const prev = order.current?.person === person.id ? order.current.pos : null
+      const sorted = prev
+        ? list
+            .map((f, i) => ({ f, i, p: prev.get(faceKey(f)) ?? Infinity }))
+            .sort((a, b) => a.p - b.p || a.i - b.i)
+            .map((e) => e.f)
+        : list
+      order.current = { person: person.id, pos: new Map(sorted.map((f, i) => [faceKey(f), i])) }
+      setFaces(sorted)
+    })
   }, [person.id])
+  const resort = (): void => {
+    order.current = null
+    reload()
+  }
 
   // Neu laden, wenn sich Beispiele, Schwelle oder der Analysestand ändern.
   useEffect(reload, [reload, key, threshold, status?.faces])
@@ -157,6 +172,15 @@ function FaceGallery({
             label={t('ui.persons.onlyMatches')}
           />
         )}
+        {hasSamples && (
+          <button
+            onClick={resort}
+            title={t('ui.persons.resortTitle')}
+            className="text-xs text-indigo-300 hover:text-indigo-200"
+          >
+            {t('ui.persons.resort')}
+          </button>
+        )}
       </div>
       <div className="text-[11px] text-white/35">
         {t('ui.persons.legend', { name: person.name || t('ui.persons.thisPerson') })}
@@ -164,7 +188,7 @@ function FaceGallery({
       {faces.length === 0 && <div className="text-sm text-white/40">{t('ui.persons.noFaces')}</div>}
       <div className="grid grid-cols-[repeat(auto-fill,minmax(100px,1fr))] gap-3">
         {shown.slice(0, limit).map((f) => (
-          <FaceTile key={`${f.photo}#${f.face}`} f={f} person={person} onChanged={reload} />
+          <FaceTile key={faceKey(f)} f={f} person={person} onChanged={reload} />
         ))}
       </div>
       {shown.length > limit && (

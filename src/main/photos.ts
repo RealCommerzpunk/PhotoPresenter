@@ -3,7 +3,7 @@ import { extname, isAbsolute, join, normalize, relative, resolve } from 'node:pa
 import { pathToFileURL } from 'node:url'
 import { net, protocol } from 'electron'
 import { DUPLICATES_DIR } from '@shared/dupes'
-import { PHOTO_SCHEME, type PhotoList } from '@shared/ipc'
+import { PHOTO_SCHEME, type PhotoList, type RelBox } from '@shared/ipc'
 import { relativeToBase } from './paths'
 import { loadSettings, photoFolder as resolvedPhotoFolder, programDir } from './settings'
 
@@ -64,16 +64,42 @@ export function registerPhotoScheme(): void {
   ])
 }
 
-/** Liefert Fotos aus, aber nur aus dem eingestellten Ordner. */
-export function handlePhotoProtocol(): void {
+/** `?face=x,y,w,h` (relativ 0–1) aus einer Foto-Adresse; null, wenn nicht gültig. */
+export function parseFaceParam(value: string | null): RelBox | null {
+  if (!value) return null
+  const parts = value.split(',').map(Number)
+  if (parts.length !== 4 || parts.some((v) => !Number.isFinite(v) || v < 0 || v > 1)) return null
+  return parts as RelBox
+}
+
+/**
+ * Liefert Fotos aus, aber nur aus dem eingestellten Ordner. Mit `?face=` statt des Fotos ein
+ * kleines Vorschaubild dieses Gesichts (`faceThumb`, zwischengespeichert).
+ */
+export function handlePhotoProtocol(
+  faceThumb: (rel: string, box: RelBox) => Promise<Buffer | null>
+): void {
   protocol.handle(PHOTO_SCHEME, async (request) => {
     const folder = resolvedPhotoFolder()
     if (!folder) return new Response('Kein Fotoordner gewählt', { status: 404 })
-    const rel = decodeURIComponent(new URL(request.url).pathname.slice(1))
+    const url = new URL(request.url)
+    const rel = decodeURIComponent(url.pathname.slice(1))
     const abs = resolve(folder, rel)
     const inside = relative(folder, abs)
     if (!inside || inside.startsWith('..') || isAbsolute(inside)) {
       return new Response('Zugriff verweigert', { status: 403 })
+    }
+    const face = parseFaceParam(url.searchParams.get('face'))
+    if (face) {
+      const image = await faceThumb(rel, face)
+      if (!image) return new Response('Vorschau nicht verfügbar', { status: 503 })
+      return new Response(new Uint8Array(image), {
+        headers: {
+          'Content-Type': 'image/jpeg',
+          'Access-Control-Allow-Origin': '*',
+          'Cache-Control': 'max-age=86400'
+        }
+      })
     }
     const file = await net.fetch(pathToFileURL(abs).toString())
     // Die Fenster laden von file:// (Herkunft "null"); nur sie erreichen dieses Protokoll.

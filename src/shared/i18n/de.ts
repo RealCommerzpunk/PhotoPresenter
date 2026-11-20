@@ -294,6 +294,9 @@ export const de = {
   'ui.dupes.move': 'In Unterordner „Duplicates“ verschieben',
   'ui.dupes.trash': 'Löschen (Papierkorb)',
   'ui.persons.onlyMatches': 'nur Treffer zeigen',
+  'ui.persons.resort': 'neu sortieren',
+  'ui.persons.resortTitle':
+    'Nach Ähnlichkeit neu ordnen. Beim Anklicken bleiben die Gesichter an ihrem Platz.',
   'ui.persons.sample': 'Beispiel',
   'ui.persons.notName': 'nicht {name}',
   'ui.persons.thisPerson': 'diese Person',

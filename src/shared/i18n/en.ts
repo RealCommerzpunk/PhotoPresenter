@@ -291,6 +291,8 @@ export const en: Record<MessageKey, string> = {
   'ui.dupes.move': 'Move to subfolder “Duplicates”',
   'ui.dupes.trash': 'Delete (recycle bin)',
   'ui.persons.onlyMatches': 'show matches only',
+  'ui.persons.resort': 're-sort',
+  'ui.persons.resortTitle': 'Order by similarity again. Faces stay in place while you click them.',
   'ui.persons.sample': 'Example',
   'ui.persons.notName': 'not {name}',
   'ui.persons.thisPerson': 'this person',

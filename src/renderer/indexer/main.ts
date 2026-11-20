@@ -222,29 +222,64 @@ async function loadModels(): Promise<Models> {
   }
 }
 
-// Vorschaubilder für die Galerie der Fernbedienung: nacheinander, unabhängig von der Analyse.
+// Vorschaubilder (Galerie der Fernbedienung, Gesichter in den Einstellungen): nacheinander,
+// unabhängig von der Analyse.
 let thumbChain: Promise<unknown> = Promise.resolve()
 const thumbCanvas = new OffscreenCanvas(1, 1)
 const thumbCtx = thumbCanvas.getContext('2d')!
+// Das zuletzt dekodierte Foto bleibt kurz liegen: Mehrere Gesichter eines Fotos kommen oft
+// direkt hintereinander und brauchen dann nur eine Dekodierung.
+let lastBitmap: { name: string; bitmap: ImageBitmap; timer: ReturnType<typeof setTimeout> } | null =
+  null
 
-async function makeThumb(name: string, size: number): Promise<Uint8Array> {
-  const bitmap = await loadBitmap(name)
-  try {
-    const scale = Math.min(1, size / Math.max(bitmap.width, bitmap.height))
-    thumbCanvas.width = Math.max(1, Math.round(bitmap.width * scale))
-    thumbCanvas.height = Math.max(1, Math.round(bitmap.height * scale))
-    thumbCtx.imageSmoothingQuality = 'high'
-    thumbCtx.drawImage(bitmap, 0, 0, thumbCanvas.width, thumbCanvas.height)
-    const blob = await thumbCanvas.convertToBlob({ type: 'image/jpeg', quality: 0.78 })
-    return new Uint8Array(await blob.arrayBuffer())
-  } finally {
-    bitmap.close()
+async function thumbBitmap(name: string): Promise<ImageBitmap> {
+  if (lastBitmap?.name === name) {
+    clearTimeout(lastBitmap.timer)
+  } else {
+    if (lastBitmap) {
+      clearTimeout(lastBitmap.timer)
+      lastBitmap.bitmap.close()
+    }
+    lastBitmap = { name, bitmap: await loadBitmap(name), timer: 0 as never }
   }
+  const held = lastBitmap
+  held.timer = setTimeout(() => {
+    held.bitmap.close()
+    if (lastBitmap === held) lastBitmap = null
+  }, 3000)
+  return held.bitmap
+}
+
+async function makeThumb(name: string, size: number, face?: RelBox): Promise<Uint8Array> {
+  const bitmap = await thumbBitmap(name)
+  const W = bitmap.width
+  const H = bitmap.height
+  thumbCtx.imageSmoothingQuality = 'high'
+  if (face) {
+    // Quadrat um das Gesicht mit etwas Rand; was über das Foto hinausragt, bleibt schwarz.
+    const [x, y, w, h] = face
+    const side = Math.max(w * W, h * H) * 1.6
+    const sx = (x + w / 2) * W - side / 2
+    const sy = (y + h / 2) * H - side / 2
+    const out = Math.min(size, Math.max(16, Math.round(side)))
+    thumbCanvas.width = out
+    thumbCanvas.height = out
+    thumbCtx.fillStyle = '#000'
+    thumbCtx.fillRect(0, 0, out, out)
+    thumbCtx.drawImage(bitmap, sx, sy, side, side, 0, 0, out, out)
+  } else {
+    const scale = Math.min(1, size / Math.max(W, H))
+    thumbCanvas.width = Math.max(1, Math.round(W * scale))
+    thumbCanvas.height = Math.max(1, Math.round(H * scale))
+    thumbCtx.drawImage(bitmap, 0, 0, thumbCanvas.width, thumbCanvas.height)
+  }
+  const blob = await thumbCanvas.convertToBlob({ type: 'image/jpeg', quality: 0.8 })
+  return new Uint8Array(await blob.arrayBuffer())
 }
 
 async function main(): Promise<void> {
   window.api.onThumbRequest((req) => {
-    const run = thumbChain.then(() => makeThumb(req.name, req.height))
+    const run = thumbChain.then(() => makeThumb(req.name, req.height, req.face))
     thumbChain = run.catch(() => undefined)
     run
       .then((data) => window.api.thumbResult(req.requestId, data))
